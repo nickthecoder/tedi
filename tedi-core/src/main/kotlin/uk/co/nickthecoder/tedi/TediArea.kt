@@ -48,13 +48,13 @@ import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.util.*
 
-class TediArea(val content: TediContent)
+class TediArea(val content: TediAreaContent)
 
     : TextInputControl(content) {
 
-    constructor() : this(TediContent())
+    constructor() : this(TediAreaContent())
 
-    constructor(text: String) : this(TediContent()) {
+    constructor(text: String) : this(TediAreaContent()) {
         this.text = text
     }
 
@@ -66,9 +66,9 @@ class TediArea(val content: TediContent)
     override fun createDefaultSkin(): Skin<*> = TediAreaSkin(this)
 
 
-    class TediContent : TextInputControl.Content {
+    class TediAreaContent : TextInputControl.Content {
 
-        internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder())
+        internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
         private var contentLength = 0
         internal val paragraphList = ParagraphList(this)
         internal var listenerHelper: ListListenerHelper<CharSequence>? = null
@@ -98,9 +98,7 @@ class TediArea(val content: TediContent)
                 offset -= count
                 paragraphIndex++
             }
-
-            if (paragraphIndex <= paragraphCount) return ""
-
+            
             // Read characters until end is reached, appending to text builder
             // and moving to next paragraph as needed
             var paragraph = paragraphs[paragraphIndex]
@@ -320,7 +318,7 @@ class TediArea(val content: TediContent)
     // Copied from TextArea.ParagraphLists
     //
     // Observable list of paragraphs
-    internal class ParagraphList(val content: TediContent)
+    internal class ParagraphList(val content: TediAreaContent)
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
 
         override fun get(index: Int): CharSequence {
