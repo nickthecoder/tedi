@@ -52,7 +52,6 @@ import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
 import javafx.beans.value.ObservableObjectValue
-import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.event.ActionEvent
@@ -67,7 +66,6 @@ import javafx.scene.control.SkinBase
 import javafx.scene.input.InputMethodEvent
 import javafx.scene.input.InputMethodHighlight
 import javafx.scene.input.MouseEvent
-import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Region
 import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
@@ -81,12 +79,9 @@ import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 import java.lang.ref.WeakReference
 import java.util.*
 
-class TediAreaSkin(val tediArea: TediArea)
+open class TediAreaSkin(val tediArea: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(tediArea, TediAreaBehavior(tediArea)) {
-
-    // *** NOTE: Multiple node mode is not yet fully implemented *** //
-    private val USE_MULTIPLE_NODES = false
 
     private var computedMinWidth = java.lang.Double.NEGATIVE_INFINITY
     private var computedMinHeight = java.lang.Double.NEGATIVE_INFINITY
@@ -206,7 +201,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
         override fun computeValue(): FontMetrics {
             invalidateMetrics()
-            return Toolkit.getToolkit().getFontLoader().getFontMetrics(tediArea.getFont());
+            return Toolkit.getToolkit().fontLoader.getFontMetrics(tediArea.font)
         }
     }
 
@@ -341,19 +336,18 @@ class TediAreaSkin(val tediArea: TediArea)
             }
 
             promptNode?.let { promptNode ->
-                promptNode.setLayoutX(leftPadding)
-                promptNode.setLayoutY(topPadding + promptNode.getBaselineOffset())
-                promptNode.setWrappingWidth(wrappingWidth)
+                promptNode.layoutX = leftPadding
+                promptNode.layoutY = topPadding + promptNode.getBaselineOffset()
+                promptNode.wrappingWidth = wrappingWidth
             }
 
             // Update the selection
             val selection = textArea.selection
-            val oldCaretBounds = caretPath.getBoundsInParent()
+            val oldCaretBounds = caretPath.boundsInParent
 
             selectionHighlightGroup.getChildren().clear()
 
             val caretPos = textArea.caretPosition
-            val anchorPos = textArea.anchor
 
             run {
                 // Position caret
@@ -368,16 +362,16 @@ class TediAreaSkin(val tediArea: TediArea)
 
                 updateTextNodeCaretPos(caretPos - paragraphOffset)
 
-                caretPath.getElements().clear()
-                caretPath.getElements().addAll(*paragraphNode!!.impl_caretShape)
+                caretPath.elements.clear()
+                caretPath.elements.addAll(*paragraphNode!!.impl_caretShape)
 
-                caretPath.setLayoutX(paragraphNode.layoutX)
+                caretPath.layoutX = paragraphNode.layoutX
 
                 // TODO: Remove this temporary workaround for RT-27533
                 paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
 
-                caretPath.setLayoutY(paragraphNode.layoutY)
-                if (oldCaretBounds == null || oldCaretBounds != caretPath.getBoundsInParent()) {
+                caretPath.layoutY = paragraphNode.layoutY
+                if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
                     scrollCaretToVisible()
                 }
             }
@@ -417,10 +411,10 @@ class TediAreaSkin(val tediArea: TediArea)
                 i++
             }
 
-            if (scrollPane.getPrefViewportWidth() == 0.0 || scrollPane.getPrefViewportHeight() == 0.0) {
+            if (scrollPane.prefViewportWidth == 0.0 || scrollPane.prefViewportHeight == 0.0) {
                 updatePrefViewportWidth()
                 updatePrefViewportHeight()
-                if (parent != null && scrollPane.getPrefViewportWidth() > 0 || scrollPane.getPrefViewportHeight() > 0) {
+                if (parent != null && scrollPane.prefViewportWidth > 0 || scrollPane.prefViewportHeight > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
                     parent.requestLayout()
                 }
@@ -428,11 +422,12 @@ class TediAreaSkin(val tediArea: TediArea)
 
             // RT-36454: Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
-            val viewportBounds = scrollPane.getViewportBounds()
+            val viewportBounds = scrollPane.viewportBounds
             val wasFitToWidth = scrollPane.isFitToWidth()
             val wasFitToHeight = scrollPane.isFitToHeight()
-            val setFitToWidth = textArea.isWrapText() || computePrefWidth(-1.0) <= viewportBounds.getWidth()
-            val setFitToHeight = computePrefHeight(width) <= viewportBounds.getHeight()
+            val setFitToWidth = computePrefWidth(-1.0) <= viewportBounds.width
+            val setFitToHeight = computePrefHeight(width) <= viewportBounds.height
+
             if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
                 Platform.runLater {
                     scrollPane.setFitToWidth(setFitToWidth)
@@ -455,8 +450,8 @@ class TediAreaSkin(val tediArea: TediArea)
         }
 
         override fun computeValue(): Boolean {
-            val txt = tediArea.getText()
-            val promptTxt = tediArea.getPromptText()
+            val txt = tediArea.text
+            val promptTxt = tediArea.promptText
             return (txt == null || txt.isEmpty()) && promptTxt != null && !promptTxt.isEmpty()
         }
     };
@@ -484,7 +479,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
     private val scrollSelectionTimeline = Timeline()
 
-    private val scrollSelectionHandler = EventHandler<ActionEvent> { event ->
+    private val scrollSelectionHandler = EventHandler<ActionEvent> {
         when (scrollDirection) {
             VerticalDirection.UP -> {
             }// TODO Get previous offset
@@ -494,12 +489,6 @@ class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-
-    val SCROLL_RATE = 30
-
-    private var pressX: Double = 0.toDouble()
-    private var pressY: Double = 0.toDouble() // For dragging handles on embedded
-    private var handlePressed: Boolean = false
 
     init {
 
@@ -520,9 +509,9 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun computeValue(): Boolean {
                 return !blink.get() && displayCaret.get() && tediArea.isFocused() &&
-                        (tediArea.getCaretPosition() == tediArea.getAnchor()) &&
+                        (tediArea.caretPosition == tediArea.anchor) &&
                         !tediArea.isDisabled() &&
-                        tediArea.isEditable()
+                        tediArea.isEditable
             }
         }
 
@@ -530,7 +519,7 @@ class TediAreaSkin(val tediArea: TediArea)
             tediArea.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
         }
 
-        tediArea.setInputMethodRequests(object : ExtendedInputMethodRequests {
+        tediArea.inputMethodRequests = object : ExtendedInputMethodRequests {
             override fun getTextLocation(offset: Int): Point2D {
                 val scene = skinnable.scene
                 val window = scene.window
@@ -584,7 +573,7 @@ class TediAreaSkin(val tediArea: TediArea)
             override fun getCommittedTextLength(): Int {
                 return skinnable.text.length - imlength
             }
-        })
+        }
 
         caretPosition.addListener { observable, oldValue, newValue ->
             targetCaretX = -1.0
@@ -593,7 +582,7 @@ class TediAreaSkin(val tediArea: TediArea)
             }
         }
 
-        forwardBias.addListener({ observable ->
+        forwardBias.addListener({ _ ->
             if (tediArea.width > 0) {
                 updateTextNodeCaretPos(tediArea.caretPosition)
             }
@@ -601,15 +590,9 @@ class TediAreaSkin(val tediArea: TediArea)
 
         // Initialize content
         scrollPane = ScrollPane()
-        scrollPane.isFitToWidth = tediArea.isWrapText()
+        scrollPane.isFitToWidth = false
         scrollPane.content = contentView
         children.add(scrollPane)
-
-        skinnable.addEventFilter(ScrollEvent.ANY) { event ->
-            if (event.isDirect && handlePressed) {
-                event.consume()
-            }
-        }
 
         // Add selection
         selectionHighlightGroup.isManaged = false
@@ -649,46 +632,36 @@ class TediAreaSkin(val tediArea: TediArea)
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
         // Add initial text content
-        run {
-            var i = 0
-            val n = if (USE_MULTIPLE_NODES) tediArea.getParagraphs().size else 1
-            while (i < n) {
-                val paragraph = if (n == 1) tediArea.textProperty().valueSafe else tediArea.getParagraphs()[i]
-                addParagraphNode(i, paragraph.toString())
-                i++
-            }
+        for (i in 0..tediArea.getParagraphs().size - 1) {
+            val paragraph = tediArea.getParagraphs()[i]
+            addParagraphNode(i, paragraph.toString())
         }
 
-        tediArea.selectionProperty().addListener { observable, oldValue, newValue ->
-            // TODO Why do we need two calls here?
+        tediArea.selectionProperty().addListener { _, _, _ ->
+            // Why do we need two calls here? (from original)
             tediArea.requestLayout()
             contentView.requestLayout()
         }
 
-        tediArea.wrapTextProperty().addListener { observable, oldValue, newValue ->
-            invalidateMetrics()
-            scrollPane.isFitToWidth = newValue!!
-        }
-
-        tediArea.prefColumnCountProperty().addListener { observable, oldValue, newValue ->
+        tediArea.prefColumnCountProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updatePrefViewportWidth()
         }
 
-        tediArea.prefRowCountProperty().addListener { observable, oldValue, newValue ->
+        tediArea.prefRowCountProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updatePrefViewportHeight()
         }
 
         updateFontMetrics()
-        fontMetrics.addListener({ valueModel -> updateFontMetrics() })
+        fontMetrics.addListener({ _ -> updateFontMetrics() })
 
-        contentView.paddingProperty().addListener { valueModel ->
+        contentView.paddingProperty().addListener { _ ->
             updatePrefViewportWidth()
             updatePrefViewportHeight()
         }
 
-        scrollPane.viewportBoundsProperty().addListener { valueModel ->
+        scrollPane.viewportBoundsProperty().addListener { _ ->
             if (scrollPane.viewportBounds != null) {
                 // ScrollPane creates a new Bounds instance for each
                 // layout pass, so we need to check if the width/height
@@ -705,7 +678,7 @@ class TediAreaSkin(val tediArea: TediArea)
             }
         }
 
-        tediArea.scrollTopProperty().addListener { observable, oldValue, newValue ->
+        tediArea.scrollTopProperty().addListener { _, _, newValue ->
             val vValue = if (newValue.toDouble() < getScrollTopMax())
                 newValue.toDouble() / getScrollTopMax()
             else
@@ -713,7 +686,7 @@ class TediAreaSkin(val tediArea: TediArea)
             scrollPane.vvalue = vValue
         }
 
-        tediArea.scrollLeftProperty().addListener { observable, oldValue, newValue ->
+        tediArea.scrollLeftProperty().addListener { _, _, newValue ->
             val hValue = if (newValue.toDouble() < getScrollLeftMax())
                 newValue.toDouble() / getScrollLeftMax()
             else
@@ -721,45 +694,10 @@ class TediAreaSkin(val tediArea: TediArea)
             scrollPane.hvalue = hValue
         }
 
-        if (USE_MULTIPLE_NODES) {
-            tediArea.getParagraphs().addListener { change: ListChangeListener.Change<out CharSequence> ->
-                while (change.next()) {
-                    val from = change.from
-                    val to = change.to
-                    val removed = change.removed
-                    if (from < to) {
-
-                        if (removed.isEmpty()) {
-                            // This is an add
-                            var i = from
-                            val n = to
-                            while (i < n) {
-                                addParagraphNode(i, change.list[i].toString())
-                                i++
-                            }
-                        } else {
-                            // This is an update
-                            var i = from
-                            val n = to
-                            while (i < n) {
-                                val node = paragraphNodes.children[i]
-                                val paragraphNode = node as Text
-                                paragraphNode.text = change.list[i].toString()
-                                i++
-                            }
-                        }
-                    } else {
-                        // This is a remove
-                        paragraphNodes.children.subList(from, from + removed.size).clear()
-                    }
-                }
-            }
-        } else {
-            tediArea.textProperty().addListener { observable ->
-                invalidateMetrics()
-                (paragraphNodes.children[0] as Text).text = tediArea.textProperty().valueSafe
-                contentView.requestLayout()
-            }
+        tediArea.textProperty().addListener { _ ->
+            invalidateMetrics()
+            (paragraphNodes.children[0] as Text).text = tediArea.textProperty().valueSafe
+            contentView.requestLayout()
         }
 
         usePromptText = object : BooleanBinding() {
@@ -817,7 +755,7 @@ class TediAreaSkin(val tediArea: TediArea)
         paragraphNode.textOrigin = VPos.TOP
         paragraphNode.isManaged = false
         paragraphNode.styleClass.add("text")
-        paragraphNode.boundsTypeProperty().addListener { observable, oldValue, newValue ->
+        paragraphNode.boundsTypeProperty().addListener { _, _, _ ->
             invalidateMetrics()
             updateFontMetrics()
         }
@@ -835,8 +773,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
     public override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
         val firstParagraph = paragraphNodes.children[0] as Text
-        return getAscent(skinnable.font, firstParagraph.boundsType)
-        +contentView.snappedTopInset() + tediArea.snappedTopInset()
+        return getAscent(skinnable.font, firstParagraph.boundsType) + contentView.snappedTopInset() + tediArea.snappedTopInset()
     }
 
     fun getCharacter(index: Int): Char {
@@ -940,11 +877,6 @@ class TediAreaSkin(val tediArea: TediArea)
         return Utils.getHitInsertionIndex(hitInfo, paragraphNode.text)
     }
 
-    fun getNextInsertionPoint(x: Double, from: Int, scrollDirection: VerticalDirection): Int {
-        // TODO
-        return 0
-    }
-
     private fun getNextInsertionPoint(paragraphNode: Text, x: Double, from: Int,
                                       scrollDirection: VerticalDirection): Int {
         // TODO
@@ -1009,10 +941,10 @@ class TediAreaSkin(val tediArea: TediArea)
     private fun scrollCaretToVisible() {
         val textArea = skinnable
         val bounds = caretPath.getLayoutBounds()
-        var x = bounds.getMinX() - textArea.getScrollLeft()
-        var y = bounds.getMinY() - textArea.getScrollTop()
-        var w = bounds.getWidth()
-        var h = bounds.getHeight()
+        val x = bounds.getMinX() - textArea.getScrollLeft()
+        val y = bounds.getMinY() - textArea.getScrollTop()
+        val w = bounds.getWidth()
+        val h = bounds.getHeight()
 
         if (w > 0 && h > 0) {
             scrollBoundsToVisible(Rectangle2D(x, y, w, h))
@@ -1085,32 +1017,8 @@ class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-//     protected void handleMouseReleasedEvent(MouseEvent event) {
-// //        super.handleMouseReleasedEvent(event);
-
-//         // Stop the scroll selection timer
-//         scrollSelectionTimeline.stop();
-//         scrollDirection = null;
-
-//         // Select all if the user double-clicked
-//         if (event.getButton() == MouseButton.PRIMARY
-//             && event.getClickCount() == 3) {
-//             // TODO Select the current row
-//         }
-//     }
-
-    // Callbacks from Behavior class
-
-    private fun getTextTranslateX(): Double {
-        return contentView.snappedLeftInset()
-    }
-
     private fun getTextTranslateY(): Double {
         return contentView.snappedTopInset()
-    }
-
-    private fun getTextLeft(): Double {
-        return 0.0
     }
 
     private fun translateCaretPosition(p: Point2D): Point2D {
@@ -1118,9 +1026,6 @@ class TediAreaSkin(val tediArea: TediArea)
     }
 
     private fun getTextNode(): Text {
-        if (USE_MULTIPLE_NODES) {
-            throw IllegalArgumentException("Multiple node traversal is not yet implemented.")
-        }
         return paragraphNodes.children[0] as Text
     }
 
@@ -1148,8 +1053,9 @@ class TediAreaSkin(val tediArea: TediArea)
      */
     internal var targetCaretX = -1.0
 
-    fun nextCharacterVisually(moveRight: Boolean) {
-        var moveRight = moveRight
+    fun nextCharacterVisually(moveRightIn: Boolean) {
+
+        var moveRight = moveRightIn
         if (isRTL()) {
             // Text node is mirrored.
             moveRight = !moveRight
@@ -1194,17 +1100,17 @@ class TediAreaSkin(val tediArea: TediArea)
 
     protected fun downLines(nLines: Int, select: Boolean, extendSelection: Boolean) {
         val textNode = getTextNode()
-        val caretBounds = caretPath.getLayoutBounds()
+        val caretBounds = caretPath.layoutBounds
 
         // The middle y coordinate of the the line we want to go to.
-        var targetLineMidY = (caretBounds.getMinY() + caretBounds.getMaxY()) / 2 + nLines * lineHeight
+        var targetLineMidY = (caretBounds.minY + caretBounds.maxY) / 2 + nLines * lineHeight
         if (targetLineMidY < 0) {
             targetLineMidY = 0.0
         }
 
         // The target x for the caret. This may have been set during a
         // previous call.
-        val x = if (targetCaretX >= 0) targetCaretX else caretBounds.getMaxX()
+        val x = if (targetCaretX >= 0) targetCaretX else caretBounds.maxX
 
         // Find a text position for the target x,y.
         val hit = textNode.impl_hitTestChar(translateCaretPosition(Point2D(x, targetLineMidY)))
@@ -1231,7 +1137,7 @@ class TediAreaSkin(val tediArea: TediArea)
                 hit.charIndex = pos - 1
             }
 
-            if (pos >= tediArea.getLength() && getCharacter(pos - 1) == '\n') {
+            if (pos >= tediArea.length && getCharacter(pos - 1) == '\n') {
                 // Special case for newline at end of text.
                 hit.isLeading = true
             }
@@ -1240,8 +1146,8 @@ class TediAreaSkin(val tediArea: TediArea)
         // Test if the found line is in the correct direction and move
         // the caret.
         if (nLines == 0 ||
-                nLines > 0 && foundLineMidY > caretBounds.getMaxY() ||
-                nLines < 0 && foundLineMidY < caretBounds.getMinY()) {
+                nLines > 0 && foundLineMidY > caretBounds.maxY ||
+                nLines < 0 && foundLineMidY < caretBounds.minY) {
 
             positionCaret(hit, select, extendSelection)
             targetCaretX = x
@@ -1410,10 +1316,6 @@ class TediAreaSkin(val tediArea: TediArea)
             !skinnable.deleteNextChar()
     }
 
-    fun getCaretBounds(): Bounds {
-        return skinnable.sceneToLocal(caretPath.localToScene(caretPath.getBoundsInLocal()))
-    }
-
     override fun queryAccessibleAttribute(attribute: AccessibleAttribute?, vararg parameters: Any): Any {
         when (attribute) {
             AccessibleAttribute.LINE_FOR_OFFSET, AccessibleAttribute.LINE_START, AccessibleAttribute.LINE_END, AccessibleAttribute.BOUNDS_FOR_RANGE, AccessibleAttribute.OFFSET_AT_POINT -> {
@@ -1424,12 +1326,6 @@ class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-    // From TextInputControlSkin
-
-    fun forwardBiasProperty(): BooleanProperty {
-        return forwardBias
-    }
-
     fun setForwardBias(isLeading: Boolean) {
         forwardBias.set(isLeading)
     }
@@ -1438,12 +1334,6 @@ class TediAreaSkin(val tediArea: TediArea)
         return forwardBias.get()
     }
 
-    // For use with PasswordField in TextFieldSkin
-    protected fun maskText(txt: String): String {
-        return txt
-    }
-
-    protected fun updateTextFill() {}
     protected fun updateHighlightTextFill() {}
 
     // Start/Length of the text under input method composition
@@ -1470,7 +1360,7 @@ class TediAreaSkin(val tediArea: TediArea)
             }
 
             // Insert committed text
-            if (event.committed.length != 0) {
+            if (event.committed.isNotEmpty()) {
                 val committed = event.committed
                 textInput.replaceText(textInput.selection, committed)
             }
@@ -1582,13 +1472,12 @@ class TediAreaSkin(val tediArea: TediArea)
     }
 
     private class CaretBlinking(blinkProperty: BooleanProperty) {
-        private val caretTimeline: Timeline
-        private val blinkPropertyRef: WeakReference<BooleanProperty>
+
+        private val caretTimeline = Timeline()
+
+        private val blinkPropertyRef = WeakReference(blinkProperty)
 
         init {
-            blinkPropertyRef = WeakReference(blinkProperty)
-
-            caretTimeline = Timeline()
             caretTimeline.cycleCount = Timeline.INDEFINITE
             caretTimeline.keyFrames.addAll(
                     KeyFrame(Duration.ZERO, EventHandler<ActionEvent> { setBlink(false) }),
@@ -1622,7 +1511,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
-                return skin.textFill == null || !skin.textFill.isBound
+                return !skin.textFill.isBound
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
@@ -1636,7 +1525,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
-                return skin.promptTextFill == null || !skin.promptTextFill.isBound
+                return !skin.promptTextFill.isBound
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
@@ -1650,7 +1539,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
-                return skin.highlightFill == null || !skin.highlightFill.isBound
+                return !skin.highlightFill.isBound
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
@@ -1664,7 +1553,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
-                return skin.highlightTextFill == null || !skin.highlightTextFill.isBound
+                return !skin.highlightTextFill.isBound
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
@@ -1678,7 +1567,7 @@ class TediAreaSkin(val tediArea: TediArea)
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
-                return skin.displayCaret == null || !skin.displayCaret.isBound
+                return !skin.displayCaret.isBound
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {

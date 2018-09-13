@@ -8,3 +8,10 @@ TediView I changed one of the properties from xxx to xxxProperty. Damn, forgot w
 
 Remove context menu stuff, as it requires translations.
     Remove TediAreaSkin getString and BASE_NAME from companion
+
+Note. TediArea uses multiple paragraphs, but the skin doesn't!!!
+
+Remove isWrap(), as we don't want to support wrapping.
+
+Remove promptText stuff
+

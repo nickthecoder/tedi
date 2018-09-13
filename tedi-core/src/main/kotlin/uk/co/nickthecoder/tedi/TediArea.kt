@@ -32,14 +32,16 @@ package uk.co.nickthecoder.tedi
 
 import com.sun.javafx.css.converters.SizeConverter
 import javafx.beans.InvalidationListener
-import javafx.beans.property.BooleanProperty
 import javafx.beans.property.DoubleProperty
 import javafx.beans.property.IntegerProperty
 import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.value.ChangeListener
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
-import javafx.css.*
+import javafx.css.CssMetaData
+import javafx.css.Styleable
+import javafx.css.StyleableIntegerProperty
+import javafx.css.StyleableProperty
 import javafx.scene.AccessibleRole
 import javafx.scene.control.Skin
 import javafx.scene.control.TextInputControl
@@ -98,7 +100,7 @@ class TediArea(val content: TediAreaContent)
                 offset -= count
                 paragraphIndex++
             }
-            
+
             // Read characters until end is reached, appending to text builder
             // and moving to next paragraph as needed
             var paragraph = paragraphs[paragraphIndex]
@@ -119,9 +121,9 @@ class TediArea(val content: TediAreaContent)
             return textBuilder.toString()
         }
 
-        override fun insert(index: Int, text: String?, notifyListeners: Boolean) {
+        override fun insert(index: Int, textIn: String?, notifyListeners: Boolean) {
 
-            var text = text
+            var text = textIn
             if (index < 0 || index > contentLength) {
                 throw IndexOutOfBoundsException()
             }
@@ -150,11 +152,10 @@ class TediArea(val content: TediAreaContent)
                 lines.add(line)
 
                 // Merge the text into the existing content
-                // Merge the text into the existing content
                 var paragraphIndex = paragraphs.size
                 var offset = contentLength + 1
 
-                var paragraph: StringBuilder? = null
+                var paragraph: StringBuilder
 
                 do {
                     paragraph = paragraphs[--paragraphIndex]
@@ -167,13 +168,13 @@ class TediArea(val content: TediAreaContent)
                 if (n == 1) {
                     // The text contains only a single line; insert it into the
                     // intersecting paragraph
-                    paragraph!!.insert(start, line)
+                    paragraph.insert(start, line)
                     fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
                             listOf<CharSequence>(paragraph))
                 } else {
                     // The text contains multiple line; split the intersecting
                     // paragraph
-                    val end = paragraph!!.length
+                    val end = paragraph.length
                     val trailingText = paragraph.subSequence(start, end)
                     paragraph.delete(start, end)
 
@@ -315,8 +316,6 @@ class TediArea(val content: TediAreaContent)
         }
     }
 
-    // Copied from TextArea.ParagraphLists
-    //
     // Observable list of paragraphs
     internal class ParagraphList(val content: TediAreaContent)
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
@@ -349,7 +348,7 @@ class TediArea(val content: TediAreaContent)
         }
 
         override fun removeListener(listener: ListChangeListener<in CharSequence>) {
-            content!!.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener)
+            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener)
         }
 
         override fun removeAll(vararg elements: CharSequence): Boolean {
@@ -385,7 +384,7 @@ class TediArea(val content: TediAreaContent)
             return removed
         }
 
-        protected override fun getPermutation(): IntArray {
+        override fun getPermutation(): IntArray {
             return IntArray(0)
         }
     }
@@ -405,38 +404,6 @@ class TediArea(val content: TediAreaContent)
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
-
-    /**
-     * If a run of text exceeds the width of the `TextArea`,
-     * then this variable indicates whether the text should wrap onto
-     * another line.
-     */
-    private val wrapTextProperty = object : StyleableBooleanProperty(false) {
-        override fun getBean(): Any {
-            return this@TediArea
-        }
-
-        override fun getName(): String {
-            return "wrapText"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Boolean> {
-            return StyleableProperties.WRAP_TEXT
-        }
-    }
-
-    fun wrapTextProperty(): BooleanProperty {
-        return wrapTextProperty
-    }
-
-    fun isWrapText(): Boolean {
-        return wrapTextProperty.value!!
-    }
-
-    fun setWrapText(value: Boolean) {
-        wrapTextProperty.value = value
-    }
-
 
     /**
      * The preferred number of text columns. This is used for
@@ -603,17 +570,6 @@ class TediArea(val content: TediAreaContent)
             }
         }
 
-        val WRAP_TEXT = object : CssMetaData<TediArea, Boolean>("-fx-wrap-text",
-                StyleConverter.getBooleanConverter(), false) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                return !n.wrapTextProperty().isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
-                return n.wrapTextProperty() as StyleableProperty<Boolean>
-            }
-        }
 
         val STYLEABLES: List<CssMetaData<out Styleable, *>>
 
@@ -621,7 +577,6 @@ class TediArea(val content: TediAreaContent)
             val styleables = ArrayList(TextInputControl.getClassCssMetaData())
             styleables.add(PREF_COLUMN_COUNT)
             styleables.add(PREF_ROW_COUNT)
-            styleables.add(WRAP_TEXT)
             STYLEABLES = Collections.unmodifiableList(styleables)
         }
     }
@@ -653,7 +608,7 @@ class TediArea(val content: TediAreaContent)
          * *
          */
         @Deprecated("This is an internal API that is not intended for use and will be removed in the next version")
-        val DEFAULT_PARAGRAPH_CAPACITY = 32
+        val DEFAULT_PARAGRAPH_CAPACITY = 1000
 
         /**
          * A little utility method for stripping out unwanted characters.
@@ -666,29 +621,31 @@ class TediArea(val content: TediAreaContent)
          * *
          * @return The string after having the unwanted characters stripped out.
          */
-        internal fun filterInput(txt: String, stripNewlines: Boolean, stripTabs: Boolean): String {
-            var txt = txt
+        internal fun filterInput(text: String, stripNewlines: Boolean, stripTabs: Boolean): String {
+
+            var result = text
+
             // Most of the time, when text is inserted, there are no illegal
             // characters. So we'll do a "cheap" check for illegal characters.
             // If we find one, we'll do a longer replace algorithm. In the
             // case of illegal characters, this may at worst be an O(2n) solution.
             // Strip out any characters that are outside the printed range
-            if (containsInvalidCharacters(txt, stripNewlines, stripTabs)) {
-                val s = StringBuilder(txt.length)
-                for (i in 0..txt.length - 1) {
-                    val c = txt[i]
+            if (containsInvalidCharacters(result, stripNewlines, stripTabs)) {
+                val s = StringBuilder(result.length)
+                for (i in 0..result.length - 1) {
+                    val c = result[i]
                     if (!isInvalidCharacter(c, stripNewlines, stripTabs)) {
                         s.append(c)
                     }
                 }
-                txt = s.toString()
+                result = s.toString()
             }
-            return txt
+            return result
         }
 
-        internal fun containsInvalidCharacters(txt: String, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
-            for (i in 0..txt.length - 1) {
-                val c = txt[i]
+        internal fun containsInvalidCharacters(text: String, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
+            for (i in 0..text.length - 1) {
+                val c = text[i]
                 if (isInvalidCharacter(c, newlineIllegal, tabIllegal)) return true
             }
             return false
