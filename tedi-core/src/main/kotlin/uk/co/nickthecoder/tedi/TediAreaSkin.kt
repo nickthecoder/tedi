@@ -631,11 +631,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         scrollSelectionFrames.clear()
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
-        // Add initial text content
-        //for (i in 0..tediArea.getParagraphs().size - 1) {
-        //    val paragraph = tediArea.getParagraphs()[i]
-        //    addParagraphNode(i, paragraph.toString())
-        //}
+        // Add initial text content TODO create multiple paragraphs
         addParagraphNode(0, tediArea.text)
 
         tediArea.selectionProperty().addListener { _, _, _ ->

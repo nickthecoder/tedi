@@ -45,6 +45,7 @@ import javafx.scene.input.MouseButton
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.javafx.BehaviorBase
 import uk.co.nickthecoder.tedi.javafx.KeyBinding
+import uk.co.nickthecoder.tedi.javafx.OptionalBoolean
 import java.text.Bidi
 import java.util.*
 
@@ -707,9 +708,6 @@ class TediAreaBehavior(val control: TediArea)
         val TEDI_AREA_BINDINGS: MutableList<KeyBinding> = ArrayList()
 
         init {
-            // However, we want to consume other key press / release events too, for
-            // things that would have been handled by the InputCharacter normally
-            // TEDI_AREA_BINDINGS.add(KeyBinding(null, KEY_PRESSED, "Consume"))
 
             TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
             TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "LineEnd")) // changed
@@ -792,6 +790,29 @@ class TediAreaBehavior(val control: TediArea)
             TEDI_AREA_BINDINGS.add(KeyBinding(Z, KEY_PRESSED, "Undo").ctrl())
             TEDI_AREA_BINDINGS.add(KeyBinding(Z, KEY_PRESSED, "Redo").ctrl().shift())
             TEDI_AREA_BINDINGS.add(KeyBinding(Y, KEY_PRESSED, "Redo").ctrl())
+
+            // Any other key press first goes to normal text input
+            // Note this is KEY_TYPED because otherwise the character is not available in the event.
+            TEDI_AREA_BINDINGS.add(KeyBinding(null, KeyEvent.KEY_TYPED, "InputCharacter")
+                    .alt(OptionalBoolean.ANY)
+                    .shift(OptionalBoolean.ANY)
+                    .ctrl(OptionalBoolean.ANY)
+                    .meta(OptionalBoolean.ANY))
+
+            // TODO Is this ok?
+            // Traversal Bindings
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraverseNext"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraversePrevious").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraverseNext").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraversePrevious").shift().ctrl())
+
+            // The following keys are forwarded to the parent container
+            TEDI_AREA_BINDINGS.add(KeyBinding(ESCAPE, "Cancel"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(F10, "ToParent"))
+
+            // However, we want to consume other key press / release events too, for
+            // things that would have been handled by the InputCharacter normally
+            TEDI_AREA_BINDINGS.add(KeyBinding(null, KEY_PRESSED, "Consume"))
 
         }
 

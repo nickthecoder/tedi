@@ -7,7 +7,8 @@ import uk.co.nickthecoder.tedi.TediArea
 
 class ExampleWindow(stage: Stage = Stage()) {
 
-    val view = TediArea("""Hello World
+    val view = TediArea("""package uk.co.nickthecoder.tedi
+Hello World
 Line 2
 Line 3
 End""")
