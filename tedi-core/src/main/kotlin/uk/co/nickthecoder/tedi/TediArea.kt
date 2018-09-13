@@ -30,7 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.css.converters.SizeConverter
 import javafx.beans.InvalidationListener
 import javafx.beans.property.DoubleProperty
 import javafx.beans.property.IntegerProperty
@@ -38,10 +37,7 @@ import javafx.beans.property.SimpleDoubleProperty
 import javafx.beans.value.ChangeListener
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
-import javafx.css.CssMetaData
-import javafx.css.Styleable
-import javafx.css.StyleableIntegerProperty
-import javafx.css.StyleableProperty
+import javafx.css.*
 import javafx.scene.AccessibleRole
 import javafx.scene.control.Skin
 import javafx.scene.control.TextInputControl
@@ -547,7 +543,7 @@ class TediArea(val content: TediAreaContent)
     private object StyleableProperties {
 
         val PREF_COLUMN_COUNT = object : CssMetaData<TediArea, Number>("-fx-pref-column-count",
-                SizeConverter.getInstance(), DEFAULT_PREF_COLUMN_COUNT) {
+                StyleConverter.getSizeConverter(), DEFAULT_PREF_COLUMN_COUNT) {
 
             override fun isSettable(n: TediArea): Boolean {
                 return !n.prefColumnCountProperty().isBound()
@@ -559,7 +555,7 @@ class TediArea(val content: TediAreaContent)
         }
 
         val PREF_ROW_COUNT = object : CssMetaData<TediArea, Number>("-fx-pref-row-count",
-                SizeConverter.getInstance(), DEFAULT_PREF_ROW_COUNT) {
+                StyleConverter.getSizeConverter(), DEFAULT_PREF_ROW_COUNT) {
 
             override fun isSettable(n: TediArea): Boolean {
                 return !n.prefRowCountProperty().isBound()

@@ -25,7 +25,6 @@
 
 package uk.co.nickthecoder.tedi.javafx;
 
-import com.sun.javafx.binding.ExpressionHelperBase;
 import javafx.beans.InvalidationListener;
 import javafx.collections.ListChangeListener;
 

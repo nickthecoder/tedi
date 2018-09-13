@@ -30,9 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.PlatformUtil
-import com.sun.javafx.css.converters.BooleanConverter
-import com.sun.javafx.css.converters.PaintConverter
 import com.sun.javafx.scene.control.skin.Utils
 import com.sun.javafx.scene.input.ExtendedInputMethodRequests
 import com.sun.javafx.scene.text.HitInfo
@@ -1345,12 +1342,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         val textInput = skinnable
         if (textInput.isEditable && !textInput.textProperty().isBound && !textInput.isDisabled) {
 
-            // just replace the text on iOS
-            if (PlatformUtil.isIOS()) {
-                textInput.text = event.committed
-                return
-            }
-
             // remove previous input method text (if any) or selected text
             if (imlength != 0) {
                 removeHighlight(imattrs)
@@ -1506,7 +1497,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     private object StyleableProperties {
 
         val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
-                PaintConverter.getInstance(), Color.BLACK) {
+                StyleConverter.getPaintConverter(), Color.BLACK) {
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
@@ -1520,7 +1511,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         val PROMPT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-prompt-text-fill",
-                PaintConverter.getInstance(), Color.GRAY) {
+                StyleConverter.getPaintConverter(), Color.GRAY) {
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
@@ -1534,7 +1525,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
-                PaintConverter.getInstance(), Color.DODGERBLUE) {
+                StyleConverter.getPaintConverter(), Color.DODGERBLUE) {
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
@@ -1548,7 +1539,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
-                PaintConverter.getInstance(), Color.WHITE) {
+                StyleConverter.getPaintConverter(), Color.WHITE) {
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin
@@ -1562,7 +1553,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
-                BooleanConverter.getInstance(), java.lang.Boolean.TRUE) {
+                StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
 
             override fun isSettable(n: TediArea): Boolean {
                 val skin = n.skin as TediAreaSkin

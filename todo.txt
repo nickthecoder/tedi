@@ -1,17 +1,23 @@
-My copy of BehaviourBase imports Direction from a non-public package.
-    Note. Node includes this class in its API!!
-    Attempt to cut that stuff out, and replace it with Node.focusNext
-    https://gist.github.com/nickthecoder/57ac20829214f1209e41e851d955ed35
+"Private" API references :
+    BehaviourBase imports Direction from a non-public package.
+        https://gist.github.com/nickthecoder/57ac20829214f1209e41e851d955ed35
+
+    TediAreaBehaviour uses :
+        import com.sun.javafx.scene.control.skin.TextInputControlSkin
+        import com.sun.javafx.scene.text.HitInfo
+    TediAreaSkin uses :
+        import com.sun.javafx.scene.control.skin.Utils
+        import com.sun.javafx.scene.input.ExtendedInputMethodRequests
+        import com.sun.javafx.scene.text.HitInfo
+        import com.sun.javafx.scene.text.TextLayout
+        import com.sun.javafx.tk.FontMetrics
+        import com.sun.javafx.tk.Toolkit
+
 
 TediView I changed one of the properties from xxx to xxxProperty. Damn, forgot which one!
 
 
-Remove context menu stuff, as it requires translations.
-    Remove TediAreaSkin getString and BASE_NAME from companion
-
 Note. TediArea uses multiple paragraphs, but the skin doesn't!!!
-
-Remove isWrap(), as we don't want to support wrapping.
 
 Remove promptText stuff
 
