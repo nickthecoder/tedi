@@ -632,10 +632,11 @@ open class TediAreaSkin(val tediArea: TediArea)
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
 
         // Add initial text content
-        for (i in 0..tediArea.getParagraphs().size - 1) {
-            val paragraph = tediArea.getParagraphs()[i]
-            addParagraphNode(i, paragraph.toString())
-        }
+        //for (i in 0..tediArea.getParagraphs().size - 1) {
+        //    val paragraph = tediArea.getParagraphs()[i]
+        //    addParagraphNode(i, paragraph.toString())
+        //}
+        addParagraphNode(0, tediArea.text)
 
         tediArea.selectionProperty().addListener { _, _, _ ->
             // Why do we need two calls here? (from original)
@@ -840,6 +841,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     }
 
     fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
+
         var pos = Utils.getHitInsertionIndex(hit, skinnable.text)
         val isNewLine = pos > 0 &&
                 pos <= skinnable.length &&
@@ -1146,12 +1148,13 @@ open class TediAreaSkin(val tediArea: TediArea)
         // Test if the found line is in the correct direction and move
         // the caret.
         if (nLines == 0 ||
-                nLines > 0 && foundLineMidY > caretBounds.maxY ||
-                nLines < 0 && foundLineMidY < caretBounds.minY) {
+                (nLines > 0 && foundLineMidY > caretBounds.maxY) ||
+                (nLines < 0 && foundLineMidY < caretBounds.minY)) {
 
             positionCaret(hit, select, extendSelection)
             targetCaretX = x
         }
+
     }
 
     fun previousLine(select: Boolean) {

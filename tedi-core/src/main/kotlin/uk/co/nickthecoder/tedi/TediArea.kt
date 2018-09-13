@@ -581,7 +581,6 @@ class TediArea(val content: TediAreaContent)
         }
     }
 
-
     /**
      * {@inheritDoc}
      * @since JavaFX 8.0

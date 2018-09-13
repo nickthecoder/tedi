@@ -30,10 +30,8 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.application.PlatformImpl
 import com.sun.javafx.scene.control.skin.TextInputControlSkin
 import com.sun.javafx.scene.text.HitInfo
-import javafx.application.ConditionalFeature
 import javafx.beans.InvalidationListener
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
@@ -52,7 +50,7 @@ import java.util.*
 
 class TediAreaBehavior(val control: TediArea)
 
-    : BehaviorBase<TediArea>(control, TEXT_AREA_BINDINGS) {
+    : BehaviorBase<TediArea>(control, TEDI_AREA_BINDINGS) {
 
     private val skin: TediAreaSkin
         get() = control.skin as TediAreaSkin
@@ -112,153 +110,95 @@ class TediAreaBehavior(val control: TediArea)
 
     public override fun callAction(name: String) {
 
-        var name = name
-        val textInputControl = getControl()
+        val tediArea = getControl()
 
         var done = false
 
-        if (textInputControl.isEditable) {
+        if (tediArea.isEditable) {
 
             setEditing(true)
             done = true
-            if ("InputCharacter" == name)
-                lastEvent?.let { defaultKeyTyped(it) }
-            else if ("Cut" == name)
-                cut()
-            else if ("Paste" == name)
-                paste()
-            else if ("DeleteFromLineStart" == name)
-                deleteFromLineStart()
-            else if ("DeletePreviousChar" == name)
-                deletePreviousChar()
-            else if ("DeleteNextChar" == name)
-                deleteNextChar()
-            else if ("DeletePreviousWord" == name)
-                deletePreviousWord()
-            else if ("DeleteNextWord" == name)
-                deleteNextWord()
-            else if ("DeleteSelection" == name)
-                deleteSelection()
-            else if ("Undo" == name)
-                textInputControl.undo()
-            else if ("Redo" == name)
-                textInputControl.redo()
-            else if ("InsertNewLine" == name)
-                insertNewLine()
-            else if ("TraverseOrInsertTab" == name)
-                insertTab()
-            else {
-                done = false
+            when (name) {
+
+                "InputCharacter" -> lastEvent?.let { defaultKeyTyped(it) }
+                "Cut" -> cut()
+                "Paste" -> paste()
+                "DeleteFromLineStart" -> deleteFromLineStart()
+                "DeletePreviousChar" -> deletePreviousChar()
+                "DeleteNextChar" -> deleteNextChar()
+                "DeletePreviousWord" -> deletePreviousWord()
+                "DeleteNextWord" -> deleteNextWord()
+                "DeleteSelection" -> deleteSelection()
+                "Undo" -> tediArea.undo()
+                "Redo" -> tediArea.redo()
+                "InsertNewLine" -> insertNewLine()
+                "TraverseOrInsertTab" -> insertTab()
+                else -> {
+                    done = false
+                }
             }
             setEditing(false)
         }
 
         if (!done) {
             done = true
-            if ("Copy" == name)
-                textInputControl.copy()
-            else if ("SelectBackward" == name)
-                textInputControl.selectBackward()
-            else if ("SelectForward" == name)
-                textInputControl.selectForward()
-            else if ("SelectLeft" == name)
-                selectLeft()
-            else if ("SelectRight" == name)
-                selectRight()
-            else if ("PreviousWord" == name)
-                previousWord()
-            else if ("NextWord" == name)
-                nextWord()
-            else if ("LeftWord" == name)
-                leftWord()
-            else if ("RightWord" == name)
-                rightWord()
-            else if ("SelectPreviousWord" == name)
-                selectPreviousWord()
-            else if ("SelectNextWord" == name)
-                selectNextWord()
-            else if ("SelectLeftWord" == name)
-                selectLeftWord()
-            else if ("SelectRightWord" == name)
-                selectRightWord()
-            else if ("SelectWord" == name)
-                selectWord()
-            else if ("SelectAll" == name)
-                textInputControl.selectAll()
-            else if ("Home" == name)
-                textInputControl.home()
-            else if ("End" == name)
-                textInputControl.end()
-            else if ("Forward" == name)
-                textInputControl.forward()
-            else if ("Backward" == name)
-                textInputControl.backward()
-            else if ("Right" == name)
-                nextCharacterVisually(true)
-            else if ("Left" == name)
-                nextCharacterVisually(false)
-            else if ("Fire" == name)
-                lastEvent?.let { fire(it) }
-            else if ("Cancel" == name)
-                lastEvent?.let { cancelEdit(it) }
-            else if ("Unselect" == name)
-                textInputControl.deselect()
-            else if ("SelectHome" == name)
-                selectHome()
-            else if ("SelectEnd" == name)
-                selectEnd()
-            else if ("SelectHomeExtend" == name)
-                selectHomeExtend()
-            else if ("SelectEndExtend" == name)
-                selectEndExtend()
-            else if ("ToParent" == name)
-                lastEvent?.let { forwardToParent(it) }
-            else if ("UseVK" == name && PlatformImpl.isSupported(ConditionalFeature.VIRTUAL_KEYBOARD)) {
-                (textInputControl.skin as TextInputControlSkin<*, *>).toggleUseVK()
+            when (name) {
+                "Copy" -> tediArea.copy()
+                "SelectBackward" -> tediArea.selectBackward()
+                "SelectForward" -> tediArea.selectForward()
+                "SelectLeft" -> selectLeft()
+                "SelectRight" -> selectRight()
+                "PreviousWord" -> previousWord()
+                "NextWord" -> nextWord()
+                "LeftWord" -> leftWord()
+                "RightWord" -> rightWord()
+                "SelectPreviousWord" -> selectPreviousWord()
+                "SelectNextWord" -> selectNextWord()
+                "SelectLeftWord" -> selectLeftWord()
+                "SelectRightWord" -> selectRightWord()
+                "SelectWord" -> selectWord()
+                "SelectAll" -> tediArea.selectAll()
+                "Home" -> tediArea.home()
+                "End" -> tediArea.end()
+                "Forward" -> tediArea.forward()
+                "Backward" -> tediArea.backward()
+                "Right" -> nextCharacterVisually(true)
+                "Left" -> nextCharacterVisually(false)
+                "Fire" -> lastEvent?.let { fire(it) }
+                "Cancel" -> lastEvent?.let { cancelEdit(it) }
+                "Unselect" -> tediArea.deselect()
+                "SelectHome" -> selectHome()
+                "SelectEnd" -> selectEnd()
+                "SelectHomeExtend" -> selectHomeExtend()
+                "SelectEndExtend" -> selectEndExtend()
+                "ToParent" -> lastEvent?.let { forwardToParent(it) }
 
-                // From TextAreaBehavior
-            } else if ("LineStart" == name)
-                lineStart(false, false)
-            else if ("LineEnd" == name)
-                lineEnd(false, false)
-            else if ("SelectLineStart" == name)
-                lineStart(true, false)
-            else if ("SelectLineStartExtend" == name)
-                lineStart(true, true)
-            else if ("SelectLineEnd" == name)
-                lineEnd(true, false)
-            else if ("SelectLineEndExtend" == name)
-                lineEnd(true, true)
-            else if ("PreviousLine" == name)
-                skin.previousLine(false)
-            else if ("NextLine" == name)
-                skin.nextLine(false)
-            else if ("SelectPreviousLine" == name)
-                skin.previousLine(true)
-            else if ("SelectNextLine" == name)
-                skin.nextLine(true)
-            else if ("ParagraphStart" == name)
-                skin.paragraphStart(true, false)
-            else if ("ParagraphEnd" == name)
-                skin.paragraphEnd(true, isWindows(), false)
-            else if ("SelectParagraphStart" == name)
-                skin.paragraphStart(true, true)
-            else if ("SelectParagraphEnd" == name)
-                skin.paragraphEnd(true, isWindows(), true)
-            else if ("PreviousPage" == name)
-                skin.previousPage(false)
-            else if ("NextPage" == name)
-                skin.nextPage(false)
-            else if ("SelectPreviousPage" == name)
-                skin.previousPage(true)
-            else if ("SelectNextPage" == name)
-                skin.nextPage(true)
-            else if ("TraverseOrInsertTab" == name) {
-                // RT-40312: Non-editabe mode means traverse instead of insert.
-                name = "TraverseNext"
-                done = false
-            } else {
-                done = false
+                "LineStart" -> lineStart(false, false)
+                "LineEnd" -> lineEnd(false, false)
+                "SelectLineStart" -> lineStart(true, false)
+                "SelectLineStartExtend" -> lineStart(true, true)
+                "SelectLineEnd" -> lineEnd(true, false)
+                "SelectLineEndExtend" -> lineEnd(true, true)
+                "PreviousLine" -> skin.previousLine(false)
+                "NextLine" -> skin.nextLine(false)
+                "SelectPreviousLine" -> skin.previousLine(true)
+                "SelectNextLine" -> skin.nextLine(true)
+                "ParagraphStart" -> skin.paragraphStart(true, false)
+                "ParagraphEnd" -> skin.paragraphEnd(true, isWindows(), false)
+                "SelectParagraphStart" -> skin.paragraphStart(true, true)
+                "SelectParagraphEnd" -> skin.paragraphEnd(true, isWindows(), true)
+                "PreviousPage" -> skin.previousPage(false)
+                "NextPage" -> skin.nextPage(false)
+                "SelectPreviousPage" -> skin.previousPage(true)
+                "SelectNextPage" -> skin.nextPage(true)
+                "TraverseOrInsertTab" -> {
+                    // RT-40312: Non-editabe mode means traverse instead of insert.
+                    super.callAction("TraverseNext")
+                    return
+                }
+                else -> {
+                    done = false
+                }
             }
         }
 
@@ -764,32 +704,95 @@ class TediAreaBehavior(val control: TediArea)
 
     companion object {
 
-        val TEXT_AREA_BINDINGS: MutableList<KeyBinding> = ArrayList()
+        val TEDI_AREA_BINDINGS: MutableList<KeyBinding> = ArrayList()
 
         init {
             // However, we want to consume other key press / release events too, for
             // things that would have been handled by the InputCharacter normally
-            TEXT_AREA_BINDINGS.add(KeyBinding(null, KEY_PRESSED, "Consume"))
+            // TEDI_AREA_BINDINGS.add(KeyBinding(null, KEY_PRESSED, "Consume"))
 
-            TEXT_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "LineEnd")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "PreviousLine")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "NextLine")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")) // new
-            TEXT_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")) // new
-            TEXT_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "LineEnd")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "PreviousLine")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "NextLine")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")) // new
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")) // new
+            TEDI_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")) // changed
 
-            TEXT_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
-            TEXT_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()) // new
-            TEXT_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()) // new
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()) // new
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()) // new
+
+
+            TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "Right"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "Right"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(LEFT, KEY_PRESSED, "Left"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_LEFT, KEY_PRESSED, "Left"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "Home"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "Home"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "Home"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "End"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "End"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "End"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "Fire"))
+            // deletion
+            TEDI_AREA_BINDINGS.add(KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousChar"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(DELETE, KEY_PRESSED, "DeleteNextChar"))
+            // cut/copy/paste
+            TEDI_AREA_BINDINGS.add(KeyBinding(CUT, KEY_PRESSED, "Cut"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(DELETE, KEY_PRESSED, "Cut").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(COPY, KEY_PRESSED, "Copy"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(PASTE, KEY_PRESSED, "Paste"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(INSERT, KEY_PRESSED, "Paste").shift())// does this belong on mac?
+            // selection
+            TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "SelectRight").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectRight").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(LEFT, KEY_PRESSED, "SelectLeft").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLeft").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "SelectHome").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "SelectHome").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "SelectEnd").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectEnd").shift())
+
+            TEDI_AREA_BINDINGS.add(KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousChar").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(DELETE, KEY_PRESSED, "DeleteNextChar").shift())
+
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectHome").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectEnd").shift())
+
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "Home").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "End").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(LEFT, KEY_PRESSED, "LeftWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_LEFT, KEY_PRESSED, "LeftWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "RightWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "RightWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(H, KEY_PRESSED, "DeletePreviousChar").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(DELETE, KEY_PRESSED, "DeleteNextWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(BACK_SPACE, KEY_PRESSED, "DeletePreviousWord").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(X, KEY_PRESSED, "Cut").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(C, KEY_PRESSED, "Copy").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(INSERT, KEY_PRESSED, "Copy").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(V, KEY_PRESSED, "Paste").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectHome").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectEnd").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(LEFT, KEY_PRESSED, "SelectLeftWord").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_LEFT, KEY_PRESSED, "SelectLeftWord").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "SelectRightWord").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectRightWord").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(A, KEY_PRESSED, "SelectAll").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(BACK_SLASH, KEY_PRESSED, "Unselect").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(Z, KEY_PRESSED, "Undo").ctrl())
+            TEDI_AREA_BINDINGS.add(KeyBinding(Z, KEY_PRESSED, "Redo").ctrl().shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(Y, KEY_PRESSED, "Redo").ctrl())
+
         }
 
     }
