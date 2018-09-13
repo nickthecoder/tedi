@@ -1,0 +1,10 @@
+My copy of BehaviourBase imports Direction from a non-public package.
+    Note. Node includes this class in its API!!
+    Attempt to cut that stuff out, and replace it with Node.focusNext
+    https://gist.github.com/nickthecoder/57ac20829214f1209e41e851d955ed35
+
+TediView I changed one of the properties from xxx to xxxProperty. Damn, forgot which one!
+
+
+Remove context menu stuff, as it requires translations.
+    Remove TediAreaSkin getString and BASE_NAME from companion

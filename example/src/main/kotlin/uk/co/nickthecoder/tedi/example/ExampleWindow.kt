@@ -3,17 +3,14 @@ package uk.co.nickthecoder.tedi.example
 import javafx.scene.Scene
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.TediDocument
-import uk.co.nickthecoder.tedi.TediView
+import uk.co.nickthecoder.tedi.TediArea
 
 class ExampleWindow(stage: Stage = Stage()) {
 
-    val document = TediDocument("""Hello World
+    val view = TediArea("""Hello World
 Line 2
 Line 3
 End""")
-
-    val view = TediView(document)
 
     val borderPane = BorderPane()
 
@@ -24,15 +21,6 @@ End""")
         stage.scene = scene
         stage.title = "Tedi Example"
         stage.show()
-
-        println("Document's text = ${document.text}")
-        println("View's text = ${view.text}")
-
-        document.text = "Hello\nWorld\nLast line"
-
-        println("Document's text = ${document.text}")
-        println("View's text = ${view.text}")
-
     }
 
 }
