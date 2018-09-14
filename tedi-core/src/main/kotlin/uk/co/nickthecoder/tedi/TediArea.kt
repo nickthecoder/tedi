@@ -39,6 +39,7 @@ import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.scene.AccessibleRole
+import javafx.scene.Scene
 import javafx.scene.control.Skin
 import javafx.scene.control.TextInputControl
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
@@ -662,5 +663,9 @@ class TediArea(val content: TediAreaContent)
             return StyleableProperties.STYLEABLES
         }
 
+        fun style(scene: Scene) {
+            val url = TediArea::class.java.getResource("tedi.css")
+            scene.stylesheets.add(url.toExternalForm())
+        }
     }
 }
