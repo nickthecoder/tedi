@@ -41,6 +41,50 @@ shows that the API is really lacking.
 I think I'll be able to "bodge" my way round most of these, but I'm worried that some may be
 near impossible to get rid of.
 
+## Compiler Warnings
+
+There are still lots of warnings during compilation. I do plan on removing them, but it isn't as easy as you
+might expect. (Some are, and I will get to those soon!)
+
+Many of these are due to use of "deprecated" apis. I use quotes, because they aren't deprecated.
+They are in use within the regular TextArea. IMHO, you should NOT add @deprecated to an API
+if the same code base is still using it!
+
+I think these are due to java's lack of Kotlin's "internal" keyword (Kotlin really if better than Java!),
+and they are abusing @deprecated to achieve a similar, but inferior result!
+
+## Differences between TediArea and TextArea
+
+Given that TediArea started as a copy of TextArea, they should be fairly similar.
+However, I have removed some features :
+
+- Context menu (for copy, paste, etc)
+- Option to wrap text
+
+I chose to exclude the context menu, because it is likely that any application that embeds TediArea will
+add their own context menu, with more features. Also, getting I18N (translations) of the text seems to
+require more "private" APIs, and even hard-coded strings containing "com.sun.xxx" package names. Yuck!
+
+Wrapping text is just evil, and won't work well when I implement line numbers.
+Tedi is primarily designed to be for code.
+
+## Styling TediArea
+
+TediArea has the style classes of "text-area" and "tedi-area".
+
+As with TextArea, you can style ".tedi-area", ".tedi-area .content" and ".tedi-area .scroll-pane"
+
+I have included a style sheet as a resource in package uk.co.nickthecoder.tedi called "tedi.css".
+Currently, this applies a monospaced font to .tedi-area, and will later be used to style the gutters
+containing the line numbers.
+
+## Paragraphs
+
+The use of the word "paragraph" in the code took me by surprise. It turns out that a "paragraph" is actually
+a line of text ending in a new-line character.
+I would have called it "line" rather than "paragraph".
+However, I suppose using "line" may be confusing when line-wrapping is enabled.
+
 ## Performance
 
 While digging through the TextArea code, I soon realised that it isn't very efficient.

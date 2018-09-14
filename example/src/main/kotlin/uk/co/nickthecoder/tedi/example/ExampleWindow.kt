@@ -30,5 +30,5 @@ End""")
         stage.title = "Tedi Example"
         stage.show()
     }
-    
+
 }

@@ -212,7 +212,7 @@ class TediArea(val content: TediAreaContent)
                 var paragraphIndex = paragraphs.size
                 var offset = contentLength + 1
 
-                var paragraph: StringBuilder? = null
+                var paragraph: StringBuilder?
 
                 do {
                     paragraph = paragraphs[--paragraphIndex]
@@ -551,6 +551,7 @@ class TediArea(val content: TediAreaContent)
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Number> {
+                @Suppress("UNCHECKED_CAST")
                 return n.prefColumnCountProperty() as StyleableProperty<Number>
             }
         }
@@ -563,6 +564,7 @@ class TediArea(val content: TediAreaContent)
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Number> {
+                @Suppress("UNCHECKED_CAST")
                 return n.prefRowCountProperty() as StyleableProperty<Number>
             }
         }
@@ -599,11 +601,6 @@ class TediArea(val content: TediAreaContent)
          */
         val DEFAULT_PREF_ROW_COUNT = 10
 
-        /**
-         * @treatAsPrivate implementation detail
-         * *
-         */
-        @Deprecated("This is an internal API that is not intended for use and will be removed in the next version")
         val DEFAULT_PARAGRAPH_CAPACITY = 1000
 
         /**

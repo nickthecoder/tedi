@@ -65,7 +65,7 @@ class TediAreaBehavior(val control: TediArea)
      */
     private var lastEvent: KeyEvent? = null
 
-    private val textListener = InvalidationListener { observable -> invalidateBidi() }
+    private val textListener = InvalidationListener { _ -> invalidateBidi() }
 
     init {
         // Register for change events

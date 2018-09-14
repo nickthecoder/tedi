@@ -351,7 +351,7 @@ open class TediAreaSkin(val tediArea: TediArea)
                 var paragraphIndex = paragraphNodesChildren.size
                 var paragraphOffset = textArea.length + 1
 
-                var paragraphNode: Text? = null
+                var paragraphNode: Text?
                 do {
                     paragraphNode = (paragraphNodesChildren.get(--paragraphIndex)) as Text
                     paragraphOffset -= paragraphNode.text.length + 1
@@ -572,7 +572,7 @@ open class TediAreaSkin(val tediArea: TediArea)
             }
         }
 
-        caretPosition.addListener { observable, oldValue, newValue ->
+        caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
             if (newValue.toInt() > oldValue.toInt()) {
                 setForwardBias(true)
@@ -618,9 +618,9 @@ open class TediAreaSkin(val tediArea: TediArea)
         })
         contentView.getChildren().add(caretPath)
 
-        scrollPane.hvalueProperty().addListener { observable, oldValue, newValue -> skinnable.setScrollLeft(newValue.toDouble() * getScrollLeftMax()) }
+        scrollPane.hvalueProperty().addListener { _, _, newValue -> skinnable.setScrollLeft(newValue.toDouble() * getScrollLeftMax()) }
 
-        scrollPane.vvalueProperty().addListener { observable, oldValue, newValue -> skinnable.setScrollTop(newValue.toDouble() * getScrollTopMax()) }
+        scrollPane.vvalueProperty().addListener { _, _, newValue -> skinnable.setScrollTop(newValue.toDouble() * getScrollTopMax()) }
 
         // Initialize the scroll selection timeline
         scrollSelectionTimeline.cycleCount = Timeline.INDEFINITE
@@ -884,7 +884,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         var paragraphIndex = paragraphNodes.children.size
         var paragraphOffset = textArea.length + 1
 
-        var paragraphNode: Text? = null
+        var paragraphNode: Text?
         do {
             paragraphNode = paragraphNodes.children[--paragraphIndex] as Text
             paragraphOffset -= paragraphNode.text.length + 1
@@ -1392,21 +1392,21 @@ open class TediAreaSkin(val tediArea: TediArea)
         for (i in elements.indices) {
             val pe = elements[i]
             if (pe is MoveTo) {
-                maxX = (pe as MoveTo).x
+                maxX = pe.x
                 minX = maxX
-                maxY = (pe as MoveTo).y
+                maxY = pe.y
                 minY = maxY
             } else if (pe is LineTo) {
-                minX = if (minX < (pe as LineTo).x) minX else (pe as LineTo).x
-                maxX = if (maxX > (pe as LineTo).x) maxX else (pe as LineTo).x
-                minY = if (minY < (pe as LineTo).y) minY else (pe as LineTo).y
-                maxY = if (maxY > (pe as LineTo).y) maxY else (pe as LineTo).y
+                minX = if (minX < pe.x) minX else pe.x
+                maxX = if (maxX > pe.x) maxX else pe.x
+                minY = if (minY < pe.y) minY else pe.y
+                maxY = if (maxY > pe.y) maxY else pe.y
             } else if (pe is HLineTo) {
-                minX = if (minX < (pe as HLineTo).x) minX else (pe as HLineTo).x
-                maxX = if (maxX > (pe as HLineTo).x) maxX else (pe as HLineTo).x
+                minX = if (minX < pe.x) minX else pe.x
+                maxX = if (maxX > pe.x) maxX else pe.x
             } else if (pe is VLineTo) {
-                minY = if (minY < (pe as VLineTo).y) minY else (pe as VLineTo).y
-                maxY = if (maxY > (pe as VLineTo).y) maxY else (pe as VLineTo).y
+                minY = if (minY < pe.y) minY else pe.y
+                maxY = if (maxY > pe.y) maxY else pe.y
             }
             // Don't assume that shapes are ended with ClosePath.
             if (pe is ClosePath ||
@@ -1506,6 +1506,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
                 val skin = n.skin as TediAreaSkin
+                @Suppress("UNCHECKED_CAST")
                 return skin.textFill as StyleableProperty<Paint>
             }
         }
@@ -1520,6 +1521,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
                 val skin = n.skin as TediAreaSkin
+                @Suppress("UNCHECKED_CAST")
                 return skin.promptTextFill as StyleableProperty<Paint>
             }
         }
@@ -1534,6 +1536,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
                 val skin = n.skin as TediAreaSkin
+                @Suppress("UNCHECKED_CAST")
                 return skin.highlightFill as StyleableProperty<Paint>
             }
         }
@@ -1548,6 +1551,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
                 val skin = n.skin as TediAreaSkin
+                @Suppress("UNCHECKED_CAST")
                 return skin.highlightTextFill as StyleableProperty<Paint>
             }
         }
@@ -1562,6 +1566,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
                 val skin = n.skin as TediAreaSkin
+                @Suppress("UNCHECKED_CAST")
                 return skin.displayCaret as StyleableProperty<Boolean>
             }
         }
@@ -1592,11 +1597,9 @@ open class TediAreaSkin(val tediArea: TediArea)
             AccessibleAction.SHOW_TEXT_RANGE -> {
                 val start = parameters[0] as Int
                 val end = parameters[1] as Int
-                if (start != null && end != null) {
-                    scrollCharacterToVisible(end)
-                    scrollCharacterToVisible(start)
-                    scrollCharacterToVisible(end)
-                }
+                scrollCharacterToVisible(end)
+                scrollCharacterToVisible(start)
+                scrollCharacterToVisible(end)
             }
             else -> super.executeAccessibleAction(action, *parameters)
         }
