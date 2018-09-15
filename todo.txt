@@ -8,9 +8,7 @@ LineNumbers change font (seemingly at random). Maybe a gc issue?
 Next
 ----
 
-Tab key to insert spaces
-    (An optional boolean property)
-    Also need an int property for the number of spaces
+Indent/unindent to work with undo/redo
 
 Do better next/prev word navigation (more in keeping with code. i.e. co.uk.nickthecoder.foo is treated as 4 words.
 

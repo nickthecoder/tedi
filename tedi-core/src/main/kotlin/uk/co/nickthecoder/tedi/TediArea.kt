@@ -46,7 +46,7 @@ import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.util.*
 
-open class TediArea private constructor(val content: TediAreaContent)
+open class TediArea private constructor(protected val content: TediAreaContent)
 
     : TextInputControl(content) {
 
@@ -69,7 +69,7 @@ open class TediArea private constructor(val content: TediAreaContent)
     // Paragraphs
     private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList())
 
-    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
+    private fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
 
     val paragraphs: ObservableList<CharSequence>
         get() = content.paragraphList()
@@ -266,48 +266,14 @@ open class TediArea private constructor(val content: TediAreaContent)
      * n space characters, where n is taken from [indentSize].
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
-
-    /**
-     * Returns the line number for the given character [position] within the document.
-     * Both [position] and the return value are ZERO based.
-     *
-     * If [position] <= 0, then -1 is returned.
-     * if [position] > the length of the document, then the return value is the
-     * number of lines in the document. Note, this is 1 more than the highest valid index
-     * to [paragraphs].
-     */
-    fun lineForPosition(position: Int, includeStartOfLine: Boolean = true): Int {
-        var lineNumber = -1
-        var count = 0
-        for (p in paragraphs) {
-            if (count > position || (includeStartOfLine && count == position)) {
-                return lineNumber
-            }
-            count += p.length + 1
-            lineNumber++
-        }
-        return lineNumber
-    }
-
-    fun positionForStartOfLine(line: Int): Int {
-        var result = 0
-        var count = 0
-        for (p in paragraphs) {
-            if (line == count) {
-                return result
-            }
-            result += p.length + 1
-            count++
-        }
-        return result
-    }
-
+    
     /***************************************************************************
      *                                                                         *
      * ParagraphList class                                                     *
      *                                                                         *
      **************************************************************************/
-    class ParagraphList(val content: TediAreaContent)
+    protected class ParagraphList(val content: TediAreaContent)
+
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
 
         override fun get(index: Int): CharSequence {
@@ -406,7 +372,7 @@ open class TediArea private constructor(val content: TediAreaContent)
      * the string representation ([Tedi.text]) when making changes.
      * Therefore editing large documents is very inefficient.
      */
-    class TediAreaContent : TextInputControl.Content {
+    protected class TediAreaContent : TextInputControl.Content {
 
         internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
         private var contentLength = 0
@@ -533,32 +499,6 @@ open class TediArea private constructor(val content: TediAreaContent)
                 if (notifyListeners) {
                     ExpressionHelper.fireValueChangedEvent(helper)
                 }
-            }
-        }
-
-        fun insert(paragraphIndex: Int, columnIndex: Int, text: String, notifyListeners: Boolean = true) {
-            if (text.contains("\n")) {
-                throw IllegalArgumentException("Inserting multiple lines not yet supported.")
-            }
-
-            val paragraph = paragraphList[paragraphIndex] as StringBuilder
-            paragraph.insert(columnIndex, text)
-            fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
-                    listOf<CharSequence>(paragraph))
-            contentLength += text.length
-            if (notifyListeners) {
-                ExpressionHelper.fireValueChangedEvent(helper)
-            }
-        }
-
-        fun delete(paragraphIndex: Int, fromColumn: Int, toColumn: Int, notifyListeners: Boolean) {
-            val paragraph = paragraphList[paragraphIndex] as StringBuilder
-            paragraph.delete(fromColumn, toColumn)
-            fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
-                    listOf<CharSequence>(paragraph))
-            contentLength -= toColumn - fromColumn
-            if (notifyListeners) {
-                ExpressionHelper.fireValueChangedEvent(helper)
             }
         }
 

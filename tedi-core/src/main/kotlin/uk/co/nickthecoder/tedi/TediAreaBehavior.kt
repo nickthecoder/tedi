@@ -555,60 +555,53 @@ class TediAreaBehavior(val control: TediArea)
         val textArea = getControl()
         val tabOrSpaces = textArea.tabIndentation()
 
+        val from = Math.min(textArea.caretPosition, textArea.anchor)
+        val to = Math.max(textArea.caretPosition, textArea.anchor)
+
         if (textArea.selection.length == 0) {
             // No selection. Just add the tab (or spaces)
             textArea.replaceSelection(tabOrSpaces)
         } else {
-            val from = if (textArea.caretPosition < textArea.anchor) textArea.caretPosition else textArea.anchor
-            val to = if (textArea.caretPosition < textArea.anchor) textArea.anchor else textArea.caretPosition
-            val fromLine = textArea.lineForPosition(from, false)
-            val toLine = textArea.lineForPosition(to, true)
-
-            val content = textArea.content
-
-            for (l in fromLine..toLine) {
-                content.insert(l, 0, tabOrSpaces)
+            var selection = textArea.selectedText
+            if (selection.endsWith("\n")) {
+                selection = selection.substring(0, selection.length - 1)
             }
-            textArea.selectRange(from, to + tabOrSpaces.length * (1 + toLine - fromLine))
+            val lines = selection.split('\n').map { tabOrSpaces + it }
+            val replacement = lines.joinToString(separator = "\n")
+
+            textArea.replaceSelection(replacement)
+            textArea.selectRange(from, to + tabOrSpaces.length * lines.size)
         }
+
     }
+
 
     /**
      * Unindents the current line, or selection. (Shift+Tab)
      */
     private fun unindent() {
         val textArea = getControl()
-        val tabOrSpaces = textArea.tabIndentation()
+        val spaces = " ".repeat(textArea.indentSize)
+        val selection = textArea.selectedText
 
-        val from = if (textArea.caretPosition < textArea.anchor) textArea.caretPosition else textArea.anchor
-        val to = if (textArea.caretPosition < textArea.anchor) textArea.anchor else textArea.caretPosition
-        val fromLine = textArea.lineForPosition(from, false)
-        val toLine = textArea.lineForPosition(to, true)
-        val fromLineStart = textArea.positionForStartOfLine(fromLine)
+        val from = Math.min(textArea.caretPosition, textArea.anchor)
+        val to = Math.max(textArea.caretPosition, textArea.anchor)
 
-        val content = textArea.content
-
-        var count = 0
-        var firstCount = 0
-        for (l in fromLine..toLine) {
-            val p = textArea.paragraphs[l].toString()
-            val spaces = " ".repeat(textArea.indentSize)
-            if (p.startsWith("\t")) {
-                content.delete(l, 0, 1, true)
-                count++
-                if (l == fromLine) {
-                    firstCount = 1
-                }
-            } else if (p.startsWith(spaces)) {
-                content.delete(l, 0, spaces.length, true)
-                count += spaces.length
-                if (l == fromLine) {
-                    firstCount = spaces.length
-                }
+        var deleted = 0
+        val lines = selection.split('\n').map {
+            if (it.startsWith("\t")) {
+                deleted += 1
+                it.substring(1)
+            } else if (it.startsWith(spaces)) {
+                deleted += spaces.length
+                it.substring(spaces.length)
+            } else {
+                it
             }
         }
-        val newStart = textArea.positionForStartOfLine(fromLine) + Math.max(0, from - fromLineStart - firstCount)
-        textArea.selectRange(newStart, to - count)
+        val replacement = lines.joinToString(separator = "\n")
+        textArea.replaceSelection(replacement)
+        textArea.selectRange(from - if (selection.startsWith("\t")) 1 else 0, to - deleted)
     }
 
     protected fun deleteChar(previous: Boolean) {
