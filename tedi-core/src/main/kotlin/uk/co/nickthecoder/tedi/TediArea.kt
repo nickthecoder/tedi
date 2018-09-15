@@ -85,7 +85,7 @@ open class TediArea private constructor(private val content: TediAreaContent)
 
 
     // Display Line Numbers
-    private val displayLineNumbersProperty = object : StyleableBooleanProperty(true) {
+    private val displayLineNumbersProperty = object : StyleableBooleanProperty(false) {
 
         override fun getBean() = this@TediArea
         override fun getName() = "displayLineNumbers"
@@ -607,7 +607,7 @@ open class TediArea private constructor(private val content: TediAreaContent)
         }
 
         val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
-                StyleConverter.getBooleanConverter(), true) {
+                StyleConverter.getBooleanConverter(), false) {
 
             override fun isSettable(n: TediArea): Boolean {
                 return !n.prefColumnCountProperty().isBound()

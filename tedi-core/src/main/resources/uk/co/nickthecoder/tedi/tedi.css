@@ -1,17 +1,33 @@
 .tedi-area {
     -fx-font-family: 'monospace';
     -fx-text-fill: #330000; /* Not working! */
-}
-
-.tedi-area .content {
+    -fx-font-size: 14px;
 }
 
 .tedi-area .gutter {
-    -fx-padding: 0 10 0 10;
+    -fx-padding: 0 4 0 10;
     -fx-background-color: #eeeeee;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 1 0 0;
     -fx-text-fill: #333333; /* Not working */
 }
 
-.text-area {
-    -fx-text-fill: #330000; /* Not working! */
+/*
+ * This is copied from modena.css, only I've changed text-input to tedi-area.
+ * I don't know why I need this, because tedi-area DOES have a styleClass of text-input.
+ * In fact, even if I use .text-input:focuses is works, however, if I leave this out,
+ * then the dark blue outline does not appear.
+ * (Only the faint blue outline of the .content appears.)
+ * Weird.
+ */
+.tedi-area:focused {
+    -fx-highlight-fill: -fx-accent;
+    -fx-highlight-text-fill: white;
+    -fx-background-color:
+        -fx-focus-color,
+        -fx-control-inner-background,
+        -fx-faint-focus-color,
+        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
+    -fx-background-insets: -0.2, 1, -1.4, 3;
+    -fx-background-radius: 3, 2, 4, 0;
 }

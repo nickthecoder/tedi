@@ -63,6 +63,7 @@ import javafx.scene.control.SkinBase
 import javafx.scene.input.InputMethodEvent
 import javafx.scene.input.InputMethodHighlight
 import javafx.scene.input.MouseEvent
+import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
@@ -93,6 +94,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     private val paragraphNodes = Group()
     private val gutter = Gutter()
 
+    private val guttersAndContentView = BorderPane()
     private val contentView = ContentView()
 
     /**
@@ -266,6 +268,8 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     init {
 
+        // Add initial text content.
+        addParagraphNode(0, tediArea.text)
 
         if (tediArea.getOnInputMethodTextChanged() == null) {
             tediArea.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
@@ -288,7 +292,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         // Initialize content
         scrollPane.isFitToWidth = false
-        scrollPane.content = contentView
+        scrollPane.content = guttersAndContentView
         children.add(scrollPane)
 
         // Add selection
@@ -298,12 +302,18 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         // Add content view
         paragraphNodes.isManaged = false
-        contentView.children.addAll(gutter, paragraphNodes)
+        contentView.children.addAll(paragraphNodes)
+        guttersAndContentView.left = gutter
+        guttersAndContentView.center = contentView
 
         // gutter
         lineNumbers.textOrigin = VPos.TOP
         lineNumbers.textAlignment = TextAlignment.RIGHT
         lineNumbers.fontProperty().bind(tediArea.fontProperty())
+        updateGutters()
+        tediArea.displayLineNumbersProperty().addListener { _, _, _ ->
+            updateGutters()
+        }
 
         // Add caret
         caretPath.isManaged = false
@@ -331,9 +341,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         val scrollSelectionFrames = scrollSelectionTimeline.keyFrames
         scrollSelectionFrames.clear()
         scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
-
-        // Add initial text content.
-        addParagraphNode(0, tediArea.text)
 
         tediArea.selectionProperty().addListener { _, _, _ ->
             // Why do we need two calls here? (from original)
@@ -488,6 +495,14 @@ open class TediAreaSkin(val tediArea: TediArea)
         lineNumbers.text = buffer.toString()
     }
 
+    private fun updateGutters() {
+        if (tediArea.displayLinesNumbers) {
+            guttersAndContentView.left = gutter
+        } else {
+            guttersAndContentView.left = null
+        }
+    }
+
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
         scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
     }
@@ -496,6 +511,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         val textArea = skinnable
         val paragraphNode = Text(string)
         paragraphNode.textOrigin = VPos.TOP
+        paragraphNode.wrappingWidth = 0.0
         paragraphNode.isManaged = false
         paragraphNode.styleClass.add("text")
         paragraphNode.boundsTypeProperty().addListener { _, _, _ ->
@@ -1210,19 +1226,34 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-
     /***************************************************************************
      *                                                                         *
      * Gutter class                                                            *
      *                                                                         *
      **************************************************************************/
     inner class Gutter : Region() {
+
         init {
+            styleClass.add("gutter")
+            visibleProperty().bind(tediArea.displayLineNumbersProperty())
+
             updateLineNumbers()
-            getChildren().add(lineNumbers)
+            children.add(lineNumbers)
             tediArea.lineCountProperty().addListener { _, _, _ ->
                 updateLineNumbers()
+                gutter.requestLayout()
             }
+        }
+
+        override fun computePrefWidth(height: Double): Double {
+            var prefWidth = snappedLeftInset() + snappedRightInset()
+            prefWidth += lineNumbers.prefWidth(height)
+            return prefWidth
+        }
+
+        override fun layoutChildren() {
+            lineNumbers.layoutX = snappedLeftInset()
+            lineNumbers.layoutY = contentView.snappedTopInset()
         }
     }
 
@@ -1235,8 +1266,6 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         init {
             styleClass.add("content")
-            gutter.styleClass.add("gutter")
-            gutter.visibleProperty().bind(tediArea.displayLineNumbersProperty())
 
             addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
                 behavior.mousePressed(event)
@@ -1292,12 +1321,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             }
 
             if (computedPrefHeight < 0) {
-                val wrappingWidth: Double
-                if (width == -1.0) {
-                    wrappingWidth = 0.0
-                } else {
-                    wrappingWidth = Math.max(width - (snappedLeftInset() + snappedRightInset()), 0.0)
-                }
 
                 var prefHeight = 0.0
 
@@ -1306,7 +1329,7 @@ open class TediAreaSkin(val tediArea: TediArea)
                     prefHeight += computeTextHeight(
                             paragraphNode.font,
                             paragraphNode.text,
-                            wrappingWidth,
+                            0.0,
                             paragraphNode.boundsType)
                 }
 
@@ -1344,23 +1367,14 @@ open class TediAreaSkin(val tediArea: TediArea)
             val topPadding = snappedTopInset()
             val leftPadding = snappedLeftInset()
 
-            lineNumbers.layoutX = gutter.snappedLeftInset()
-            lineNumbers.layoutY = topPadding
-
-            val gutterWidth = lineNumbers.prefWidth(height) + gutter.snappedLeftInset() + gutter.snappedRightInset()
-            gutter.resizeRelocate(0.0, 0.0, gutterWidth, height)
-
-            val x = gutterWidth + leftPadding
+            val x = leftPadding
             var y = topPadding
-
-            val wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0.0)
 
             val paragraphNodesChildren = paragraphNodes.getChildren()
 
             for (i in paragraphNodesChildren.indices) {
                 val node = paragraphNodesChildren.get(i)
                 val paragraphNode = node as Text
-                paragraphNode.wrappingWidth = wrappingWidth
 
                 val bounds = paragraphNode.boundsInLocal
                 paragraphNode.layoutX = x

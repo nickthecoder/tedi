@@ -1,9 +1,12 @@
 package uk.co.nickthecoder.tedi.example
 
+import javafx.event.ActionEvent
+import javafx.event.EventHandler
 import javafx.scene.Scene
+import javafx.scene.control.Button
 import javafx.scene.control.SplitPane
 import javafx.scene.control.TextArea
-import javafx.scene.control.TextField
+import javafx.scene.control.ToolBar
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.TediArea
@@ -16,9 +19,9 @@ Line 2
 Line 3
 End""")
 
-    val view2 = TediArea(view1)
+    val toolbar = ToolBar()
 
-    val textField = TextField("This is a text field")
+    val view2 = TediArea(view1)
 
     val textArea = TextArea("This is a regular TextArea")
 
@@ -32,7 +35,15 @@ End""")
         TediArea.style(scene)
         borderPane.center = splitPane
         borderPane.bottom = textArea
-        borderPane.top = textField
+        borderPane.top = toolbar
+
+        with(toolbar.items) {
+            add(createButton("Show Line Numbers") { view1.displayLinesNumbers = true })
+            add(createButton("Hide Line Numbers") { view1.displayLinesNumbers = false })
+        }
+
+        println("TediArea 1 : $view1")
+        println("TextArea   : $textArea")
 
         // textField.setStyle("-fx-text-fill: green;"); // This works
         // But if I add ".text-field { -fx-text-fill: green; }" into a css file, it doesn't work.
@@ -44,4 +55,9 @@ End""")
         stage.show()
     }
 
+    fun createButton(text: String, action: () -> Unit): Button {
+        val button = Button(text)
+        button.onAction = EventHandler<ActionEvent> { action() }
+        return button
+    }
 }
