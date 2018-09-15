@@ -121,6 +121,7 @@ class TediAreaBehavior(val control: TediArea)
                 "Redo" -> tediArea.redo()
                 "InsertNewLine" -> insertNewLine()
                 "TraverseOrInsertTab" -> insertTab()
+                "Unindent" -> unindent()
                 else -> {
                     done = false
                 }
@@ -182,6 +183,10 @@ class TediAreaBehavior(val control: TediArea)
                 "TraverseOrInsertTab" -> {
                     // RT-40312: Non-editabe mode means traverse instead of insert.
                     super.callAction("TraverseNext")
+                    return
+                }
+                "Unindent" -> {
+                    super.callAction("TraversePrevious")
                     return
                 }
                 else -> {
@@ -559,12 +564,51 @@ class TediAreaBehavior(val control: TediArea)
             val fromLine = textArea.lineForPosition(from, false)
             val toLine = textArea.lineForPosition(to, true)
 
+            val content = textArea.content
+
             for (l in fromLine..toLine) {
-                val content = textArea.content
                 content.insert(l, 0, tabOrSpaces)
             }
             textArea.selectRange(from, to + tabOrSpaces.length * (1 + toLine - fromLine))
         }
+    }
+
+    /**
+     * Unindents the current line, or selection. (Shift+Tab)
+     */
+    private fun unindent() {
+        val textArea = getControl()
+        val tabOrSpaces = textArea.tabIndentation()
+
+        val from = if (textArea.caretPosition < textArea.anchor) textArea.caretPosition else textArea.anchor
+        val to = if (textArea.caretPosition < textArea.anchor) textArea.anchor else textArea.caretPosition
+        val fromLine = textArea.lineForPosition(from, false)
+        val toLine = textArea.lineForPosition(to, true)
+        val fromLineStart = textArea.positionForStartOfLine(fromLine)
+
+        val content = textArea.content
+
+        var count = 0
+        var firstCount = 0
+        for (l in fromLine..toLine) {
+            val p = textArea.paragraphs[l].toString()
+            val spaces = " ".repeat(textArea.indentSize)
+            if (p.startsWith("\t")) {
+                content.delete(l, 0, 1, true)
+                count++
+                if (l == fromLine) {
+                    firstCount = 1
+                }
+            } else if (p.startsWith(spaces)) {
+                content.delete(l, 0, spaces.length, true)
+                count += spaces.length
+                if (l == fromLine) {
+                    firstCount = spaces.length
+                }
+            }
+        }
+        val newStart = textArea.positionForStartOfLine(fromLine) + Math.max(0, from - fromLineStart - firstCount)
+        textArea.selectRange(newStart, to - count)
     }
 
     protected fun deleteChar(previous: Boolean) {
@@ -616,6 +660,7 @@ class TediAreaBehavior(val control: TediArea)
             TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage"))
             TEDI_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine"))
             TEDI_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "Unindent").shift())
 
             TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift())
             TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift())

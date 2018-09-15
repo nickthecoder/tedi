@@ -289,6 +289,19 @@ open class TediArea private constructor(val content: TediAreaContent)
         return lineNumber
     }
 
+    fun positionForStartOfLine(line: Int): Int {
+        var result = 0
+        var count = 0
+        for (p in paragraphs) {
+            if (line == count) {
+                return result
+            }
+            result += p.length + 1
+            count++
+        }
+        return result
+    }
+
     /***************************************************************************
      *                                                                         *
      * ParagraphList class                                                     *
@@ -533,6 +546,17 @@ open class TediArea private constructor(val content: TediAreaContent)
             fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
                     listOf<CharSequence>(paragraph))
             contentLength += text.length
+            if (notifyListeners) {
+                ExpressionHelper.fireValueChangedEvent(helper)
+            }
+        }
+
+        fun delete(paragraphIndex: Int, fromColumn: Int, toColumn: Int, notifyListeners: Boolean) {
+            val paragraph = paragraphList[paragraphIndex] as StringBuilder
+            paragraph.delete(fromColumn, toColumn)
+            fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
+                    listOf<CharSequence>(paragraph))
+            contentLength -= toColumn - fromColumn
             if (notifyListeners) {
                 ExpressionHelper.fireValueChangedEvent(helper)
             }
