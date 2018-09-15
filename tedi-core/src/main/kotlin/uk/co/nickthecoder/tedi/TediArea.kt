@@ -46,7 +46,7 @@ import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.util.*
 
-open class TediArea private constructor(private val content: TediAreaContent)
+open class TediArea private constructor(val content: TediAreaContent)
 
     : TextInputControl(content) {
 
@@ -67,12 +67,12 @@ open class TediArea private constructor(private val content: TediAreaContent)
      **************************************************************************/
 
     // Paragraphs
-    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList)
+    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList())
 
     fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
 
     val paragraphs: ObservableList<CharSequence>
-        get() = content.paragraphList
+        get() = content.paragraphList()
 
 
     // Line Count
@@ -210,6 +210,32 @@ open class TediArea private constructor(private val content: TediAreaContent)
             scrollLeftProperty.set(v)
         }
 
+    // Tab Inserts Spaces
+    private val tabInsertsSpacesProperty = SimpleBooleanProperty(this, "tabInsertsSpaces", true)
+
+    fun tabInsertsSpacesProperty(): BooleanProperty = tabInsertsSpacesProperty
+
+    /**
+     * If true, then the TAB key will insert spaces, rather than a tab-character.
+     * The number of spaces is determined by the [indentSize] property.
+     */
+    var tabInsertsSpaces: Boolean
+        get() = tabInsertsSpacesProperty.get()
+        set(v) {
+            tabInsertsSpacesProperty.set(v)
+        }
+
+    // Indent Size
+    private val indentSizeProperty = SimpleIntegerProperty(this, "indentSize", 4)
+
+    fun indentSizePropert(): IntegerProperty = indentSizeProperty
+
+    var indentSize: Int
+        get() = indentSizeProperty.get()
+        set(v) {
+            indentSizeProperty.set(v)
+        }
+
     /***************************************************************************
      *                                                                         *
      * End of Properties                                                       *
@@ -235,12 +261,40 @@ open class TediArea private constructor(private val content: TediAreaContent)
         return getClassCssMetaData()
     }
 
+    /**
+     * Returns a tab character (when [tabInsertsSpaces] == true), otherwise
+     * n space characters, where n is taken from [indentSize].
+     */
+    fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
+
+    /**
+     * Returns the line number for the given character [position] within the document.
+     * Both [position] and the return value are ZERO based.
+     *
+     * If [position] <= 0, then -1 is returned.
+     * if [position] > the length of the document, then the return value is the
+     * number of lines in the document. Note, this is 1 more than the highest valid index
+     * to [paragraphs].
+     */
+    fun lineForPosition(position: Int, includeStartOfLine: Boolean = true): Int {
+        var lineNumber = -1
+        var count = 0
+        for (p in paragraphs) {
+            if (count > position || (includeStartOfLine && count == position)) {
+                return lineNumber
+            }
+            count += p.length + 1
+            lineNumber++
+        }
+        return lineNumber
+    }
+
     /***************************************************************************
      *                                                                         *
      * ParagraphList class                                                     *
      *                                                                         *
      **************************************************************************/
-    protected class ParagraphList(val content: TediAreaContent)
+    class ParagraphList(val content: TediAreaContent)
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
 
         override fun get(index: Int): CharSequence {
@@ -324,18 +378,32 @@ open class TediArea private constructor(private val content: TediAreaContent)
      * TediAreaContent class                                                   *
      *                                                                         *
      **************************************************************************/
-    protected class TediAreaContent : TextInputControl.Content {
+
+    /**
+     * You can think of this as a "Document".
+     * It stores the text as a list of lines, where each line is stored as a
+     * StringBuffer.
+     *
+     * This data structure allows largish text documents to be edited without
+     * large String objects being created and then garbage collected.
+     *
+     * Note, whenever you use [Tedi.text], it builds a String object from this document.
+     *
+     * Alas, TextAreaSkin does NOT make best use of this structure, and instead uses
+     * the string representation ([Tedi.text]) when making changes.
+     * Therefore editing large documents is very inefficient.
+     */
+    class TediAreaContent : TextInputControl.Content {
 
         internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
         private var contentLength = 0
-        internal val paragraphList = ParagraphList(this)
+        private val paragraphList = ParagraphList(this)
         internal var listenerHelper: ListListenerHelper<CharSequence>? = null
 
         private var helper: ExpressionHelper<String>? = null
 
-        /**
-         * Copied from TextArea.Content
-         */
+        fun paragraphList() = paragraphList
+
         override fun get(start: Int, end: Int): String {
             val length = end - start
             val textBuilder = StringBuilder(length)
@@ -452,6 +520,21 @@ open class TediArea private constructor(private val content: TediAreaContent)
                 if (notifyListeners) {
                     ExpressionHelper.fireValueChangedEvent(helper)
                 }
+            }
+        }
+
+        fun insert(paragraphIndex: Int, columnIndex: Int, text: String, notifyListeners: Boolean = true) {
+            if (text.contains("\n")) {
+                throw IllegalArgumentException("Inserting multiple lines not yet supported.")
+            }
+
+            val paragraph = paragraphList[paragraphIndex] as StringBuilder
+            paragraph.insert(columnIndex, text)
+            fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
+                    listOf<CharSequence>(paragraph))
+            contentLength += text.length
+            if (notifyListeners) {
+                ExpressionHelper.fireValueChangedEvent(helper)
             }
         }
 

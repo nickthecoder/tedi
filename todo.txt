@@ -1,4 +1,35 @@
-"Private" API references :
+Bugs
+----
+
+LineNumbers change font (seemingly at random). Maybe a gc issue?
+    Note, only the "font family" changes (from monospace to the default (proportional) font.
+    This causes them not to line up with the content.
+
+Next
+----
+
+Tab key to insert spaces
+    (An optional boolean property)
+    Also need an int property for the number of spaces
+
+Do better next/prev word navigation (more in keeping with code. i.e. co.uk.nickthecoder.foo is treated as 4 words.
+
+Tab key to indent a block (when there is a selection)
+Shift-tab to un-indent a block (unless in read-only mode, in which case perform the normal navigation).
+
+Later
+-----
+
+Goto (line number and column)
+
+Search and replace.
+    Matches should be highlighted in a similar way to a selection (but in a different color).
+    For now, limit it to single line matches???
+
+"Private" API references
+------------------------
+    My code still references com.sum.xxx classes.
+
     BehaviourBase imports Direction from a non-public package.
         https://gist.github.com/nickthecoder/57ac20829214f1209e41e851d955ed35
 
@@ -13,11 +44,9 @@
         import com.sun.javafx.tk.FontMetrics
         import com.sun.javafx.tk.Toolkit
 
-
-TediView I changed one of the properties from xxx to xxxProperty. Damn, forgot which one!
-
-
-Note. TediArea uses multiple paragraphs, but the skin doesn't!!!
-
-Remove promptText stuff
+Optimisation
+------------
+The skin uses one big Text object holding ALL of the text.
+    This was a hangover from the original TextArea
+The line numbers are also one big Text object.
 

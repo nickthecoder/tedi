@@ -548,7 +548,23 @@ class TediAreaBehavior(val control: TediArea)
 
     private fun insertTab() {
         val textArea = getControl()
-        textArea.replaceSelection("\t")
+        val tabOrSpaces = textArea.tabIndentation()
+
+        if (textArea.selection.length == 0) {
+            // No selection. Just add the tab (or spaces)
+            textArea.replaceSelection(tabOrSpaces)
+        } else {
+            val from = if (textArea.caretPosition < textArea.anchor) textArea.caretPosition else textArea.anchor
+            val to = if (textArea.caretPosition < textArea.anchor) textArea.anchor else textArea.caretPosition
+            val fromLine = textArea.lineForPosition(from, false)
+            val toLine = textArea.lineForPosition(to, true)
+
+            for (l in fromLine..toLine) {
+                val content = textArea.content
+                content.insert(l, 0, tabOrSpaces)
+            }
+            textArea.selectRange(from, to + tabOrSpaces.length * (1 + toLine - fromLine))
+        }
     }
 
     protected fun deleteChar(previous: Boolean) {
