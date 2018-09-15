@@ -46,15 +46,175 @@ import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.util.*
 
-class TediArea(val content: TediAreaContent)
+open class TediArea private constructor(private val content: TediAreaContent)
 
     : TextInputControl(content) {
 
     constructor() : this(TediAreaContent())
 
+
     constructor(text: String) : this(TediAreaContent()) {
         this.text = text
     }
+
+    constructor(sharedContent: TediArea) : this(sharedContent.content)
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Properties                                                              *
+     *                                                                         *
+     **************************************************************************/
+
+    // Paragraphs
+    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList)
+
+    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
+
+    val paragraphs: ObservableList<CharSequence>
+        get() = content.paragraphList
+
+
+    // Line Count
+    private val lineCountProperty = Bindings.size(paragraphsProperty)!!
+
+    fun lineCountProperty() = lineCountProperty
+
+    val lineCount
+        get() = lineCountProperty().get()
+
+
+    // Display Line Numbers
+    private val displayLineNumbersProperty = object : StyleableBooleanProperty(true) {
+
+        override fun getBean() = this@TediArea
+        override fun getName() = "displayLineNumbers"
+        override fun getCssMetaData() = StyleableProperties.DISPLAY_LINE_NUMBERS
+    }
+
+    fun displayLineNumbersProperty() = displayLineNumbersProperty
+
+    /**
+     * Determines if line numbers are displayed.
+     * This can also be set using the css : -fx-display-line-numbers
+     */
+    var displayLinesNumbers: Boolean
+        get() = displayLineNumbersProperty.get()
+        set(v) {
+            displayLineNumbersProperty.set(v)
+        }
+
+
+    // Pref Column Count
+    private val prefColumnCountProperty = object : StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
+
+        private var oldValue = get()
+
+        override fun invalidated() {
+            val value = get()
+            if (value < 0) {
+                if (isBound) {
+                    unbind()
+                }
+                set(oldValue)
+                throw IllegalArgumentException("value cannot be negative.")
+            }
+            oldValue = value
+        }
+
+        override fun getCssMetaData() = StyleableProperties.PREF_COLUMN_COUNT
+        override fun getBean() = this@TediArea
+        override fun getName() = "prefColumnCount"
+    }
+
+    fun prefColumnCountProperty(): IntegerProperty = prefColumnCountProperty
+
+    /**
+     * The preferred number of columns of text (used to calculated TediArea's preferred width).
+     */
+    var prefColumnCount: Int
+        get() = prefColumnCountProperty.get()
+        set(v) {
+            prefColumnCountProperty.set(v)
+        }
+
+
+    // Pref Row Count
+    private val prefRowCountProperty = object : StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
+
+        private var oldValue = get()
+
+        override fun invalidated() {
+            val value = get()
+            if (value < 0) {
+                if (isBound) {
+                    unbind()
+                }
+                set(oldValue)
+                throw IllegalArgumentException("value cannot be negative.")
+            }
+
+            oldValue = value
+        }
+
+        override fun getCssMetaData(): CssMetaData<TediArea, Number> {
+            return StyleableProperties.PREF_ROW_COUNT
+        }
+
+        override fun getBean(): Any {
+            return this@TediArea
+        }
+
+        override fun getName(): String {
+            return "prefRowCount"
+        }
+    }
+
+    fun prefRowCountProperty(): IntegerProperty = prefRowCountProperty
+
+    /**
+     * The preferred number of row of text (used to calculated TediArea's preferred height).
+     */
+    var prefRowCount: Int
+        get() = prefRowCountProperty.get()
+        set(v) {
+            prefRowCountProperty.set(v)
+        }
+
+
+    // Scroll Top
+    private val scrollTopProperty = SimpleDoubleProperty(this, "scrollTop", 0.0)
+
+    fun scrollTopProperty(): DoubleProperty = scrollTopProperty
+
+    /**
+     * The number of pixels by which the content is vertically scrolled.
+     */
+    var scrollTop: Double
+        get() = scrollTopProperty.get()
+        set(v) {
+            scrollTopProperty.set(v)
+        }
+
+    // Scroll Left
+    private val scrollLeftProperty = SimpleDoubleProperty(this, "scrollLeft", 0.0)
+
+    fun scrollLeftProperty(): DoubleProperty = scrollLeftProperty
+
+    /**
+     * The number of pixels by which the content is horizontally scrolled.
+     */
+    var scrollLeft: Double
+        get() = scrollLeftProperty.get()
+        set(v) {
+            scrollLeftProperty.set(v)
+        }
+
+    /***************************************************************************
+     *                                                                         *
+     * End of Properties                                                       *
+     *                                                                         *
+     **************************************************************************/
 
     init {
         // Note, base class TextInputControl also adds "text-input" style class.
@@ -63,10 +223,108 @@ class TediArea(val content: TediAreaContent)
         accessibleRole = AccessibleRole.TEXT_AREA
     }
 
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
     override fun createDefaultSkin(): Skin<*> = TediAreaSkin(this)
 
+    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> {
+        return getClassCssMetaData()
+    }
 
-    class TediAreaContent : TextInputControl.Content {
+    /***************************************************************************
+     *                                                                         *
+     * ParagraphList class                                                     *
+     *                                                                         *
+     **************************************************************************/
+    protected class ParagraphList(val content: TediAreaContent)
+        : AbstractList<CharSequence>(), ObservableList<CharSequence> {
+
+        override fun get(index: Int): CharSequence {
+            return content.paragraphs.get(index)
+        }
+
+        override fun addAll(elements: Collection<CharSequence>): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun addAll(vararg paragraphs: CharSequence): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun setAll(paragraphs: Collection<CharSequence>): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun setAll(vararg paragraphs: CharSequence): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override val size: Int
+            get() = content.paragraphs.size
+
+        override fun addListener(listener: ListChangeListener<in CharSequence>) {
+            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener)
+        }
+
+        override fun removeListener(listener: ListChangeListener<in CharSequence>) {
+            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener)
+        }
+
+        override fun removeAll(vararg elements: CharSequence): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun retainAll(vararg elements: CharSequence): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun remove(from: Int, to: Int) {
+            throw UnsupportedOperationException()
+        }
+
+        override fun addListener(listener: InvalidationListener) {
+            content.listenerHelper = ListListenerHelper.addListener<CharSequence>(content.listenerHelper, listener)
+        }
+
+        override fun removeListener(listener: InvalidationListener) {
+            content.listenerHelper = ListListenerHelper.removeListener<CharSequence>(content.listenerHelper, listener)
+        }
+    }
+    // End ParagraphList
+
+    /***************************************************************************
+     *                                                                         *
+     * ParagraphListChange class                                               *
+     *                                                                         *
+     **************************************************************************/
+    protected class ParagraphListChange(
+            list: ObservableList<CharSequence>,
+            from: Int,
+            to: Int,
+            private val removed: List<CharSequence>)
+
+        : NonIterableChange<CharSequence>(from, to, list) {
+
+        override fun getRemoved(): List<CharSequence> {
+            return removed
+        }
+
+        override fun getPermutation(): IntArray {
+            return IntArray(0)
+        }
+    }
+    // End ParagraphListChange
+
+    /***************************************************************************
+     *                                                                         *
+     * TediAreaContent class                                                   *
+     *                                                                         *
+     **************************************************************************/
+    protected class TediAreaContent : TextInputControl.Content {
 
         internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
         private var contentLength = 0
@@ -313,267 +571,13 @@ class TediArea(val content: TediAreaContent)
             ListListenerHelper.fireValueChangedEvent(listenerHelper, change)
         }
     }
-
-    // Observable list of paragraphs
-    internal class ParagraphList(val content: TediAreaContent)
-        : AbstractList<CharSequence>(), ObservableList<CharSequence> {
-
-        override fun get(index: Int): CharSequence {
-            return content.paragraphs.get(index)
-        }
-
-        override fun addAll(elements: Collection<CharSequence>): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override fun addAll(vararg paragraphs: CharSequence): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override fun setAll(paragraphs: Collection<CharSequence>): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override fun setAll(vararg paragraphs: CharSequence): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override val size: Int
-            get() = content.paragraphs.size
-
-        override fun addListener(listener: ListChangeListener<in CharSequence>) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener)
-        }
-
-        override fun removeListener(listener: ListChangeListener<in CharSequence>) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener)
-        }
-
-        override fun removeAll(vararg elements: CharSequence): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override fun retainAll(vararg elements: CharSequence): Boolean {
-            throw UnsupportedOperationException()
-        }
-
-        override fun remove(from: Int, to: Int) {
-            throw UnsupportedOperationException()
-        }
-
-        override fun addListener(listener: InvalidationListener) {
-            content.listenerHelper = ListListenerHelper.addListener<CharSequence>(content.listenerHelper, listener)
-        }
-
-        override fun removeListener(listener: InvalidationListener) {
-            content.listenerHelper = ListListenerHelper.removeListener<CharSequence>(content.listenerHelper, listener)
-        }
-    }
-
-    internal class ParagraphListChange(
-            list: ObservableList<CharSequence>,
-            from: Int,
-            to: Int,
-            private val removed: List<CharSequence>)
-
-        : NonIterableChange<CharSequence>(from, to, list) {
-
-        override fun getRemoved(): List<CharSequence> {
-            return removed
-        }
-
-        override fun getPermutation(): IntArray {
-            return IntArray(0)
-        }
-    }
-
-
-    protected val displayLineNumbers: BooleanProperty = object : StyleableBooleanProperty(true) {
-        override fun getBean(): Any {
-            return this
-        }
-
-        override fun getName(): String {
-            return "displayLineNumbers"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Boolean> {
-            return TediArea.StyleableProperties.DISPLAY_LINE_NUMBERS
-        }
-    }
-
-    /**
-     * Returns an unmodifiable list of the character sequences that back the
-     * text area's content.
-     */
-    fun getParagraphs(): ObservableList<CharSequence> {
-        return content.paragraphList
-    }
-
-    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList)
-
-    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
-
-    private val lineCountProperty = Bindings.size(paragraphsProperty)
-
-    fun lineCountProperty() = lineCountProperty
-
-    fun lineCount() = lineCountProperty().get()
-
-
-    // TODO Remove
-    init {
-        println("LineCount : ${lineCount()}")
-    }
+    // End of class TediAreaContent
 
     /***************************************************************************
      *                                                                         *
-     * Properties                                                              *
+     * StyleableProperties object                                              *
      *                                                                         *
      **************************************************************************/
-
-    private val displayLineNumbersProperty = object : StyleableBooleanProperty(true) {
-
-        override fun getBean() = this@TediArea
-        override fun getName() = "displayLineNumbers"
-        override fun getCssMetaData() = StyleableProperties.DISPLAY_LINE_NUMBERS
-    }
-
-    fun displayLineNumbersProperty() = displayLineNumbersProperty
-
-    var displayLinesNumbers: Boolean
-        get() = displayLineNumbersProperty.get()
-        set(v) {
-            displayLineNumbersProperty.set(v)
-        }
-
-    /**
-     * The preferred number of text columns. This is used for
-     * calculating the `TextArea`'s preferred width.
-     */
-    private val prefColumnCountProperty = object : StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
-
-        private var oldValue = get()
-
-        override fun invalidated() {
-            val value = get()
-            if (value < 0) {
-                if (isBound) {
-                    unbind()
-                }
-                set(oldValue)
-                throw IllegalArgumentException("value cannot be negative.")
-            }
-            oldValue = value
-        }
-
-        override fun getCssMetaData() = StyleableProperties.PREF_COLUMN_COUNT
-        override fun getBean() = this@TediArea
-        override fun getName() = "prefColumnCount"
-    }
-
-    fun prefColumnCountProperty(): IntegerProperty = prefColumnCountProperty
-
-    fun getPrefColumnCount() = prefColumnCountProperty.value!!
-
-    fun setPrefColumnCount(value: Int) {
-        prefColumnCountProperty.setValue(value)
-    }
-
-
-    /**
-     * The preferred number of text rows. This is used for calculating
-     * the `TextArea`'s preferred height.
-     */
-    private val prefRowCount = object : StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
-
-        private var oldValue = get()
-
-        override fun invalidated() {
-            val value = get()
-            if (value < 0) {
-                if (isBound) {
-                    unbind()
-                }
-                set(oldValue)
-                throw IllegalArgumentException("value cannot be negative.")
-            }
-
-            oldValue = value
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Number> {
-            return StyleableProperties.PREF_ROW_COUNT
-        }
-
-        override fun getBean(): Any {
-            return this@TediArea
-        }
-
-        override fun getName(): String {
-            return "prefRowCount"
-        }
-    }
-
-    fun prefRowCountProperty(): IntegerProperty {
-        return prefRowCount
-    }
-
-    fun getPrefRowCount(): Int {
-        return prefRowCount.value!!
-    }
-
-    fun setPrefRowCount(value: Int) {
-        prefRowCount.setValue(value)
-    }
-
-
-    /**
-     * The number of pixels by which the content is vertically
-     * scrolled.
-     */
-    private val scrollTop = SimpleDoubleProperty(this, "scrollTop", 0.0)
-
-    fun scrollTopProperty(): DoubleProperty {
-        return scrollTop
-    }
-
-    fun getScrollTop(): Double {
-        return scrollTop.value!!
-    }
-
-    fun setScrollTop(value: Double) {
-        scrollTop.setValue(value)
-    }
-
-
-    /**
-     * The number of pixels by which the content is horizontally
-     * scrolled.
-     */
-    private val scrollLeft = SimpleDoubleProperty(this, "scrollLeft", 0.0)
-
-    fun scrollLeftProperty(): DoubleProperty {
-        return scrollLeft
-    }
-
-    fun getScrollLeft(): Double {
-        return scrollLeft.value!!
-    }
-
-    fun setScrollLeft(value: Double) {
-        scrollLeft.setValue(value)
-    }
-
-    /***************************************************************************
-     *                                                                         *
-     * Stylesheet Handling                                                     *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * @treatAsPrivate implementation detail
-     */
     private object StyleableProperties {
 
         val PREF_COLUMN_COUNT = object : CssMetaData<TediArea, Number>("-fx-pref-column-count",
@@ -624,17 +628,14 @@ class TediArea(val content: TediAreaContent)
             STYLEABLES = Collections.unmodifiableList(styleables)
         }
     }
+    // End StyleableProperties
 
-    /**
-     * {@inheritDoc}
-     * @since JavaFX 8.0
-     */
-    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> {
-        return getClassCssMetaData()
-    }
-
+    /***************************************************************************
+     *                                                                         *
+     * Companion Object                                                        *
+     *                                                                         *
+     **************************************************************************/
     companion object {
-
 
         /**
          * The default value for [.prefColumnCount].
@@ -710,4 +711,6 @@ class TediArea(val content: TediAreaContent)
             scene.stylesheets.add(url.toExternalForm())
         }
     }
+    // End Companion Object
+
 }

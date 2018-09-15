@@ -648,9 +648,9 @@ open class TediAreaSkin(val tediArea: TediArea)
         })
         contentView.getChildren().add(caretPath)
 
-        scrollPane.hvalueProperty().addListener { _, _, newValue -> skinnable.setScrollLeft(newValue.toDouble() * getScrollLeftMax()) }
+        scrollPane.hvalueProperty().addListener { _, _, newValue -> skinnable.scrollLeft = newValue.toDouble() * getScrollLeftMax() }
 
-        scrollPane.vvalueProperty().addListener { _, _, newValue -> skinnable.setScrollTop(newValue.toDouble() * getScrollTopMax()) }
+        scrollPane.vvalueProperty().addListener { _, _, newValue -> skinnable.scrollTop = newValue.toDouble() * getScrollTopMax() }
 
         // Initialize the scroll selection timeline
         scrollSelectionTimeline.cycleCount = Timeline.INDEFINITE
@@ -755,7 +755,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
 
     private fun updateLineNumbers() {
-        val lines = tediArea.lineCount()
+        val lines = tediArea.lineCount
         val buffer = StringBuffer(lines * 3)
         for (i in 1..lines) {
             buffer.append(i.toString()).append("\n")
@@ -944,8 +944,8 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         val bounds = characterBoundingPath.boundsInLocal
 
-        var x = bounds.minX + paragraphNode.layoutX - textArea.getScrollLeft()
-        val y = bounds.minY + paragraphNode.layoutY - textArea.getScrollTop()
+        var x = bounds.minX + paragraphNode.layoutX - textArea.scrollLeft
+        val y = bounds.minY + paragraphNode.layoutY - textArea.scrollTop
 
         // Sometimes the bounds is empty, in which case we must ignore the width/height
         var width = if (bounds.isEmpty) 0.0 else bounds.width
@@ -975,8 +975,8 @@ open class TediAreaSkin(val tediArea: TediArea)
     private fun scrollCaretToVisible() {
         val textArea = skinnable
         val bounds = caretPath.getLayoutBounds()
-        val x = bounds.getMinX() - textArea.getScrollLeft()
-        val y = bounds.getMinY() - textArea.getScrollTop()
+        val x = bounds.getMinX() - textArea.scrollLeft
+        val y = bounds.getMinY() - textArea.scrollTop
         val w = bounds.getWidth()
         val h = bounds.getHeight()
 
@@ -991,8 +991,8 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         val viewportWidth = viewportBounds.width
         val viewportHeight = viewportBounds.height
-        val scrollTop = textArea.getScrollTop()
-        val scrollLeft = textArea.getScrollLeft()
+        val scrollTop = textArea.scrollTop
+        val scrollLeft = textArea.scrollLeft
         val slop = 6.0
 
         if (bounds.minY < 0) {
@@ -1000,13 +1000,13 @@ open class TediAreaSkin(val tediArea: TediArea)
             if (y <= contentView.snappedTopInset()) {
                 y = 0.0
             }
-            textArea.setScrollTop(y)
+            textArea.scrollTop = y
         } else if (contentView.snappedTopInset() + bounds.maxY > viewportHeight) {
             var y = scrollTop + contentView.snappedTopInset() + bounds.maxY - viewportHeight
             if (y >= getScrollTopMax() - contentView.snappedBottomInset()) {
                 y = getScrollTopMax()
             }
-            textArea.setScrollTop(y)
+            textArea.scrollTop = y
         }
 
 
@@ -1015,24 +1015,24 @@ open class TediAreaSkin(val tediArea: TediArea)
             if (x <= contentView.snappedLeftInset() + slop) {
                 x = 0.0
             }
-            textArea.setScrollLeft(x)
+            textArea.scrollLeft = x
         } else if (contentView.snappedLeftInset() + bounds.maxX > viewportWidth) {
             var x = scrollLeft + contentView.snappedLeftInset() + bounds.maxX - viewportWidth + slop
             if (x >= getScrollLeftMax() - contentView.snappedRightInset() - slop) {
                 x = getScrollLeftMax()
             }
-            textArea.setScrollLeft(x)
+            textArea.scrollLeft = x
         }
     }
 
     private fun updatePrefViewportWidth() {
-        val columnCount = skinnable.getPrefColumnCount()
+        val columnCount = skinnable.prefColumnCount
         scrollPane.prefViewportWidth = columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
         scrollPane.minViewportWidth = characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
     }
 
     private fun updatePrefViewportHeight() {
-        val rowCount = skinnable.getPrefRowCount()
+        val rowCount = skinnable.prefRowCount
         scrollPane.prefViewportHeight = rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
         scrollPane.minViewportHeight = lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
     }

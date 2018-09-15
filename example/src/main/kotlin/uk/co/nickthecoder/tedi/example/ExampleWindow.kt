@@ -16,7 +16,7 @@ Line 2
 Line 3
 End""")
 
-    val view2 = TediArea(view1.content)
+    val view2 = TediArea(view1)
 
     val textField = TextField("This is a text field")
 
