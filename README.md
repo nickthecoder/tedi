@@ -56,7 +56,8 @@ and they are abusing @deprecated to achieve a similar, but inferior result!
 ## Differences between TediArea and TextArea
 
 Given that TediArea started as a copy of TextArea, they should be fairly similar.
-However, I have removed some features :
+
+### Missing Features
 
 - Context menu (for copy, paste, etc)
 - Option to wrap text
@@ -68,11 +69,19 @@ require more "private" APIs, and even hard-coded strings containing "com.sun.xxx
 Wrapping text is just evil, and won't work well when I implement line numbers.
 Tedi is primarily designed to be for code.
 
+### Additional Features
+
+- Exposes a lineCount property
+- Exposes a paragraphsProperty (should this be called linesProperty??)
+
 ## Styling TediArea
 
 TediArea has the style classes of "text-area" and "tedi-area".
 
 As with TextArea, you can style ".tedi-area", ".tedi-area .content" and ".tedi-area .scroll-pane"
+
+TediArea has similar styleable properties as TextArea, with the addition of :
+- -fx-display-line-numbers
 
 I have included a style sheet as a resource in package uk.co.nickthecoder.tedi called "tedi.css".
 Currently, this applies a monospaced font to .tedi-area, and will later be used to style the gutters

@@ -31,9 +31,8 @@
 package uk.co.nickthecoder.tedi
 
 import javafx.beans.InvalidationListener
-import javafx.beans.property.DoubleProperty
-import javafx.beans.property.IntegerProperty
-import javafx.beans.property.SimpleDoubleProperty
+import javafx.beans.binding.Bindings
+import javafx.beans.property.*
 import javafx.beans.value.ChangeListener
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
@@ -58,7 +57,9 @@ class TediArea(val content: TediAreaContent)
     }
 
     init {
+        // Note, base class TextInputControl also adds "text-input" style class.
         styleClass.addAll("text-area", "tedi-area")
+
         accessibleRole = AccessibleRole.TEXT_AREA
     }
 
@@ -387,6 +388,20 @@ class TediArea(val content: TediAreaContent)
     }
 
 
+    protected val displayLineNumbers: BooleanProperty = object : StyleableBooleanProperty(true) {
+        override fun getBean(): Any {
+            return this
+        }
+
+        override fun getName(): String {
+            return "displayLineNumbers"
+        }
+
+        override fun getCssMetaData(): CssMetaData<TediArea, Boolean> {
+            return TediArea.StyleableProperties.DISPLAY_LINE_NUMBERS
+        }
+    }
+
     /**
      * Returns an unmodifiable list of the character sequences that back the
      * text area's content.
@@ -395,12 +410,42 @@ class TediArea(val content: TediAreaContent)
         return content.paragraphList
     }
 
+    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList)
+
+    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
+
+    private val lineCountProperty = Bindings.size(paragraphsProperty)
+
+    fun lineCountProperty() = lineCountProperty
+
+    fun lineCount() = lineCountProperty().get()
+
+
+    // TODO Remove
+    init {
+        println("LineCount : ${lineCount()}")
+    }
 
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
      *                                                                         *
      **************************************************************************/
+
+    private val displayLineNumbersProperty = object : StyleableBooleanProperty(true) {
+
+        override fun getBean() = this@TediArea
+        override fun getName() = "displayLineNumbers"
+        override fun getCssMetaData() = StyleableProperties.DISPLAY_LINE_NUMBERS
+    }
+
+    fun displayLineNumbersProperty() = displayLineNumbersProperty
+
+    var displayLinesNumbers: Boolean
+        get() = displayLineNumbersProperty.get()
+        set(v) {
+            displayLineNumbersProperty.set(v)
+        }
 
     /**
      * The preferred number of text columns. This is used for
@@ -422,26 +467,14 @@ class TediArea(val content: TediAreaContent)
             oldValue = value
         }
 
-        override fun getCssMetaData(): CssMetaData<TediArea, Number> {
-            return StyleableProperties.PREF_COLUMN_COUNT
-        }
-
-        override fun getBean(): Any {
-            return this@TediArea
-        }
-
-        override fun getName(): String {
-            return "prefColumnCount"
-        }
+        override fun getCssMetaData() = StyleableProperties.PREF_COLUMN_COUNT
+        override fun getBean() = this@TediArea
+        override fun getName() = "prefColumnCount"
     }
 
-    fun prefColumnCountProperty(): IntegerProperty {
-        return prefColumnCountProperty
-    }
+    fun prefColumnCountProperty(): IntegerProperty = prefColumnCountProperty
 
-    fun getPrefColumnCount(): Int {
-        return prefColumnCountProperty.value!!
-    }
+    fun getPrefColumnCount() = prefColumnCountProperty.value!!
 
     fun setPrefColumnCount(value: Int) {
         prefColumnCountProperty.setValue(value)
@@ -569,6 +602,18 @@ class TediArea(val content: TediAreaContent)
             }
         }
 
+        val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
+                StyleConverter.getBooleanConverter(), true) {
+
+            override fun isSettable(n: TediArea): Boolean {
+                return !n.prefColumnCountProperty().isBound()
+            }
+
+            override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
+                @Suppress("UNCHECKED_CAST")
+                return n.prefColumnCountProperty() as StyleableProperty<Boolean>
+            }
+        }
 
         val STYLEABLES: List<CssMetaData<out Styleable, *>>
 

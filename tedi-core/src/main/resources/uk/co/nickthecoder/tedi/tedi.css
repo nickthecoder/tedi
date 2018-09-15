@@ -1,3 +1,17 @@
 .tedi-area {
     -fx-font-family: 'monospace';
+    -fx-text-fill: #330000; /* Not working! */
+}
+
+.tedi-area .content {
+}
+
+.tedi-area .gutter {
+    -fx-padding: 0 10 0 10;
+    -fx-background-color: #eeeeee;
+    -fx-text-fill: #333333; /* Not working */
+}
+
+.text-area {
+    -fx-text-fill: #330000; /* Not working! */
 }

@@ -64,12 +64,12 @@ import javafx.scene.input.InputMethodEvent
 import javafx.scene.input.InputMethodHighlight
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.Region
-import javafx.scene.layout.StackPane
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
+import javafx.scene.text.TextAlignment
 import javafx.scene.text.TextBoundsType
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
@@ -85,9 +85,17 @@ open class TediAreaSkin(val tediArea: TediArea)
     private var computedPrefWidth = java.lang.Double.NEGATIVE_INFINITY
     private var computedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
     private var widthForComputedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
-    private var characterWidth: Double = 0.toDouble()
-    private var lineHeight: Double = 0.toDouble()
+    private var characterWidth: Double = 0.0
+    private var lineHeight: Double = 0.0
 
+
+    private val lineNumbers = Text("1\n2\n3\n4\n5\n6\n7\n8\n9\n10\n11")
+    private val paragraphNodes = Group()
+    private val gutter = Gutter()
+
+    private val contentView = ContentView()
+
+    private var promptNode: Text? = null
 
     private val blink = SimpleBooleanProperty(this, "blink", true)
     protected var caretVisible: ObservableBooleanValue
@@ -100,10 +108,6 @@ open class TediAreaSkin(val tediArea: TediArea)
      * but I'm not sure.
      */
     protected val caretPath = Path()
-
-    protected var caretHandle: StackPane? = null
-    protected var selectionHandle1: StackPane? = null
-    protected var selectionHandle2: StackPane? = null
 
     private val forwardBias = SimpleBooleanProperty(this, "forwardBias", true)
 
@@ -211,9 +215,23 @@ open class TediAreaSkin(val tediArea: TediArea)
     }
 
 
+    inner class Gutter : Region() {
+        init {
+            updateLineNumbers()
+            getChildren().add(lineNumbers)
+            tediArea.lineCountProperty().addListener { _, _, _ ->
+                updateLineNumbers()
+            }
+        }
+    }
+
+
     inner class ContentView : Region() {
+
         init {
             styleClass.add("content")
+            gutter.styleClass.add("gutter")
+            gutter.visibleProperty().bind(tediArea.displayLineNumbersProperty())
 
             addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
                 behavior.mousePressed(event)
@@ -250,6 +268,11 @@ open class TediAreaSkin(val tediArea: TediArea)
                 }
 
                 prefWidth += snappedLeftInset() + snappedRightInset()
+
+                if (gutter.isVisible) {
+                    prefWidth += gutter.snappedLeftInset() + gutter.snappedRightInset() +
+                            computeTextWidth(lineNumbers.font, lineNumbers.text, 0.0)
+                }
 
                 val viewPortBounds = scrollPane.viewportBounds
                 computedPrefWidth = Math.max(prefWidth, if (viewPortBounds != null) viewPortBounds.width else 0.0)
@@ -307,16 +330,25 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         public override fun layoutChildren() {
-            val textArea = skinnable
+
+            val tediArea = skinnable
             val width = width
+            val height = height
 
             // Lay out paragraphs
             val topPadding = snappedTopInset()
             val leftPadding = snappedLeftInset()
 
-            val wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0.0)
+            lineNumbers.layoutX = gutter.snappedLeftInset()
+            lineNumbers.layoutY = topPadding
 
+            val gutterWidth = lineNumbers.prefWidth(height) + gutter.snappedLeftInset() + gutter.snappedRightInset()
+            gutter.resizeRelocate(0.0, 0.0, gutterWidth, height)
+
+            val x = gutterWidth + leftPadding
             var y = topPadding
+
+            val wrappingWidth = Math.max(width - (leftPadding + snappedRightInset()), 0.0)
 
             val paragraphNodesChildren = paragraphNodes.getChildren()
 
@@ -326,51 +358,49 @@ open class TediAreaSkin(val tediArea: TediArea)
                 paragraphNode.wrappingWidth = wrappingWidth
 
                 val bounds = paragraphNode.boundsInLocal
-                paragraphNode.layoutX = leftPadding
+                paragraphNode.layoutX = x
                 paragraphNode.layoutY = y
 
                 y += bounds.height
             }
 
             promptNode?.let { promptNode ->
-                promptNode.layoutX = leftPadding
+                promptNode.layoutX = x
                 promptNode.layoutY = topPadding + promptNode.getBaselineOffset()
                 promptNode.wrappingWidth = wrappingWidth
             }
 
             // Update the selection
-            val selection = textArea.selection
+            val selection = tediArea.selection
             val oldCaretBounds = caretPath.boundsInParent
 
             selectionHighlightGroup.getChildren().clear()
 
-            val caretPos = textArea.caretPosition
+            val caretPos = tediArea.caretPosition
 
-            run {
-                // Position caret
-                var paragraphIndex = paragraphNodesChildren.size
-                var paragraphOffset = textArea.length + 1
+            // Position caret
+            var paragraphIndex = paragraphNodesChildren.size
+            var paragraphOffset = tediArea.length + 1
 
-                var paragraphNode: Text?
-                do {
-                    paragraphNode = (paragraphNodesChildren.get(--paragraphIndex)) as Text
-                    paragraphOffset -= paragraphNode.text.length + 1
-                } while (caretPos < paragraphOffset)
+            var paragraphNode: Text?
+            do {
+                paragraphNode = (paragraphNodesChildren.get(--paragraphIndex)) as Text
+                paragraphOffset -= paragraphNode.text.length + 1
+            } while (caretPos < paragraphOffset)
 
-                updateTextNodeCaretPos(caretPos - paragraphOffset)
+            updateTextNodeCaretPos(caretPos - paragraphOffset)
 
-                caretPath.elements.clear()
-                caretPath.elements.addAll(*paragraphNode!!.impl_caretShape)
+            caretPath.elements.clear()
+            caretPath.elements.addAll(*paragraphNode!!.impl_caretShape)
 
-                caretPath.layoutX = paragraphNode.layoutX
+            caretPath.layoutX = paragraphNode.layoutX
 
-                // TODO: Remove this temporary workaround for RT-27533
-                paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
+            // TODO: Remove this temporary workaround for RT-27533
+            paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
 
-                caretPath.layoutY = paragraphNode.layoutY
-                if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
-                    scrollCaretToVisible()
-                }
+            caretPath.layoutY = paragraphNode.layoutY
+            if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
+                scrollCaretToVisible()
             }
 
             // Update selection fg and bg
@@ -435,11 +465,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-
-    private val contentView = ContentView()
-    private val paragraphNodes = Group()
-
-    private var promptNode: Text? = null
 
     private var usePromptText: ObservableBooleanValue = object : BooleanBinding() {
         init {
@@ -598,7 +623,12 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         // Add content view
         paragraphNodes.isManaged = false
-        contentView.getChildren().add(paragraphNodes)
+        contentView.getChildren().addAll(gutter, paragraphNodes)
+
+        // gutter
+        lineNumbers.textOrigin = VPos.TOP
+        lineNumbers.textAlignment = TextAlignment.RIGHT
+        lineNumbers.fontProperty().bind(tediArea.fontProperty())
 
         // Add caret
         caretPath.setManaged(false)
@@ -723,6 +753,15 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     }
 
+
+    private fun updateLineNumbers() {
+        val lines = tediArea.lineCount()
+        val buffer = StringBuffer(lines * 3)
+        for (i in 1..lines) {
+            buffer.append(i.toString()).append("\n")
+        }
+        lineNumbers.text = buffer.toString()
+    }
 
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
         scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
