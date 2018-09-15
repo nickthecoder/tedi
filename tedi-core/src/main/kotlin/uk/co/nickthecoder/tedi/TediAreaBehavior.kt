@@ -33,11 +33,7 @@ package uk.co.nickthecoder.tedi
 import com.sun.javafx.scene.control.skin.TextInputControlSkin
 import com.sun.javafx.scene.text.HitInfo
 import javafx.beans.InvalidationListener
-import javafx.beans.value.ChangeListener
-import javafx.beans.value.ObservableValue
 import javafx.geometry.NodeOrientation
-import javafx.scene.control.ContextMenu
-import javafx.scene.input.ContextMenuEvent
 import javafx.scene.input.KeyCode.*
 import javafx.scene.input.KeyEvent
 import javafx.scene.input.KeyEvent.KEY_PRESSED
@@ -56,9 +52,6 @@ class TediAreaBehavior(val control: TediArea)
     private val skin: TediAreaSkin
         get() = control.skin as TediAreaSkin
 
-
-    private val contextMenu = ContextMenu()
-
     /**
      * Used to keep track of the most recent key event. This is used when
      * handling InputCharacter actions.
@@ -67,28 +60,22 @@ class TediAreaBehavior(val control: TediArea)
 
     private val textListener = InvalidationListener { _ -> invalidateBidi() }
 
+    private var bidi: Bidi? = null
+    private var mixed: Boolean? = null
+    private var rtlText: Boolean? = null
+
+    private var shiftDown = false
+    private var deferClick = false
+
+    private var editing = false
+
     init {
         // Register for change events
-        control.focusedProperty().addListener(
-                object : ChangeListener<Boolean> {
-                    override fun changed(observable: ObservableValue<out Boolean>, oldValue: Boolean?, newValue: Boolean?) {
-                        // NOTE: The code in this method is *almost* and exact copy of what is in TextFieldBehavior.
-                        // The only real difference is that TextFieldBehavior selects all the text when the control
-                        // receives focus (when not gained by mouse click), whereas TextArea doesn't, and also the
-                        // TextArea doesn't lose selection on focus lost, whereas the TextField does.
-                        if (control.isFocused()) {
-                            if (!focusGainedByMouseClick) {
-                                setCaretAnimating(true)
-                            }
-                        } else {
-                            focusGainedByMouseClick = false
-                            setCaretAnimating(false)
-                        }
-                    }
-                })
+        control.focusedProperty().addListener { _, _, _ ->
+            setCaretAnimating(control.isFocused())
+        }
 
         control.textProperty().addListener(textListener)
-
     }
 
     override fun dispose() {
@@ -98,7 +85,7 @@ class TediAreaBehavior(val control: TediArea)
 
     /**************************************************************************
      * Key handling implementation                                            *
-     */
+     *************************************************************************/
 
     /**
      * Records the last KeyEvent we saw.
@@ -117,7 +104,7 @@ class TediAreaBehavior(val control: TediArea)
 
         if (tediArea.isEditable) {
 
-            setEditing(true)
+            editing = true
             done = true
             when (name) {
 
@@ -138,7 +125,7 @@ class TediAreaBehavior(val control: TediArea)
                     done = false
                 }
             }
-            setEditing(false)
+            editing = false
         }
 
         if (!done) {
@@ -185,9 +172,9 @@ class TediAreaBehavior(val control: TediArea)
                 "SelectPreviousLine" -> skin.previousLine(true)
                 "SelectNextLine" -> skin.nextLine(true)
                 "ParagraphStart" -> skin.paragraphStart(true, false)
-                "ParagraphEnd" -> skin.paragraphEnd(true, isWindows(), false)
+                "ParagraphEnd" -> skin.paragraphEnd(true, isWindows, false)
                 "SelectParagraphStart" -> skin.paragraphStart(true, true)
-                "SelectParagraphEnd" -> skin.paragraphEnd(true, isWindows(), true)
+                "SelectParagraphEnd" -> skin.paragraphEnd(true, isWindows, true)
                 "PreviousPage" -> skin.previousPage(false)
                 "NextPage" -> skin.nextPage(false)
                 "SelectPreviousPage" -> skin.previousPage(true)
@@ -208,21 +195,11 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-
-    private fun insertNewLine() {
-        control.replaceSelection("\n")
-    }
-
     override fun mousePressed(e: MouseEvent?) {
         super.mousePressed(e)
         // We never respond to events if disabled
         if (!control.isDisabled) {
-            // If the text field doesn't have focus, then we'll attempt to set
-            // the focus and we'll indicate that we gained focus by a mouse
-            // click, TODO which will then NOT honor the selectOnFocus variable
-            // of the textInputControl
             if (!control.isFocused) {
-                focusGainedByMouseClick = true
                 control.requestFocus()
             }
 
@@ -242,13 +219,10 @@ class TediAreaBehavior(val control: TediArea)
                     // if there is a selection, then we will NOT handle the
                     // press now, but will defer until the release. If you
                     // select some text and then press down, we change the
-                    // caret and wait to allow you to drag the text (TODO).
+                    // caret and wait to allow you to drag the text.
                     // When the drag concludes, then we handle the click
 
                     deferClick = true
-                    // TODO start a timer such that after some millis we
-                    // switch into text dragging mode, change the cursor
-                    // to indicate the text can be dragged, etc.
                 } else if (!(e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown || e.isShortcutDown)) {
                     when (e.clickCount) {
                         1 -> skin.positionCaret(hit, false, false)
@@ -264,22 +238,15 @@ class TediAreaBehavior(val control: TediArea)
                     // selection, and set the mark to be the other side and
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
-                    if (isMac()) {
+                    if (isMac) {
                         control.extendSelection(i)
                     } else {
                         skin.positionCaret(hit, true, false)
                     }
                 }
-                //                 skin.setForwardBias(hit.isLeading());
-                //                if (textInputControl.editable)
-                //                    displaySoftwareKeyboard(true);
-            }
-            if (contextMenu.isShowing) {
-                contextMenu.hide()
             }
         }
     }
-
 
     override fun mouseDragged(e: MouseEvent?) {
         val textArea = getControl()
@@ -310,67 +277,6 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    override fun contextMenuRequested(e: ContextMenuEvent?) {
-        val textArea = getControl()
-
-        if (contextMenu.isShowing) {
-            contextMenu.hide()
-        } else if (textArea.contextMenu == null) {
-            var screenX = e!!.screenX
-            var screenY = e.screenY
-            var sceneX = e.sceneX
-
-            if (IS_TOUCH_SUPPORTED) {
-                /*
-                var menuPos: Point2D?
-                if (textArea.selection.length == 0) {
-                    skin.positionCaret(skin.getIndex(e.x, e.y), false, false)
-                    menuPos = skin.getMenuPosition()
-                } else {
-                    menuPos = skin.getMenuPosition()
-                    if (menuPos != null && (menuPos.x <= 0 || menuPos.y <= 0)) {
-                        skin.positionCaret(skin.getIndex(e.x, e.y), false, false)
-                        menuPos = skin.getMenuPosition()
-                    }
-                }
-
-                if (menuPos != null) {
-                    val p = getControl().localToScene(menuPos)
-                    val scene = getControl().scene
-                    val window = scene.window
-                    val location = Point2D(window.x + scene.x + p.x,
-                            window.y + scene.y + p.y)
-                    screenX = location.x
-                    sceneX = p.x
-                    screenY = location.y
-                }
-                */
-            }
-
-            val menuWidth = contextMenu.prefWidth(-1.0)
-            val menuX = screenX - if (IS_TOUCH_SUPPORTED) menuWidth / 2.0 else 0.0
-            val currentScreen = com.sun.javafx.util.Utils.getScreenForPoint(screenX, 0.0)
-            val bounds = currentScreen.bounds
-
-            if (menuX < bounds.minX) {
-                getControl().properties.put("CONTEXT_MENU_SCREEN_X", screenX)
-                getControl().properties.put("CONTEXT_MENU_SCENE_X", sceneX)
-                contextMenu.show(getControl(), bounds.minX, screenY)
-            } else if (screenX + menuWidth > bounds.maxX) {
-                val leftOver = menuWidth - (bounds.maxX - screenX)
-                getControl().properties.put("CONTEXT_MENU_SCREEN_X", screenX)
-                getControl().properties.put("CONTEXT_MENU_SCENE_X", sceneX)
-                contextMenu.show(getControl(), screenX - leftOver, screenY)
-            } else {
-                getControl().properties.put("CONTEXT_MENU_SCREEN_X", 0)
-                getControl().properties.put("CONTEXT_MENU_SCENE_X", 0)
-                contextMenu.show(getControl(), menuX, screenY)
-            }
-        }
-
-        e!!.consume()
-    }
-
     protected fun setCaretAnimating(play: Boolean) {
         skin.setCaretAnimating(play)
     }
@@ -378,7 +284,7 @@ class TediAreaBehavior(val control: TediArea)
     protected fun mouseDoubleClick(hit: HitInfo) {
         val textArea = getControl()
         textArea.previousWord()
-        if (isWindows()) {
+        if (isWindows) {
             textArea.selectNextWord()
         } else {
             textArea.selectEndOfNextWord()
@@ -388,7 +294,7 @@ class TediAreaBehavior(val control: TediArea)
     protected fun mouseTripleClick(hit: HitInfo) {
         // select the line
         skin.paragraphStart(false, false)
-        skin.paragraphEnd(false, isWindows(), true)
+        skin.paragraphEnd(false, isWindows, true)
     }
 
 
@@ -410,9 +316,9 @@ class TediAreaBehavior(val control: TediArea)
         val character = event.character
         if (character.isEmpty()) return
 
-        // Filter out control keys except control+Alt on PC or Alt on Mac
-        if (event.isControlDown || event.isAltDown || isMac() && event.isMetaDown) {
-            if (!((event.isControlDown || isMac()) && event.isAltDown)) return
+        // Filter out control keys except control & Alt on PC or Alt on Mac
+        if (event.isControlDown || event.isAltDown || isMac && event.isMetaDown) {
+            if (!((event.isControlDown || isMac) && event.isAltDown)) return
         }
 
         // Ignore characters in the control range and the ASCII delete
@@ -429,9 +335,6 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    private var bidi: Bidi? = null
-    private var mixed: Boolean? = null
-    private var rtlText: Boolean? = null
 
     private fun invalidateBidi() {
         bidi = null
@@ -465,7 +368,6 @@ class TediAreaBehavior(val control: TediArea)
         return rtlText!!
     }
 
-
     private fun nextCharacterVisually(moveRight: Boolean) {
         if (isMixed()) {
             val skin = control.getSkin() as TextInputControlSkin<*, *>
@@ -475,6 +377,11 @@ class TediAreaBehavior(val control: TediArea)
         } else {
             control.backward()
         }
+    }
+
+
+    private fun insertNewLine() {
+        control.replaceSelection("\n")
     }
 
     private fun selectLeft() {
@@ -532,7 +439,6 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-
     private fun cut() {
         val textInputControl = getControl()
         textInputControl.cut()
@@ -549,7 +455,7 @@ class TediAreaBehavior(val control: TediArea)
 
     protected fun selectNextWord() {
         val textInputControl = getControl()
-        if (isMac() || isLinux()) {
+        if (isMac || isLinux) {
             textInputControl.selectEndOfNextWord()
         } else {
             textInputControl.selectNextWord()
@@ -575,7 +481,7 @@ class TediAreaBehavior(val control: TediArea)
     protected fun selectWord() {
         val textInputControl = getControl()
         textInputControl.previousWord()
-        if (isWindows()) {
+        if (isWindows) {
             textInputControl.selectNextWord()
         } else {
             textInputControl.selectEndOfNextWord()
@@ -588,7 +494,7 @@ class TediAreaBehavior(val control: TediArea)
 
     protected fun nextWord() {
         val textInputControl = getControl()
-        if (isMac() || isLinux()) {
+        if (isMac || isLinux) {
             textInputControl.endOfNextWord()
         } else {
             textInputControl.nextWord()
@@ -678,57 +584,31 @@ class TediAreaBehavior(val control: TediArea)
         control.replaceText(start, end, txt)
     }
 
-    /**
-     * If the focus is gained via response to a mouse click, then we don't
-     * want to select all the text even if selectOnFocus is true.
-     */
-    private var focusGainedByMouseClick = false // TODO!!
-    private var shiftDown = false
-    private var deferClick = false
-
-
-    private var editing = false
-
-    protected fun setEditing(b: Boolean) {
-        editing = b
-    }
-
-    fun isEditing(): Boolean {
-        return editing
-    }
-
-    // TODO Do something better?
-    fun isMac() = false
-
-    fun isLinux() = true
-    fun isWindows() = false
-
     companion object {
 
         val TEDI_AREA_BINDINGS: MutableList<KeyBinding> = ArrayList()
 
         init {
 
-            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "LineStart")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "LineEnd")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "PreviousLine")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "NextLine")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage")) // new
-            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage")) // new
-            TEDI_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine")) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab")) // changed
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "LineStart"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "LineEnd"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "PreviousLine"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "PreviousLine"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "NextLine"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "NextLine"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "PreviousPage"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "NextPage"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(ENTER, KEY_PRESSED, "InsertNewLine"))
+            TEDI_AREA_BINDINGS.add(KeyBinding(TAB, KEY_PRESSED, "TraverseOrInsertTab"))
 
-            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift()) // changed
-            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift()) // new
-            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift()) // new
-
+            TEDI_AREA_BINDINGS.add(KeyBinding(HOME, KEY_PRESSED, "SelectLineStart").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(END, KEY_PRESSED, "SelectLineEnd").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(UP, KEY_PRESSED, "SelectPreviousLine").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_UP, KEY_PRESSED, "SelectPreviousLine").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(DOWN, KEY_PRESSED, "SelectNextLine").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(KP_DOWN, KEY_PRESSED, "SelectNextLine").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_UP, KEY_PRESSED, "SelectPreviousPage").shift())
+            TEDI_AREA_BINDINGS.add(KeyBinding(PAGE_DOWN, KEY_PRESSED, "SelectNextPage").shift())
 
             TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "Right"))
             TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "Right"))
@@ -749,7 +629,7 @@ class TediAreaBehavior(val control: TediArea)
             TEDI_AREA_BINDINGS.add(KeyBinding(DELETE, KEY_PRESSED, "Cut").shift())
             TEDI_AREA_BINDINGS.add(KeyBinding(COPY, KEY_PRESSED, "Copy"))
             TEDI_AREA_BINDINGS.add(KeyBinding(PASTE, KEY_PRESSED, "Paste"))
-            TEDI_AREA_BINDINGS.add(KeyBinding(INSERT, KEY_PRESSED, "Paste").shift())// does this belong on mac?
+            TEDI_AREA_BINDINGS.add(KeyBinding(INSERT, KEY_PRESSED, "Paste").shift())
             // selection
             TEDI_AREA_BINDINGS.add(KeyBinding(RIGHT, KEY_PRESSED, "SelectRight").shift())
             TEDI_AREA_BINDINGS.add(KeyBinding(KP_RIGHT, KEY_PRESSED, "SelectRight").shift())
@@ -799,7 +679,6 @@ class TediAreaBehavior(val control: TediArea)
                     .ctrl(OptionalBoolean.ANY)
                     .meta(OptionalBoolean.ANY))
 
-            // TODO Is this ok?
             // Traversal Bindings
             TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraverseNext"))
             TEDI_AREA_BINDINGS.add(KeyBinding(TAB, "TraversePrevious").shift())

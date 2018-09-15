@@ -114,3 +114,9 @@ over "well written" code on crusty old hardware of yesteryear. Now get off my la
 So it seems there's a lot of work to be done to convert TextArea into an efficient general purpose editor.
 Alas, there's a good chance that I won't put in that amount of work, so Tedi will probably remain
 as poorly written as TextArea. Sorry.
+
+## Right-to-Left and Accessibility
+
+I've keep code which handles right-to-left support, and accessibility support.
+However, I don't understand them, nor how to use them, so I may have broken them without knowing.
+Help will be appreciated; even just a confirmation on whether they do work!
