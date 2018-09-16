@@ -9,6 +9,7 @@ import javafx.scene.control.TextArea
 import javafx.scene.control.ToolBar
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
+import uk.co.nickthecoder.tedi.CodeWordBreakIterator
 import uk.co.nickthecoder.tedi.TediArea
 
 class ExampleWindow(stage: Stage = Stage()) {
@@ -36,6 +37,8 @@ End""")
         borderPane.center = splitPane
         borderPane.bottom = textArea
         borderPane.top = toolbar
+
+        view1.wordIterator = CodeWordBreakIterator()
 
         with(toolbar.items) {
             add(createButton("Show Line Numbers") { view1.displayLinesNumbers = true })

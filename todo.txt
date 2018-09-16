@@ -5,15 +5,12 @@ LineNumbers change font (seemingly at random). Maybe a gc issue?
     Note, only the "font family" changes (from monospace to the default (proportional) font.
     This causes them not to line up with the content.
 
+Indenting a block, where the "to" includes the new line character REMOVES that new line character.
+
 Next
 ----
 
-Indent/unindent to work with undo/redo
-
 Do better next/prev word navigation (more in keeping with code. i.e. co.uk.nickthecoder.foo is treated as 4 words.
-
-Tab key to indent a block (when there is a selection)
-Shift-tab to un-indent a block (unless in read-only mode, in which case perform the normal navigation).
 
 Later
 -----

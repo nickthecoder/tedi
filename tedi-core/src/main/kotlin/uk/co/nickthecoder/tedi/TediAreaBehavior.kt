@@ -498,11 +498,11 @@ class TediAreaBehavior(val control: TediArea)
     }
 
     protected fun nextWord() {
-        val textInputControl = getControl()
+        val tediArea = getControl()
         if (isMac || isLinux) {
-            textInputControl.endOfNextWord()
+            tediArea.endOfNextWord()
         } else {
-            textInputControl.nextWord()
+            tediArea.nextWord()
         }
     }
 

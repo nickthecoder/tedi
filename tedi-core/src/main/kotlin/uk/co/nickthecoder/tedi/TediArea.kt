@@ -44,6 +44,7 @@ import javafx.scene.control.TextInputControl
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
 import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
+import java.text.BreakIterator
 import java.util.*
 
 open class TediArea private constructor(protected val content: TediAreaContent)
@@ -236,6 +237,16 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             indentSizeProperty.set(v)
         }
 
+    /**
+     * The Break Iterator to use, when double clicking, and also when using Left/Right Arrow + Shift.
+     * The default value is :
+     *     BreakIterator.getWordInstance()
+     * which means that TediArea will behave in the same manner as TextArea.
+     * However, for coding, set it to a [CodeWordBreakIterator].
+     */
+    var wordIterator: BreakIterator = BreakIterator.getWordInstance()
+
+
     /***************************************************************************
      *                                                                         *
      * End of Properties                                                       *
@@ -266,7 +277,137 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * n space characters, where n is taken from [indentSize].
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
-    
+
+
+    /***************************************************************************
+     *                                                                         *
+     * Word Selection. These are basically an EXACT copy of those from         *
+     * TextInputControl, except that I need to access the private              *
+     * wordIterator. And therefore, I've had to duplicate the lot. Grr.        *
+     *                                                                         *
+     **************************************************************************/
+
+    protected fun previousWord(select: Boolean) {
+        val textLength = length
+        val text = text
+        if (textLength <= 0) {
+            return
+        }
+
+        wordIterator.setText(text)
+
+        var pos = wordIterator.preceding(clamp(0, caretPosition, textLength))
+
+        // Skip the non-word region, then move/select to the beginning of the word.
+        while (pos != BreakIterator.DONE && !Character.isLetterOrDigit(text[clamp(0, pos, textLength - 1)])) {
+            pos = wordIterator.preceding(clamp(0, pos, textLength))
+        }
+
+        // move/select
+        selectRange(if (select) anchor else pos, pos)
+    }
+
+    protected fun nextWord(select: Boolean) {
+        val textLength = length
+        val text = text
+        if (textLength <= 0) {
+            return
+        }
+
+        wordIterator.setText(text)
+
+        var last = wordIterator.following(clamp(0, caretPosition, textLength - 1))
+        var current = wordIterator.next()
+
+        // Skip whitespace characters to the beginning of next word, but
+        // stop at newline. Then move the caret or select a range.
+        while (current != BreakIterator.DONE) {
+            for (p in last..current) {
+                val ch = text[clamp(0, p, textLength - 1)]
+                // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
+                // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
+                if (ch != ' ' && ch != '\t') {
+                    if (select) {
+                        selectRange(anchor, p)
+                    } else {
+                        selectRange(p, p)
+                    }
+                    return
+                }
+            }
+            last = current
+            current = wordIterator.next()
+        }
+
+        // move/select to the end
+        if (select) {
+            selectRange(anchor, textLength)
+        } else {
+            end()
+        }
+    }
+
+    protected fun endOfNextWord(select: Boolean) {
+        val textLength = length
+        val text = text
+        if (textLength <= 0) {
+            return
+        }
+
+        wordIterator.setText(text)
+
+        var last = wordIterator.following(clamp(0, caretPosition, textLength))
+        var current = wordIterator.next()
+
+        // skip the non-word region, then move/select to the end of the word.
+        while (current != BreakIterator.DONE) {
+            for (p in last..current) {
+                if (!Character.isLetterOrDigit(text[clamp(0, p, textLength - 1)])) {
+                    if (select) {
+                        selectRange(anchor, p)
+                    } else {
+                        selectRange(p, p)
+                    }
+                    return
+                }
+            }
+            last = current
+            current = wordIterator.next()
+        }
+
+        // move/select to the end
+        if (select) {
+            selectRange(anchor, textLength)
+        } else {
+            end()
+        }
+    }
+
+    override fun previousWord() {
+        previousWord(false)
+    }
+
+    override fun nextWord() {
+        nextWord(false)
+    }
+
+    override fun endOfNextWord() {
+        endOfNextWord(false)
+    }
+
+    override fun selectPreviousWord() {
+        previousWord(true)
+    }
+
+    override fun selectNextWord() {
+        nextWord(true)
+    }
+
+    override fun selectEndOfNextWord() {
+        endOfNextWord(true)
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * ParagraphList class                                                     *
