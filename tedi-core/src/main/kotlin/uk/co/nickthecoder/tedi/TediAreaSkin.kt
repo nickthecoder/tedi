@@ -70,7 +70,6 @@ import javafx.scene.paint.Paint
 import javafx.scene.shape.*
 import javafx.scene.text.Font
 import javafx.scene.text.Text
-import javafx.scene.text.TextAlignment
 import javafx.scene.text.TextBoundsType
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
@@ -90,12 +89,11 @@ open class TediAreaSkin(val tediArea: TediArea)
     private var lineHeight: Double = 0.0
 
 
-    private val lineNumbers = Text("")
     private val paragraphNodes = Group()
-    private val gutter = Gutter()
+    private val gutter = Gutter(this)
 
     private val guttersAndContentView = BorderPane()
-    private val contentView = ContentView()
+    internal val contentView = ContentView()
 
     /**
      * A path, provided by the textNode, which represents the caret.
@@ -197,24 +195,6 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         override fun getCssMetaData(): CssMetaData<TediArea, Paint> {
             return StyleableProperties.HIGHLIGHT_TEXT_FILL
-        }
-    }
-
-    protected val gutterTextFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
-        override fun invalidated() {
-            updateGutterTextFill()
-        }
-
-        override fun getBean(): Any {
-            return this@TediAreaSkin
-        }
-
-        override fun getName(): String {
-            return "gutterTextFill"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Paint> {
-            return StyleableProperties.GUTTER_TEXT_FILL
         }
     }
 
@@ -325,19 +305,11 @@ open class TediAreaSkin(val tediArea: TediArea)
 
 
         // gutter
-        guttersAndContentView.left = gutter
+        guttersAndContentView.left = if (gutter.isVisible) gutter else null
         guttersAndContentView.center = contentView
 
-        lineNumbers.isManaged = false
-        lineNumbers.textOrigin = VPos.TOP
-        lineNumbers.textAlignment = TextAlignment.RIGHT
-        lineNumbers.fontProperty().bind(tediArea.fontProperty())
-        updateLineNumbers()
-        updateGutterTextFill()
-        updateGutters()
         tediArea.displayLineNumbersProperty().addListener { _, _, _ ->
             updateGutters()
-            gutter.requestLayout()
         }
 
         // Add caret
@@ -511,17 +483,8 @@ open class TediAreaSkin(val tediArea: TediArea)
         computedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
     }
 
-    private fun updateLineNumbers() {
-        val lines = tediArea.lineCount
-        val buffer = StringBuffer(lines * 3)
-        for (i in 1..lines) {
-            buffer.append(i.toString()).append("\n")
-        }
-        lineNumbers.text = buffer.toString()
-    }
-
     private fun updateGutters() {
-        if (tediArea.displayLinesNumbers) {
+        if (tediArea.displayLineNumbers) {
             guttersAndContentView.left = gutter
         } else {
             guttersAndContentView.left = null
@@ -535,19 +498,23 @@ open class TediAreaSkin(val tediArea: TediArea)
     private fun addParagraphNode(i: Int, string: String) {
         val textArea = skinnable
         val paragraphNode = Text(string)
-        paragraphNode.textOrigin = VPos.TOP
-        paragraphNode.wrappingWidth = 0.0
-        paragraphNode.isManaged = false
-        paragraphNode.styleClass.add("text")
-        paragraphNode.boundsTypeProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updateFontMetrics()
+
+        with(paragraphNode) {
+            textOrigin = VPos.TOP
+            wrappingWidth = 0.0
+            isManaged = false
+            styleClass.add("text")
+            boundsTypeProperty().addListener { _, _, _ ->
+                invalidateMetrics()
+                updateFontMetrics()
+            }
+
+            fontProperty().bind(textArea.fontProperty())
+            fillProperty().bind(textFill)
+            impl_selectionFillProperty().bind(highlightTextFill)
         }
         paragraphNodes.children.add(i, paragraphNode)
 
-        paragraphNode.fontProperty().bind(textArea.fontProperty())
-        paragraphNode.fillProperty().bind(textFill)
-        paragraphNode.impl_selectionFillProperty().bind(highlightTextFill)
     }
 
     public override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
@@ -801,10 +768,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             val selectionHighlightPath = node as Path
             selectionHighlightPath.fill = highlightFill.get()
         }
-    }
-
-    protected fun updateGutterTextFill() {
-        lineNumbers.fill = gutterTextFill.get()
     }
 
     private fun getTextTranslateY(): Double {
@@ -1258,36 +1221,6 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     /***************************************************************************
      *                                                                         *
-     * Gutter class                                                            *
-     *                                                                         *
-     **************************************************************************/
-    inner class Gutter : Region() {
-
-        init {
-            styleClass.add("gutter")
-            visibleProperty().bind(tediArea.displayLineNumbersProperty())
-
-            children.add(lineNumbers)
-            tediArea.lineCountProperty().addListener { _, _, _ ->
-                updateLineNumbers()
-                gutter.requestLayout()
-            }
-        }
-
-        override fun computePrefWidth(height: Double): Double {
-            var prefWidth = snappedLeftInset() + snappedRightInset()
-            prefWidth += lineNumbers.prefWidth(height)
-            return prefWidth
-        }
-
-        override fun layoutChildren() {
-            lineNumbers.layoutX = snappedLeftInset()
-            lineNumbers.layoutY = contentView.snappedTopInset()
-        }
-    }
-
-    /***************************************************************************
-     *                                                                         *
      * Content View class                                                      *
      *                                                                         *
      **************************************************************************/
@@ -1333,8 +1266,7 @@ open class TediAreaSkin(val tediArea: TediArea)
                 prefWidth += snappedLeftInset() + snappedRightInset()
 
                 if (gutter.isVisible) {
-                    prefWidth += gutter.snappedLeftInset() + gutter.snappedRightInset() +
-                            computeTextWidth(lineNumbers.font, lineNumbers.text, 0.0)
+                    prefWidth += gutter.prefWidth(height)
                 }
 
                 val viewPortBounds = scrollPane.viewportBounds
@@ -1399,7 +1331,7 @@ open class TediAreaSkin(val tediArea: TediArea)
             val x = leftPadding
             var y = topPadding
 
-            val paragraphNodesChildren = paragraphNodes.getChildren()
+            val paragraphNodesChildren = paragraphNodes.children
 
             for (i in paragraphNodesChildren.indices) {
                 val node = paragraphNodesChildren.get(i)
@@ -1416,7 +1348,7 @@ open class TediAreaSkin(val tediArea: TediArea)
             val selection = tediArea.selection
             val oldCaretBounds = caretPath.boundsInParent
 
-            selectionHighlightGroup.getChildren().clear()
+            selectionHighlightGroup.children.clear()
 
             val caretPos = tediArea.caretPosition
 
@@ -1558,21 +1490,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             }
         }
 
-        val GUTTER_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-gutter-text-fill",
-                StyleConverter.getPaintConverter(), Color.GREY) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                val skin = n.skin as TediAreaSkin
-                return !skin.gutterTextFill.isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
-                val skin = n.skin as TediAreaSkin
-                @Suppress("UNCHECKED_CAST")
-                return skin.gutterTextFill as StyleableProperty<Paint>
-            }
-        }
-
         val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
                 StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
 
@@ -1588,26 +1505,10 @@ open class TediAreaSkin(val tediArea: TediArea)
             }
         }
 
-        val STYLEABLES: List<CssMetaData<out Styleable, *>>
-
-        init {
-            val styleables = ArrayList(TextInputControl.getClassCssMetaData())
-            styleables.add(TEXT_FILL)
-            styleables.add(HIGHLIGHT_FILL)
-            styleables.add(HIGHLIGHT_TEXT_FILL)
-            styleables.add(GUTTER_TEXT_FILL)
-            styleables.add(DISPLAY_CARET)
-
-            STYLEABLES = Collections.unmodifiableList(styleables)
-        }
-
-        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> {
-            return StyleableProperties.STYLEABLES
-        }
     }
 
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
-        return StyleableProperties.getClassCssMetaData()
+        return getClassCssMetaData()
     }
 
     /***************************************************************************
@@ -1617,7 +1518,21 @@ open class TediAreaSkin(val tediArea: TediArea)
      **************************************************************************/
     companion object {
 
+        private val STYLEABLES: List<CssMetaData<out Styleable, *>>
+
         internal val layout = Toolkit.getToolkit().textLayoutFactory.createLayout()
+
+        init {
+            val styleables = ArrayList(TextInputControl.getClassCssMetaData())
+            styleables.add(StyleableProperties.TEXT_FILL)
+            styleables.add(StyleableProperties.HIGHLIGHT_FILL)
+            styleables.add(StyleableProperties.HIGHLIGHT_TEXT_FILL)
+            styleables.add(StyleableProperties.DISPLAY_CARET)
+
+            STYLEABLES = Collections.unmodifiableList(styleables)
+        }
+
+        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
 
         internal fun computeTextWidth(font: Font, text: String?, wrappingWidth: Double): Double {
             layout.setContent(text ?: "", font.impl_getNativeFont())

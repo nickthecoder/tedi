@@ -32,7 +32,7 @@ End""")
 
     init {
         TediArea.style(scene)
-        
+
         with(borderPane) {
             styleClass.add("example")
             center = splitPane
@@ -42,8 +42,8 @@ End""")
         view1.wordIterator = CodeWordBreakIterator()
 
         with(toolbar.items) {
-            add(createButton("Show Line Numbers") { view1.displayLinesNumbers = true })
-            add(createButton("Hide Line Numbers") { view1.displayLinesNumbers = false })
+            add(createButton("Show Line Numbers") { view1.displayLineNumbers = true })
+            add(createButton("Hide Line Numbers") { view1.displayLineNumbers = false })
             add(GotoDialog.createGotoButton { view1 })
         }
 

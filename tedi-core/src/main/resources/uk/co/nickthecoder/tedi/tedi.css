@@ -1,6 +1,5 @@
 .tedi-area {
     -fx-font-family: 'monospace';
-    -fx-gutter-text-fill: #ff0000;
 }
 
 .tedi-area .gutter {
@@ -8,6 +7,7 @@
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
+    -fx-text-fill: #888888;
 }
 
 /*
@@ -30,7 +30,7 @@
     -fx-background-radius: 3, 2, 4, 0;
 }
 
-/***** For the ui package (goto dialog, and search/replace toolbars) *****/
+/***** For the ui package (go to line dialog, and search/replace toolbars) *****/
 
 .tedi-form {
     -fx-padding: 20px;

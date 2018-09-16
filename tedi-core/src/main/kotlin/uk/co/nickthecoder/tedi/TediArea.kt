@@ -99,7 +99,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * Determines if line numbers are displayed.
      * This can also be set using the css : -fx-display-line-numbers
      */
-    var displayLinesNumbers: Boolean
+    var displayLineNumbers: Boolean
         get() = displayLineNumbersProperty.get()
         set(v) {
             displayLineNumbersProperty.set(v)
