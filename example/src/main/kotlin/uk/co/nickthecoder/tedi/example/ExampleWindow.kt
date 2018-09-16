@@ -5,7 +5,6 @@ import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.SplitPane
-import javafx.scene.control.TextArea
 import javafx.scene.control.ToolBar
 import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
@@ -25,8 +24,6 @@ End""")
 
     val view2 = TediArea(view1)
 
-    val textArea = TextArea("This is a regular TextArea")
-
     val borderPane = BorderPane()
 
     val splitPane = SplitPane()
@@ -35,9 +32,12 @@ End""")
 
     init {
         TediArea.style(scene)
-        borderPane.center = splitPane
-        borderPane.bottom = textArea
-        borderPane.top = toolbar
+        
+        with(borderPane) {
+            styleClass.add("example")
+            center = splitPane
+            top = toolbar
+        }
 
         view1.wordIterator = CodeWordBreakIterator()
 
@@ -46,10 +46,6 @@ End""")
             add(createButton("Hide Line Numbers") { view1.displayLinesNumbers = false })
             add(GotoDialog.createGotoButton { view1 })
         }
-
-        // textField.setStyle("-fx-text-fill: green;"); // This works
-        // But if I add ".text-field { -fx-text-fill: green; }" into a css file, it doesn't work.
-        // Nor if I replace .text-field with .text-input or .text-area
 
         splitPane.items.addAll(view1, view2)
         stage.scene = scene

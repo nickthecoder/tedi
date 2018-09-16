@@ -268,10 +268,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     override fun createDefaultSkin(): Skin<*> = TediAreaSkin(this)
 
-    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> {
-        return getClassCssMetaData()
-    }
-
     /**
      * Returns a tab character (when [tabInsertsSpaces] == true), otherwise
      * n space characters, where n is taken from [indentSize].
@@ -857,10 +853,25 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             val styleables = ArrayList(TextInputControl.getClassCssMetaData())
             styleables.add(PREF_COLUMN_COUNT)
             styleables.add(PREF_ROW_COUNT)
+            styleables.add(DISPLAY_LINE_NUMBERS)
             STYLEABLES = Collections.unmodifiableList(styleables)
         }
+
+
+        /**
+         * @return The CssMetaData associated with this class, which may include the
+         * CssMetaData of its super classes.
+         */
+        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> {
+            return StyleableProperties.STYLEABLES
+        }
+
     }
     // End StyleableProperties
+
+    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> {
+        return StyleableProperties.getClassCssMetaData()
+    }
 
     /***************************************************************************
      *                                                                         *
@@ -928,14 +939,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             if (c.toInt() == 0x9) return tabIllegal
             if (c.toInt() < 0x20) return true
             return false
-        }
-
-        /**
-         * @return The CssMetaData associated with this class, which may include the
-         * CssMetaData of its super classes.
-         */
-        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> {
-            return StyleableProperties.STYLEABLES
         }
 
         fun style(scene: Scene) {

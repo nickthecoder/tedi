@@ -1,7 +1,6 @@
 .tedi-area {
     -fx-font-family: 'monospace';
-    -fx-text-fill: #330000; /* Not working! */
-    -fx-font-size: 14px;
+    -fx-gutter-text-fill: #ff0000;
 }
 
 .tedi-area .gutter {
@@ -9,7 +8,6 @@
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
-    -fx-text-fill: #333333; /* Not working */
 }
 
 /*

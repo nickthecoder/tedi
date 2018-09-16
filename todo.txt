@@ -5,6 +5,13 @@ LineNumbers change font (seemingly at random). Maybe a gc issue?
     Note, only the "font family" changes (from monospace to the default (proportional) font.
     This causes them not to line up with the content.
 
+-fx-text-fill not working
+    This doesn't work for regular text fields, or text areas. Not my fault!!!
+    textField.setStyle("-fx-text-fill: green;"); // This works
+    But if I add ".text-input { -fx-text-fill: green; }" into a css file, it doesn't work.
+    Nor if I replace .text-input with .text-area or .tedi-area
+
+
 Indenting a block, where the "to" includes the new line character REMOVES that new line character.
 
 Next
@@ -13,7 +20,7 @@ Next
 Later
 -----
 
-Goto (line number and column)
+Style the line numbers (use a grey fill, rather than black)
 
 Search and replace.
     Matches should be highlighted in a similar way to a selection (but in a different color).
