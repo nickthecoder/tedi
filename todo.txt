@@ -10,8 +10,6 @@ Indenting a block, where the "to" includes the new line character REMOVES that n
 Next
 ----
 
-Do better next/prev word navigation (more in keeping with code. i.e. co.uk.nickthecoder.foo is treated as 4 words.
-
 Later
 -----
 
@@ -20,6 +18,8 @@ Goto (line number and column)
 Search and replace.
     Matches should be highlighted in a similar way to a selection (but in a different color).
     For now, limit it to single line matches???
+
+Consider add back line-wrapping, but disable line numbers whenever it is set.
 
 "Private" API references
 ------------------------
@@ -38,10 +38,3 @@ Search and replace.
         import com.sun.javafx.scene.text.TextLayout
         import com.sun.javafx.tk.FontMetrics
         import com.sun.javafx.tk.Toolkit
-
-Optimisation
-------------
-The skin uses one big Text object holding ALL of the text.
-    This was a hangover from the original TextArea
-The line numbers are also one big Text object.
-

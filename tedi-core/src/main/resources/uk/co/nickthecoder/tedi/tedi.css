@@ -31,3 +31,22 @@
     -fx-background-insets: -0.2, 1, -1.4, 3;
     -fx-background-radius: 3, 2, 4, 0;
 }
+
+/***** For the ui package (goto dialog, and search/replace toolbars) *****/
+
+.tedi-form {
+    -fx-padding: 20px;
+    -fx-spacing: 20px;
+    -fx-alignment:  center;
+    -fx-fill-height: true;
+}
+
+.tedi-buttons {
+    -fx-alignment: center-right;
+    -fx-padding: 10px;
+    -fx-hgap: 10px;
+}
+
+.tedi-buttons .button {
+    -fx-min-width: 80px;
+}

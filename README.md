@@ -12,20 +12,9 @@ I've tried looking for a suitable alternative, and the best I found is
 
 ## Progress
 
-So far, I have replicated the functionality of TextArea.
-This isn't as easy as it sounds!
-I started off by copy/pasting the TextArea, TextAreaSkin and TextAreaBehaviour, changing names appropriately.
-However, then the code ends up using shed loads of "private" APIs
-(i.e. those in com.sun.javafx.xxx, rather than javafx.xxx).
+TediArea already does most of what I want (highlighted search matches being the most notable exception).
 
-I then made exact duplicates of about a dozen "simple" classes in the com.sun.javafx package,
-such as ExpressionHelper, KeyBinding, BehaviourBase, OptionalBoolean.
-
-However, there are some classes that cannot be copy/pasted, due to interwoven dependencies.
-For example HitInfo which is implicitly bound with the (public) "Text" class.
-Getting rid of those dependencies will be much harder.
-
-So my code currently depends on the following "private" classes :
+However, it currently depends on the following non-standard classes :
 
     com.sun.javafx.scene.control.skin.TextInputControlSkin
     com.sun.javafx.scene.control.skin.Utils
@@ -35,23 +24,19 @@ So my code currently depends on the following "private" classes :
     com.sun.javafx.tk.FontMetrics
     com.sun.javafx.tk.Toolkit
 
-While I think JavaFX is good, the fact that writing a simple TextArea is extremely challenging
-shows that the API is really lacking.
+It also spews out numerous compiler warnings due to use of "deprecated" APIs.
+(most/all of these are related to the above non-standard classes).
 
-I think I'll be able to "bodge" my way round most of these, but I'm worried that some may be
-near impossible to get rid of.
+It's not going to be easy to remove these using the current version of JavaFX, because it
+doesn't have a sufficient public API (especially regarding fonts).
 
-## Compiler Warnings
+So, I have three options :
 
-There are still lots of warnings during compilation. I do plan on removing them, but it isn't as easy as you
-might expect. (Some are, and I will get to those soon!)
+- Wait for the next version of JavaFX, (which hopefully has a complete public API for creating a text editor)
+- Spend a lot of effort bodging around the missing APIs
+- Do nothing, and expect TediArea to break when run against a future version of JavaFX.
 
-Many of these are due to use of "deprecated" apis. I use quotes, because they aren't deprecated.
-They are in use within the regular TextArea. IMHO, you should NOT add @deprecated to an API
-if the same code base is still using it!
-
-I think these are due to java's lack of Kotlin's "internal" keyword (Kotlin really if better than Java!),
-and they are abusing @deprecated to achieve a similar, but inferior result!
+For now, I'm doing nothing. Sorry.
 
 ## Differences between TediArea and TextArea
 
@@ -66,14 +51,14 @@ I chose to exclude the context menu, because it is likely that any application t
 add their own context menu, with more features. Also, getting I18N (translations) of the text seems to
 require more "private" APIs, and even hard-coded strings containing "com.sun.xxx" package names. Yuck!
 
-Wrapping text is just evil, and won't work well when I implement line numbers.
-Tedi is primarily designed to be for code.
+Tedi is primarily designed to be for coding, where line-wrapping is just not done!
+Also, line-wrapping doesn't work with my implementation of line numbers.
 
 ### Additional Features
 
 - Exposes a lineCount property
 - Exposes a paragraphsProperty (should this be called linesProperty??)
-- Can use a "better" word breaks for coding : (myTediArea.wordIterator = CodeWordBreakIterator())
+- Can use a better word breaks for coding : (myTediArea.wordIterator = CodeWordBreakIterator())
 
 ## Styling TediArea
 
@@ -82,17 +67,20 @@ TediArea has the style classes of "text-area" and "tedi-area".
 As with TextArea, you can style ".tedi-area", ".tedi-area .content" and ".tedi-area .scroll-pane"
 
 TediArea has similar styleable properties as TextArea, with the addition of :
-- -fx-display-line-numbers
+- -fx-display-line-numbers (boolean)
 
 I have included a style sheet as a resource in package uk.co.nickthecoder.tedi called "tedi.css".
 This applies a monospaced font to .tedi-area, and styles the gutter containing the line numbers.
 
-## Paragraphs
+## Planned additional features
 
-The use of the word "paragraph" in the code took me by surprise. It turns out that a "paragraph" is actually
-a line of text ending in a new-line character.
-I would have called it "line" rather than "paragraph".
-However, I suppose using "line" may be confusing when line-wrapping is enabled.
+Possibly in the order that I'll develop them :
+
+- Goto (go to a line number / column position)
+- Search and replace, with matches highlighted.
+- Create a full-featured example application, i.e. a simple text editor.
+- Remove dependencies on com.sun.xxx
+- Optimise for large documents. TextArea (on which this is based), is not efficient at all. See below.
 
 ## Performance
 
@@ -114,6 +102,8 @@ over "well written" code on crusty old hardware of yesteryear. Now get off my la
 So it seems there's a lot of work to be done to convert TextArea into an efficient general purpose editor.
 Alas, there's a good chance that I won't put in that amount of work, so Tedi will probably remain
 as poorly written as TextArea. Sorry.
+
+CodeWordBreakIterator is horribly inefficient. Sorry!
 
 ## Right-to-Left and Accessibility
 

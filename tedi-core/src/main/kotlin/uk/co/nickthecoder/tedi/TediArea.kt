@@ -278,6 +278,50 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
 
+    /**
+     * Returns the position within [text] of the start of the nth line.
+     * [line] and the returned result are zero based.
+     */
+    fun lineStartPosition(line: Int): Int {
+        var result = 0
+        var i = 0
+        for (p in paragraphs) {
+            if (i >= line) {
+                return result
+            }
+            result += p.length + 1 // 1 for the new line character
+            i++
+        }
+        return result
+    }
+
+    fun positionFor(line: Int, column: Int): Int {
+        val lineStart = lineStartPosition(line)
+        if (line >= 0 && line < paragraphs.size) {
+            return lineStart + clamp(0, paragraphs[line].length, column)
+        } else {
+            return lineStart
+        }
+    }
+
+    /**
+     * Returns the line/column as a [Pair] for the given position within the [text].
+     * Everything is zero-based. So Pair(0,0) relates to position 0 (the start of the text.
+     *
+     * If the position is less than 0, or >= text.length then the result is undefined.
+     */
+    fun lineColumnFor(position: Int): Pair<Int, Int> {
+        var count = 0
+        var i = 0
+        for (p in paragraphs) {
+            if (count + p.length >= position) {
+                return Pair(i, position - count)
+            }
+            count += p.length + 1 // 1 for the new line character
+            i++
+        }
+        return Pair(i, position - count)
+    }
 
     /***************************************************************************
      *                                                                         *

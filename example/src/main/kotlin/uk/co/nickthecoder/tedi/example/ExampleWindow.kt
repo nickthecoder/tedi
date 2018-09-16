@@ -11,6 +11,7 @@ import javafx.scene.layout.BorderPane
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.CodeWordBreakIterator
 import uk.co.nickthecoder.tedi.TediArea
+import uk.co.nickthecoder.tedi.ui.GotoDialog
 
 class ExampleWindow(stage: Stage = Stage()) {
 
@@ -43,10 +44,8 @@ End""")
         with(toolbar.items) {
             add(createButton("Show Line Numbers") { view1.displayLinesNumbers = true })
             add(createButton("Hide Line Numbers") { view1.displayLinesNumbers = false })
+            add(GotoDialog.createGotoButton { view1 })
         }
-
-        println("TediArea 1 : $view1")
-        println("TextArea   : $textArea")
 
         // textField.setStyle("-fx-text-fill: green;"); // This works
         // But if I add ".text-field { -fx-text-fill: green; }" into a css file, it doesn't work.
