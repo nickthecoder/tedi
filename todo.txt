@@ -3,10 +3,7 @@ Bugs
 
 Next
 ----
-
-Consider re-working how line numbers are styled.
-    Use .tedi-area .gutter { -fx-text-fill : grey; }
-
+import
 Later
 -----
 

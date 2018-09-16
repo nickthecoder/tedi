@@ -30,7 +30,7 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.scene.control.skin.TextInputControlSkin
+import com.sun.javafx.scene.control.skin.Utils
 import com.sun.javafx.scene.text.HitInfo
 import javafx.beans.InvalidationListener
 import javafx.geometry.NodeOrientation
@@ -61,7 +61,6 @@ class TediAreaBehavior(val control: TediArea)
     private val textListener = InvalidationListener { _ -> invalidateBidi() }
 
     private var bidi: Bidi? = null
-    private var mixed: Boolean? = null
     private var rtlText: Boolean? = null
 
     private var shiftDown = false
@@ -216,8 +215,8 @@ class TediAreaBehavior(val control: TediArea)
             // if the primary button was pressed
             if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
                 val hit = skin.getIndex(e.x, e.y)
-                val i = com.sun.javafx.scene.control.skin.Utils.getHitInsertionIndex(hit, control.textProperty().valueSafe)
-                //                 int i = skin.getInsertionPoint(e.getX(), e.getY());
+                val i = Utils.getHitInsertionIndex(hit, control.textProperty().valueSafe)
+
                 val anchor = control.anchor
                 val caretPosition = control.caretPosition
                 if (e.clickCount < 2 && (e.isSynthesized || anchor != caretPosition && (i > anchor && i < caretPosition || i < anchor && i > caretPosition))) {
@@ -343,7 +342,6 @@ class TediAreaBehavior(val control: TediArea)
 
     private fun invalidateBidi() {
         bidi = null
-        mixed = null
         rtlText = null
     }
 
@@ -358,26 +356,16 @@ class TediAreaBehavior(val control: TediArea)
         return bidi!!
     }
 
-    protected fun isMixed(): Boolean {
-        if (mixed == null) {
-            mixed = getBidi().isMixed
-        }
-        return mixed!!
-    }
-
     protected fun isRTLText(): Boolean {
         if (rtlText == null) {
             val bidi = getBidi()
-            rtlText = bidi.isRightToLeft || isMixed() && control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT
+            rtlText = bidi.isRightToLeft
         }
         return rtlText!!
     }
 
     private fun nextCharacterVisually(moveRight: Boolean) {
-        if (isMixed()) {
-            val skin = control.getSkin() as TextInputControlSkin<*, *>
-            skin.nextCharacterVisually(moveRight)
-        } else if (moveRight != isRTLText()) {
+        if (moveRight != isRTLText()) {
             control.forward()
         } else {
             control.backward()
