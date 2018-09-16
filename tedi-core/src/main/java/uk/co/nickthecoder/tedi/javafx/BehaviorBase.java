@@ -25,24 +25,29 @@ package uk.co.nickthecoder.tedi.javafx;
  * questions.
  */
 
-import com.sun.javafx.scene.traversal.Direction;
 import javafx.application.ConditionalFeature;
 import javafx.application.Platform;
 import javafx.beans.InvalidationListener;
 import javafx.event.EventHandler;
-import javafx.scene.Node;
 import javafx.scene.control.Control;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
+import uk.co.nickthecoder.tedi.FocusHelperKt;
 
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import static javafx.scene.input.KeyCode.*;
+import static javafx.scene.input.KeyCode.TAB;
 
 /**
+ * This is a copy of JavaFX's BehaviorBase, with some modifications.
+ * Up/down/left/right traversal has been removed.
+ * Next and Previous have been re-implemented.
+ * This is so that TediArea can be written without depending on non-standard APIs.
+ * i.e. those in packages com.sun.xxx
+ * <p>
  * A convenient base class from which all our built-in behaviors extend. The
  * main functionality in BehaviorBase revolves around infrastructure for
  * resolving key events into function calls. The differences between platforms
@@ -59,10 +64,6 @@ import static javafx.scene.input.KeyCode.*;
  * traversal. Subclasses which need to invoke focus traversal using non-standard
  * key strokes should map key strokes to these action names:</p>
  * <ul>
- * <li>TraverseUp</li>
- * <li>TraverseDown</li>
- * <li>TraverseLeft</li>
- * <li>TraverseRight</li>
  * <li>TraverseNext</li>
  * <li>TraversePrevious</li>
  * </ul>
@@ -81,34 +82,18 @@ public class BehaviorBase<C extends Control> {
      * implementations, you may be able to use this directly. The built in names
      * for these traversal actions are:
      * <ul>
-     * <li>TraverseUp</li>
-     * <li>TraverseDown</li>
-     * <li>TraverseLeft</li>
-     * <li>TraverseRight</li>
      * <li>TraverseNext</li>
      * <li>TraversePrevious</li>
      * </ul>
      */
     protected static final List<KeyBinding> TRAVERSAL_BINDINGS = new ArrayList<>();
-    static final String TRAVERSE_UP = "TraverseUp";
-    static final String TRAVERSE_DOWN = "TraverseDown";
-    static final String TRAVERSE_LEFT = "TraverseLeft";
-    static final String TRAVERSE_RIGHT = "TraverseRight";
     static final String TRAVERSE_NEXT = "TraverseNext";
     static final String TRAVERSE_PREVIOUS = "TraversePrevious";
 
     static {
-        TRAVERSAL_BINDINGS.add(new KeyBinding(UP, TRAVERSE_UP));
-        TRAVERSAL_BINDINGS.add(new KeyBinding(DOWN, TRAVERSE_DOWN));
-        TRAVERSAL_BINDINGS.add(new KeyBinding(LEFT, TRAVERSE_LEFT));
-        TRAVERSAL_BINDINGS.add(new KeyBinding(RIGHT, TRAVERSE_RIGHT));
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_NEXT));
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_PREVIOUS).shift());
 
-        TRAVERSAL_BINDINGS.add(new KeyBinding(UP, TRAVERSE_UP).shift().alt().ctrl());
-        TRAVERSAL_BINDINGS.add(new KeyBinding(DOWN, TRAVERSE_DOWN).shift().alt().ctrl());
-        TRAVERSAL_BINDINGS.add(new KeyBinding(LEFT, TRAVERSE_LEFT).shift().alt().ctrl());
-        TRAVERSAL_BINDINGS.add(new KeyBinding(RIGHT, TRAVERSE_RIGHT).shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_NEXT).shift().alt().ctrl());
         TRAVERSAL_BINDINGS.add(new KeyBinding(TAB, TRAVERSE_PREVIOUS).alt().ctrl());
     }
@@ -257,18 +242,6 @@ public class BehaviorBase<C extends Control> {
      */
     protected void callAction(String name) {
         switch (name) {
-            case TRAVERSE_UP:
-                traverseUp();
-                break;
-            case TRAVERSE_DOWN:
-                traverseDown();
-                break;
-            case TRAVERSE_LEFT:
-                traverseLeft();
-                break;
-            case TRAVERSE_RIGHT:
-                traverseRight();
-                break;
             case TRAVERSE_NEXT:
                 traverseNext();
                 break;
@@ -283,56 +256,11 @@ public class BehaviorBase<C extends Control> {
      **************************************************************************/
 
     /**
-     * Called by any of the BehaviorBase traverse methods to actually effect a
-     * traversal of the focus. The default behavior of this method is to simply
-     * call impl_traverse on the given node, passing the given direction. A
-     * subclass may override this method.
-     *
-     * @param node The node to call impl_traverse on
-     * @param dir  The direction to traverse
-     */
-    protected void traverse(final Node node, final Direction dir) {
-        node.impl_traverse(dir);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node above the current one.
-     */
-    public final void traverseUp() {
-        traverse(control, Direction.UP);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node below the current one.
-     */
-    public final void traverseDown() {
-        traverse(control, Direction.DOWN);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node left of the current one.
-     */
-    public final void traverseLeft() {
-        traverse(control, Direction.LEFT);
-    }
-
-    /**
-     * Calls the focus traversal engine and indicates that traversal should
-     * go the next focusTraversable Node right of the current one.
-     */
-    public final void traverseRight() {
-        traverse(control, Direction.RIGHT);
-    }
-
-    /**
      * Calls the focus traversal engine and indicates that traversal should
      * go the next focusTraversable Node in the focus traversal cycle.
      */
     public final void traverseNext() {
-        traverse(control, Direction.NEXT);
+        FocusHelperKt.focusNext(getControl(), 1000);
     }
 
     /**
@@ -340,7 +268,8 @@ public class BehaviorBase<C extends Control> {
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public final void traversePrevious() {
-        traverse(control, Direction.PREVIOUS);
+        System.out.println("traversePrevious");
+        FocusHelperKt.focusPrevious(getControl(), 1000);
     }
 
     /***************************************************************************
