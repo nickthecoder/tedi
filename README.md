@@ -73,6 +73,7 @@ Tedi is primarily designed to be for code.
 
 - Exposes a lineCount property
 - Exposes a paragraphsProperty (should this be called linesProperty??)
+- Can use a "better" word breaks for coding : (myTediArea.wordIterator = CodeWordBreakIterator())
 
 ## Styling TediArea
 
@@ -84,8 +85,7 @@ TediArea has similar styleable properties as TextArea, with the addition of :
 - -fx-display-line-numbers
 
 I have included a style sheet as a resource in package uk.co.nickthecoder.tedi called "tedi.css".
-Currently, this applies a monospaced font to .tedi-area, and will later be used to style the gutters
-containing the line numbers.
+This applies a monospaced font to .tedi-area, and styles the gutter containing the line numbers.
 
 ## Paragraphs
 

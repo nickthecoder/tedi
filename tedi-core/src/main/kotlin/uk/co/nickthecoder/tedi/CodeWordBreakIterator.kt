@@ -1,5 +1,10 @@
 /*
- * Copyright (c) 2006, Oracle and/or its affiliates. All rights reserved.
+ * Most of this code was copied (and convert from Java to Kotlin) from JavaFX.
+ * Therefore I have kept the copyright message. However much wasn't written by
+ * Oracle, so don't blame them for my mistakes!!!
+ *
+ *
+ * Copyright (c) 2011, 2014, Oracle and/or its affiliates. All rights reserved.
  * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
  *
  * This code is free software; you can redistribute it and/or modify it
@@ -30,20 +35,26 @@ import java.text.CharacterIterator
 import java.text.StringCharacterIterator
 import java.util.*
 
-
 /**
- * Separates text by whitespace, and by a change from symbols to letters.
+ * Splits the text into three types : whitespace, words and everything else.
+ * A word is considered to be made up of letters, numbers and underscores.
+ * However, you can change this definition by using the constructor which takes a lambda.
+ *
  * For example uk.co.nickthecoder.tedi will be split before and after each "."
  * Also "a += 2", the breaks will be 1, 2, 4, 5, 6. (i.e. "+=" is considered a word).
+ *
+ * This class was loosely based off of WhiteSpaceBasedBreakIterator.
+ * This is horribly inefficient, because it parses the WHOLE text (just as WhiteSpaceBasedBreakIterator does).
+ *
+ * Note, if you need to change the definition of whitespace, create a sub-class and override [isWhiteSpace].
  */
 open class CodeWordBreakIterator(val wordPartTest: (Char) -> Boolean)
 
     : BreakIterator() {
 
     /**
-     * Creates a WordBreakIterator which considers words to be made up of letters, digits and underscores.
-     *
-     * Note, the primary constructor takes a lambda, so that you can use your own definition of "word-part".
+     * Uses the "default" definition of a word, which is letters, digits and underscores.
+     * See the other constructor to choose your own definition.
      */
     constructor() : this({
         c: Char ->
@@ -54,6 +65,9 @@ open class CodeWordBreakIterator(val wordPartTest: (Char) -> Boolean)
     private var breaks = intArrayOf(0)
     private var pos = 0
 
+    /**
+     * I have made this an open method, so that sub-classes can change the definition of whitespace if they need to.
+     */
     open fun isWhiteSpace(c: Char): Boolean = c.isWhitespace()
 
     /**
@@ -74,7 +88,7 @@ open class CodeWordBreakIterator(val wordPartTest: (Char) -> Boolean)
             text[charIndex] = c
             val currentType = if (isWhiteSpace(c)) 0 else if (wordPartTest(c)) 1 else 2
 
-            if (previousType!=null && previousType != currentType) {
+            if (previousType != null && previousType != currentType) {
                 breaks0[breakIndex++] = charIndex + begin
             }
             previousType = currentType
