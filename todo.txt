@@ -1,6 +1,8 @@
 Bugs
 ----
 
+Shift-tab doesn't work without a selection.
+
 Next
 ----
 
@@ -19,7 +21,7 @@ Consider adding back line-wrapping, but set display-line-numbers=false whenever 
     My code still references com.sum.xxx classes.
 
     TediAreaBehaviour uses :
-        import com.sun.javafx.scene.control.skin.TextInputControlSkin
+        com.sun.javafx.scene.control.skin.Utils
         import com.sun.javafx.scene.text.HitInfo
     TediAreaSkin uses :
         import com.sun.javafx.scene.control.skin.Utils

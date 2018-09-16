@@ -31,7 +31,6 @@
 package uk.co.nickthecoder.tedi
 
 import com.sun.javafx.scene.control.skin.Utils
-import com.sun.javafx.scene.input.ExtendedInputMethodRequests
 import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.FontMetrics
@@ -274,8 +273,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             tediArea.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
         }
 
-        tediArea.inputMethodRequests = createInputMethodRequest()
-
         caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
             if (newValue.toInt() > oldValue.toInt()) {
@@ -420,61 +417,6 @@ open class TediAreaSkin(val tediArea: TediArea)
      * Methods                                                                 *
      *                                                                         *
      **************************************************************************/
-
-    private fun createInputMethodRequest() = object : ExtendedInputMethodRequests {
-
-        override fun getTextLocation(offset: Int): Point2D {
-            val scene = skinnable.scene
-            val window = scene.window
-            // Don't use imstart here because it isn't initialized yet.
-            val characterBounds = getCharacterBounds(tediArea.getSelection().getStart() + offset)
-            val p = skinnable.localToScene(characterBounds.getMinX(), characterBounds.getMaxY())
-            val location = Point2D(window.x + scene.x + p.getX(),
-                    window.y + scene.y + p.getY())
-            return location
-        }
-
-        override fun getLocationOffset(x: Int, y: Int): Int {
-            return getInsertionPoint(x.toDouble(), y.toDouble())
-        }
-
-        override fun cancelLatestCommittedText() {}
-
-        override fun getSelectedText(): String {
-            val textInput = skinnable
-            val selection = textInput.selection
-
-            return textInput.getText(selection.start, selection.end)
-        }
-
-        override fun getInsertPositionOffset(): Int {
-            val caretPosition = skinnable.caretPosition
-            if (caretPosition < imstart) {
-                return caretPosition
-            } else if (caretPosition < imstart + imlength) {
-                return imstart
-            } else {
-                return caretPosition - imlength
-            }
-        }
-
-        override fun getCommittedText(begin: Int, end: Int): String {
-            val textInput = skinnable
-            if (begin < imstart) {
-                if (end <= imstart) {
-                    return textInput.getText(begin, end)
-                } else {
-                    return textInput.getText(begin, imstart) + textInput.getText(imstart + imlength, end + imlength)
-                }
-            } else {
-                return textInput.getText(begin + imlength, end + imlength)
-            }
-        }
-
-        override fun getCommittedTextLength(): Int {
-            return skinnable.text.length - imlength
-        }
-    }
 
     protected fun invalidateMetrics() {
         computedMinWidth = java.lang.Double.NEGATIVE_INFINITY
