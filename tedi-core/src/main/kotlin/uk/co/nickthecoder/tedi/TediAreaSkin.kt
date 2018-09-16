@@ -33,7 +33,6 @@ package uk.co.nickthecoder.tedi
 import com.sun.javafx.scene.control.skin.Utils
 import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
-import com.sun.javafx.tk.FontMetrics
 import com.sun.javafx.tk.Toolkit
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
@@ -41,13 +40,11 @@ import javafx.application.Platform
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.binding.IntegerBinding
-import javafx.beans.binding.ObjectBinding
 import javafx.beans.property.BooleanProperty
 import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
-import javafx.beans.value.ObservableObjectValue
 import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.event.ActionEvent
@@ -78,15 +75,6 @@ import java.util.*
 open class TediAreaSkin(val tediArea: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(tediArea, TediAreaBehavior(tediArea)) {
-
-    private var computedMinWidth = java.lang.Double.NEGATIVE_INFINITY
-    private var computedMinHeight = java.lang.Double.NEGATIVE_INFINITY
-    private var computedPrefWidth = java.lang.Double.NEGATIVE_INFINITY
-    private var computedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
-    private var widthForComputedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
-    private var characterWidth: Double = 0.0
-    private var lineHeight: Double = 0.0
-
 
     private val paragraphNodes = Group()
     private val gutter = Gutter(this)
@@ -211,18 +199,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-    protected val fontMetrics: ObservableObjectValue<FontMetrics> = object : ObjectBinding<FontMetrics>() {
-        init {
-            bind(tediArea.fontProperty());
-        }
-
-        override fun computeValue(): FontMetrics {
-            invalidateMetrics()
-            return Toolkit.getToolkit().fontLoader.getFontMetrics(tediArea.font)
-        }
-    }
-
-
     private var caretPosition: ObservableIntegerValue = object : IntegerBinding() {
         init {
             bind(tediArea.caretPositionProperty())
@@ -342,25 +318,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             contentView.requestLayout()
         }
 
-        tediArea.prefColumnCountProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updatePrefViewportWidth()
-        }
-
-        tediArea.prefRowCountProperty().addListener { _, _, _ ->
-            invalidateMetrics()
-            updatePrefViewportHeight()
-        }
-
-        updateFontMetrics()
-        fontMetrics.addListener({ _ -> updateFontMetrics() })
-
-        contentView.paddingProperty().addListener { _ ->
-            updatePrefViewportWidth()
-            updatePrefViewportHeight()
-        }
-        // TODO, I probably need more such calls, for when the gutter's padding changes???
-
         scrollPane.viewportBoundsProperty().addListener { _ ->
             if (scrollPane.viewportBounds != null) {
                 // ScrollPane creates a new Bounds instance for each
@@ -371,7 +328,6 @@ open class TediAreaSkin(val tediArea: TediArea)
                         oldViewportBounds?.width != newViewportBounds.width ||
                         oldViewportBounds?.height != newViewportBounds.height) {
 
-                    invalidateMetrics()
                     oldViewportBounds = newViewportBounds
                     contentView.requestLayout()
                 }
@@ -395,14 +351,11 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         tediArea.textProperty().addListener { _ ->
-            invalidateMetrics()
             (paragraphNodes.children[0] as Text).text = tediArea.textProperty().valueSafe
             contentView.requestLayout()
         }
 
         updateHighlightFill()
-        updatePrefViewportWidth()
-        updatePrefViewportHeight()
         if (tediArea.isFocused) setCaretAnimating(true)
 
     }
@@ -417,13 +370,6 @@ open class TediAreaSkin(val tediArea: TediArea)
      * Methods                                                                 *
      *                                                                         *
      **************************************************************************/
-
-    protected fun invalidateMetrics() {
-        computedMinWidth = java.lang.Double.NEGATIVE_INFINITY
-        computedMinHeight = java.lang.Double.NEGATIVE_INFINITY
-        computedPrefWidth = java.lang.Double.NEGATIVE_INFINITY
-        computedPrefHeight = java.lang.Double.NEGATIVE_INFINITY
-    }
 
     private fun updateGutters() {
         if (tediArea.displayLineNumbers) {
@@ -446,10 +392,6 @@ open class TediAreaSkin(val tediArea: TediArea)
             wrappingWidth = 0.0
             isManaged = false
             styleClass.add("text")
-            boundsTypeProperty().addListener { _, _, _ ->
-                invalidateMetrics()
-                updateFontMetrics()
-            }
 
             fontProperty().bind(textArea.fontProperty())
             fillProperty().bind(textFill)
@@ -462,69 +404,6 @@ open class TediAreaSkin(val tediArea: TediArea)
     public override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
         val firstParagraph = paragraphNodes.children[0] as Text
         return getAscent(skinnable.font, firstParagraph.boundsType) + contentView.snappedTopInset() + tediArea.snappedTopInset()
-    }
-
-    fun getCharacter(index: Int): Char {
-        val n = paragraphNodes.children.size
-
-        var paragraphIndex = 0
-        var offset = index
-
-        var paragraph: String? = null
-        while (paragraphIndex < n) {
-            val paragraphNode = paragraphNodes.children[paragraphIndex] as Text
-            paragraph = paragraphNode.text
-            val count = paragraph!!.length + 1
-
-            if (offset < count) {
-                break
-            }
-
-            offset -= count
-            paragraphIndex++
-        }
-
-        return if (offset == paragraph!!.length) '\n' else paragraph[offset]
-    }
-
-    fun getInsertionPoint(x: Double, y: Double): Int {
-        val textArea = skinnable
-
-        val n = paragraphNodes.children.size
-        var index = -1
-
-        if (n > 0) {
-            if (y < contentView.snappedTopInset()) {
-                // Select the character at x in the first row
-                val paragraphNode = paragraphNodes.children[0] as Text
-                index = getNextInsertionPoint(paragraphNode, x, -1, VerticalDirection.DOWN)
-            } else if (y > contentView.snappedTopInset() + contentView.height) {
-                // Select the character at x in the last row
-                val lastParagraphIndex = n - 1
-                val lastParagraphView = paragraphNodes.children[lastParagraphIndex] as Text
-
-                index = getNextInsertionPoint(lastParagraphView, x, -1, VerticalDirection.UP) + (textArea.length - lastParagraphView.text.length)
-            } else {
-                // Select the character at x in the row at y
-                var paragraphOffset = 0
-                for (i in 0..n - 1) {
-                    val paragraphNode = paragraphNodes.children[i] as Text
-
-                    val bounds = paragraphNode.boundsInLocal
-                    val paragraphViewY = paragraphNode.layoutY + bounds.minY
-                    if (y >= paragraphViewY && y < paragraphViewY + paragraphNode.boundsInLocal.height) {
-                        index = getInsertionPoint(paragraphNode,
-                                x - paragraphNode.layoutX,
-                                y - paragraphNode.layoutY) + paragraphOffset
-                        break
-                    }
-
-                    paragraphOffset += paragraphNode.text.length + 1
-                }
-            }
-        }
-
-        return index
     }
 
     fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
@@ -559,17 +438,6 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     private fun getScrollLeftMax(): Double {
         return Math.max(0.0, contentView.width - scrollPane.viewportBounds.width)
-    }
-
-    private fun getInsertionPoint(paragraphNode: Text, x: Double, y: Double): Int {
-        val hitInfo = paragraphNode.impl_hitTestChar(Point2D(x, y))
-        return Utils.getHitInsertionIndex(hitInfo, paragraphNode.text)
-    }
-
-    private fun getNextInsertionPoint(paragraphNode: Text, x: Double, from: Int,
-                                      scrollDirection: VerticalDirection): Int {
-        // TODO
-        return 0
     }
 
     fun getCharacterBounds(index: Int): Rectangle2D {
@@ -680,24 +548,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-    private fun updatePrefViewportWidth() {
-        val columnCount = skinnable.prefColumnCount
-        scrollPane.prefViewportWidth = columnCount * characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
-        scrollPane.minViewportWidth = characterWidth + contentView.snappedLeftInset() + contentView.snappedRightInset()
-    }
-
-    private fun updatePrefViewportHeight() {
-        val rowCount = skinnable.prefRowCount
-        scrollPane.prefViewportHeight = rowCount * lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
-        scrollPane.minViewportHeight = lineHeight + contentView.snappedTopInset() + contentView.snappedBottomInset()
-    }
-
-    private fun updateFontMetrics() {
-        val firstParagraph = paragraphNodes.children[0] as Text
-        lineHeight = getLineHeight(skinnable.font, firstParagraph.boundsType)
-        characterWidth = fontMetrics.get().computeStringWidth("W").toDouble()
-    }
-
     protected fun updateHighlightTextFill() {
         for (node in selectionHighlightGroup.children) {
             val selectionHighlightPath = node as Path
@@ -743,91 +593,74 @@ open class TediAreaSkin(val tediArea: TediArea)
         return hit
     };
 
-    protected fun downLines(nLines: Int, select: Boolean, extendSelection: Boolean) {
-        val textNode = getTextNode()
-        val caretBounds = caretPath.layoutBounds
-
-        // The middle y coordinate of the the line we want to go to.
-        var targetLineMidY = (caretBounds.minY + caretBounds.maxY) / 2 + nLines * lineHeight
-        if (targetLineMidY < 0) {
-            targetLineMidY = 0.0
+    private fun changeLine(n: Int, select: Boolean) {
+        val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
+        val newPosition = tediArea.positionFor(lineColumn.first + n, lineColumn.second)
+        if (select) {
+            tediArea.selectRange(tediArea.anchor, newPosition)
+        } else {
+            tediArea.selectRange(newPosition, newPosition)
         }
-
-        // The target x for the caret. This may have been set during a
-        // previous call.
-        val x = if (targetCaretX >= 0) targetCaretX else caretBounds.maxX
-
-        // Find a text position for the target x,y.
-        val hit = textNode.impl_hitTestChar(translateCaretPosition(Point2D(x, targetLineMidY)))
-        val pos = hit.charIndex
-
-        // Save the old pos temporarily while testing the new one.
-        val oldPos = textNode.impl_caretPosition
-        val oldBias = textNode.isImpl_caretBias
-        textNode.isImpl_caretBias = hit.isLeading
-        textNode.impl_caretPosition = pos
-        tmpCaretPath.elements.clear()
-        tmpCaretPath.elements.addAll(*textNode.impl_caretShape)
-        tmpCaretPath.layoutX = textNode.layoutX
-        tmpCaretPath.layoutY = textNode.layoutY
-        val tmpCaretBounds = tmpCaretPath.layoutBounds
-        // The y for the middle of the row we found.
-        val foundLineMidY = (tmpCaretBounds.minY + tmpCaretBounds.maxY) / 2
-        textNode.isImpl_caretBias = oldBias
-        textNode.impl_caretPosition = oldPos
-
-        if (pos > 0) {
-            if (nLines > 0 && foundLineMidY > targetLineMidY) {
-                // We went too far and ended up after a newline.
-                hit.charIndex = pos - 1
-            }
-
-            if (pos >= tediArea.length && getCharacter(pos - 1) == '\n') {
-                // Special case for newline at end of text.
-                hit.isLeading = true
-            }
-        }
-
-        // Test if the found line is in the correct direction and move
-        // the caret.
-        if (nLines == 0 ||
-                (nLines > 0 && foundLineMidY > caretBounds.maxY) ||
-                (nLines < 0 && foundLineMidY < caretBounds.minY)) {
-
-            positionCaret(hit, select, extendSelection)
-            targetCaretX = x
-        }
-
     }
 
     fun previousLine(select: Boolean) {
-        downLines(-1, select, false)
+        changeLine(-1, select)
     }
 
     fun nextLine(select: Boolean) {
-        downLines(1, select, false)
+        changeLine(1, select)
+    }
+
+    /**
+     * Returns a rough calculation of the line height
+     */
+    private fun lineHeight(): Double {
+        return paragraphNodes.children[0].prefHeight(0.0) / tediArea.lineCount
+    }
+
+    /**
+     * Returns the number of lines to scroll up/down by.
+     * This is a rough calculation, based on the size of content, and the number of lines it contains.
+     * When there are fewer lines than can fit within the visible viewport, then the returned value is wrong,
+     * but as it is only used for scrolling, it doesn't matter!
+     */
+    private fun pageSizeInLines(): Int {
+        val result = scrollPane.height / (paragraphNodes.children[0].prefHeight(0.0) / tediArea.lineCount)
+        return result.toInt() - 1
     }
 
     fun previousPage(select: Boolean) {
-        downLines(-(scrollPane.viewportBounds.height / lineHeight).toInt(),
-                select, false)
+        val lines = pageSizeInLines()
+        // This calculation is a little off, and the caret tends to wander upwards as you scroll up
+        scrollPane.vvalue -= lines * lineHeight() / contentView.height
+        changeLine(-lines, select)
     }
 
     fun nextPage(select: Boolean) {
-        downLines((scrollPane.viewportBounds.height / lineHeight).toInt(),
-                select, false)
+        val lines = pageSizeInLines()
+        // This calculation is a little off, and the caret tends to wander downwards as you scroll down.
+        scrollPane.vvalue += lines * lineHeight() / contentView.height
+        changeLine(lines, select)
     }
 
     fun lineStart(select: Boolean, extendSelection: Boolean) {
-        targetCaretX = 0.0
-        downLines(0, select, extendSelection)
-        targetCaretX = -1.0
+        val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
+        val newPosition = tediArea.positionFor(lineColumn.first, 0)
+        if (select) {
+            tediArea.selectRange(tediArea.anchor, newPosition)
+        } else {
+            tediArea.selectRange(newPosition, newPosition)
+        }
     }
 
     fun lineEnd(select: Boolean, extendSelection: Boolean) {
-        targetCaretX = java.lang.Double.MAX_VALUE
-        downLines(0, select, extendSelection)
-        targetCaretX = -1.0
+        val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
+        val newPosition = tediArea.positionFor(lineColumn.first, Int.MAX_VALUE)
+        if (select) {
+            tediArea.selectRange(tediArea.anchor, newPosition)
+        } else {
+            tediArea.selectRange(newPosition, newPosition)
+        }
     }
 
 
@@ -1196,68 +1029,12 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         override fun computePrefWidth(height: Double): Double {
-            if (computedPrefWidth < 0) {
-                var prefWidth = 0.0
+            return paragraphNodes.children[0].prefWidth(height) + snappedLeftInset() + snappedRightInset()
 
-                for (node in paragraphNodes.getChildren()) {
-                    val paragraphNode = node as Text
-                    prefWidth = Math.max(prefWidth,
-                            computeTextWidth(paragraphNode.font, paragraphNode.text, 0.0))
-                }
-
-                prefWidth += snappedLeftInset() + snappedRightInset()
-
-                if (gutter.isVisible) {
-                    prefWidth += gutter.prefWidth(height)
-                }
-
-                val viewPortBounds = scrollPane.viewportBounds
-                computedPrefWidth = Math.max(prefWidth, if (viewPortBounds != null) viewPortBounds.width else 0.0)
-            }
-            return computedPrefWidth
         }
 
         override fun computePrefHeight(width: Double): Double {
-            if (width != widthForComputedPrefHeight) {
-                invalidateMetrics()
-                widthForComputedPrefHeight = width
-            }
-
-            if (computedPrefHeight < 0) {
-
-                var prefHeight = 0.0
-
-                for (node in paragraphNodes.children) {
-                    val paragraphNode = node as Text
-                    prefHeight += computeTextHeight(
-                            paragraphNode.font,
-                            paragraphNode.text,
-                            0.0,
-                            paragraphNode.boundsType)
-                }
-
-                prefHeight += snappedTopInset() + snappedBottomInset()
-
-                val viewPortBounds = scrollPane.getViewportBounds()
-                computedPrefHeight = Math.max(prefHeight, if (viewPortBounds != null) viewPortBounds.height else 0.0)
-            }
-            return computedPrefHeight
-        }
-
-        override fun computeMinWidth(height: Double): Double {
-            if (computedMinWidth < 0) {
-                val hInsets = snappedLeftInset() + snappedRightInset()
-                computedMinWidth = Math.min(characterWidth + hInsets, computePrefWidth(height))
-            }
-            return computedMinWidth
-        }
-
-        override fun computeMinHeight(width: Double): Double {
-            if (computedMinHeight < 0) {
-                val vInsets = snappedTopInset() + snappedBottomInset()
-                computedMinHeight = Math.min(lineHeight + vInsets, computePrefHeight(width))
-            }
-            return computedMinHeight
+            return paragraphNodes.children[0].prefHeight(width) + snappedTopInset() + snappedBottomInset()
         }
 
         public override fun layoutChildren() {
@@ -1353,14 +1130,14 @@ open class TediAreaSkin(val tediArea: TediArea)
                 i++
             }
 
+            /*
             if (scrollPane.prefViewportWidth == 0.0 || scrollPane.prefViewportHeight == 0.0) {
-                updatePrefViewportWidth()
-                updatePrefViewportHeight()
                 if (parent != null && scrollPane.prefViewportWidth > 0 || scrollPane.prefViewportHeight > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
                     parent.requestLayout()
                 }
             }
+            */
 
             // RT-36454: Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.

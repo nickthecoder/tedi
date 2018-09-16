@@ -93,7 +93,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         override fun getCssMetaData() = StyleableProperties.DISPLAY_LINE_NUMBERS
     }
 
-    fun displayLineNumbersProperty() = displayLineNumbersProperty
+    fun displayLineNumbersProperty(): BooleanProperty = displayLineNumbersProperty
 
     /**
      * Determines if line numbers are displayed.
@@ -104,84 +104,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         set(v) {
             displayLineNumbersProperty.set(v)
         }
-
-
-    // Pref Column Count
-    private val prefColumnCountProperty = object : StyleableIntegerProperty(DEFAULT_PREF_COLUMN_COUNT) {
-
-        private var oldValue = get()
-
-        override fun invalidated() {
-            val value = get()
-            if (value < 0) {
-                if (isBound) {
-                    unbind()
-                }
-                set(oldValue)
-                throw IllegalArgumentException("value cannot be negative.")
-            }
-            oldValue = value
-        }
-
-        override fun getCssMetaData() = StyleableProperties.PREF_COLUMN_COUNT
-        override fun getBean() = this@TediArea
-        override fun getName() = "prefColumnCount"
-    }
-
-    fun prefColumnCountProperty(): IntegerProperty = prefColumnCountProperty
-
-    /**
-     * The preferred number of columns of text (used to calculated TediArea's preferred width).
-     */
-    var prefColumnCount: Int
-        get() = prefColumnCountProperty.get()
-        set(v) {
-            prefColumnCountProperty.set(v)
-        }
-
-
-    // Pref Row Count
-    private val prefRowCountProperty = object : StyleableIntegerProperty(DEFAULT_PREF_ROW_COUNT) {
-
-        private var oldValue = get()
-
-        override fun invalidated() {
-            val value = get()
-            if (value < 0) {
-                if (isBound) {
-                    unbind()
-                }
-                set(oldValue)
-                throw IllegalArgumentException("value cannot be negative.")
-            }
-
-            oldValue = value
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Number> {
-            return StyleableProperties.PREF_ROW_COUNT
-        }
-
-        override fun getBean(): Any {
-            return this@TediArea
-        }
-
-        override fun getName(): String {
-            return "prefRowCount"
-        }
-    }
-
-    fun prefRowCountProperty(): IntegerProperty = prefRowCountProperty
-
-    /**
-     * The preferred number of row of text (used to calculated TediArea's preferred height).
-     */
-    var prefRowCount: Int
-        get() = prefRowCountProperty.get()
-        set(v) {
-            prefRowCountProperty.set(v)
-        }
-
 
     // Scroll Top
     private val scrollTopProperty = SimpleDoubleProperty(this, "scrollTop", 0.0)
@@ -808,42 +730,16 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      **************************************************************************/
     private object StyleableProperties {
 
-        val PREF_COLUMN_COUNT = object : CssMetaData<TediArea, Number>("-fx-pref-column-count",
-                StyleConverter.getSizeConverter(), DEFAULT_PREF_COLUMN_COUNT) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                return !n.prefColumnCountProperty().isBound()
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Number> {
-                @Suppress("UNCHECKED_CAST")
-                return n.prefColumnCountProperty() as StyleableProperty<Number>
-            }
-        }
-
-        val PREF_ROW_COUNT = object : CssMetaData<TediArea, Number>("-fx-pref-row-count",
-                StyleConverter.getSizeConverter(), DEFAULT_PREF_ROW_COUNT) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                return !n.prefRowCountProperty().isBound()
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Number> {
-                @Suppress("UNCHECKED_CAST")
-                return n.prefRowCountProperty() as StyleableProperty<Number>
-            }
-        }
-
         val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
                 StyleConverter.getBooleanConverter(), false) {
 
             override fun isSettable(n: TediArea): Boolean {
-                return !n.prefColumnCountProperty().isBound()
+                return !n.displayLineNumbersProperty().isBound()
             }
 
             override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
                 @Suppress("UNCHECKED_CAST")
-                return n.prefColumnCountProperty() as StyleableProperty<Boolean>
+                return n.displayLineNumbersProperty() as StyleableProperty<Boolean>
             }
         }
 
@@ -851,8 +747,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         init {
             val styleables = ArrayList(TextInputControl.getClassCssMetaData())
-            styleables.add(PREF_COLUMN_COUNT)
-            styleables.add(PREF_ROW_COUNT)
             styleables.add(DISPLAY_LINE_NUMBERS)
             STYLEABLES = Collections.unmodifiableList(styleables)
         }
