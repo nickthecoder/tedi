@@ -562,12 +562,14 @@ class TediAreaBehavior(val control: TediArea)
             // No selection. Just add the tab (or spaces)
             textArea.replaceSelection(tabOrSpaces)
         } else {
+            var extraNL = ""
             var selection = textArea.selectedText
             if (selection.endsWith("\n")) {
                 selection = selection.substring(0, selection.length - 1)
+                extraNL = "\n"
             }
             val lines = selection.split('\n').map { tabOrSpaces + it }
-            val replacement = lines.joinToString(separator = "\n")
+            val replacement = lines.joinToString(separator = "\n") + extraNL
 
             textArea.replaceSelection(replacement)
             textArea.selectRange(from, to + tabOrSpaces.length * lines.size)

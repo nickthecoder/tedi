@@ -1,12 +1,6 @@
 Bugs
 ----
 
-LineNumbers change font (seemingly at random). Maybe a gc issue?
-    Note, only the "font family" changes (from monospace to the default (proportional) font.
-    This causes them not to line up with the content.
-
-Indenting a block, where the "to" includes the new line character REMOVES that new line character.
-
 Next
 ----
 
