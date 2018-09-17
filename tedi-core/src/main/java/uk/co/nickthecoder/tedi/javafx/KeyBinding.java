@@ -133,7 +133,7 @@ public class KeyBinding {
     }
 
     public int getSpecificity(Control control, KeyEvent event) {
-        int s = 0;
+        int s;
         if (code != null && code != event.getCode()) return 0;
         else s = 1;
         if (!shift.equals(event.isShiftDown())) return 0;

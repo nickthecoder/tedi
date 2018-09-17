@@ -71,7 +71,7 @@ class TediAreaBehavior(val control: TediArea)
     init {
         // Register for change events
         control.focusedProperty().addListener { _, _, _ ->
-            setCaretAnimating(control.isFocused())
+            setCaretAnimating(control.isFocused)
         }
 
         control.textProperty().addListener(textListener)
@@ -281,11 +281,11 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun setCaretAnimating(play: Boolean) {
+    private fun setCaretAnimating(play: Boolean) {
         skin.setCaretAnimating(play)
     }
 
-    protected fun mouseDoubleClick(hit: HitInfo) {
+    private fun mouseDoubleClick(hit: HitInfo) {
         val textArea = getControl()
         textArea.previousWord()
         if (isWindows) {
@@ -295,7 +295,7 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun mouseTripleClick(hit: HitInfo) {
+    private fun mouseTripleClick(hit: HitInfo) {
         // select the line
         skin.paragraphStart(false, false)
         skin.paragraphEnd(false, isWindows, true)
@@ -347,8 +347,8 @@ class TediAreaBehavior(val control: TediArea)
 
     private fun getBidi(): Bidi {
         if (bidi == null) {
-            bidi = Bidi(control.textProperty().getValueSafe(),
-                    if (control.getEffectiveNodeOrientation() == NodeOrientation.RIGHT_TO_LEFT)
+            bidi = Bidi(control.textProperty().valueSafe,
+                    if (control.effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT)
                         Bidi.DIRECTION_RIGHT_TO_LEFT
                     else
                         Bidi.DIRECTION_LEFT_TO_RIGHT)
@@ -356,7 +356,7 @@ class TediAreaBehavior(val control: TediArea)
         return bidi!!
     }
 
-    protected fun isRTLText(): Boolean {
+    private fun isRTLText(): Boolean {
         if (rtlText == null) {
             val bidi = getBidi()
             rtlText = bidi.isRightToLeft
@@ -401,7 +401,7 @@ class TediAreaBehavior(val control: TediArea)
         deleteChar(false)
     }
 
-    protected fun deletePreviousWord() {
+    private fun deletePreviousWord() {
         val textInputControl = getControl()
         val end = textInputControl.caretPosition
 
@@ -412,7 +412,7 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun deleteNextWord() {
+    private fun deleteNextWord() {
         val textInputControl = getControl()
         val start = textInputControl.caretPosition
 
@@ -442,11 +442,11 @@ class TediAreaBehavior(val control: TediArea)
         textInputControl.paste()
     }
 
-    protected fun selectPreviousWord() {
+    private fun selectPreviousWord() {
         getControl().selectPreviousWord()
     }
 
-    protected fun selectNextWord() {
+    private fun selectNextWord() {
         val textInputControl = getControl()
         if (isMac || isLinux) {
             textInputControl.selectEndOfNextWord()
@@ -471,7 +471,7 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun selectWord() {
+    private fun selectWord() {
         val textInputControl = getControl()
         textInputControl.previousWord()
         if (isWindows) {
@@ -481,11 +481,11 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun previousWord() {
+    private fun previousWord() {
         getControl().previousWord()
     }
 
-    protected fun nextWord() {
+    private fun nextWord() {
         val tediArea = getControl()
         if (isMac || isLinux) {
             tediArea.endOfNextWord()
@@ -510,13 +510,13 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    protected fun fire(event: KeyEvent) {}
+    private fun fire(event: KeyEvent) {}
 
-    protected fun cancelEdit(event: KeyEvent) {
+    private fun cancelEdit(event: KeyEvent) {
         forwardToParent(event)
     }
 
-    protected fun forwardToParent(event: KeyEvent) {
+    private fun forwardToParent(event: KeyEvent) {
         if (getControl().parent != null) {
             getControl().parent.fireEvent(event)
         }
@@ -594,11 +594,11 @@ class TediAreaBehavior(val control: TediArea)
         textArea.selectRange(from - if (selection.startsWith("\t")) 1 else 0, to - deleted)
     }
 
-    protected fun deleteChar(previous: Boolean) {
+    private fun deleteChar(previous: Boolean) {
         skin.deleteChar(previous)
     }
 
-    protected fun deleteFromLineStart() {
+    private fun deleteFromLineStart() {
         val textArea = getControl()
         val end = textArea.caretPosition
 
@@ -619,11 +619,11 @@ class TediAreaBehavior(val control: TediArea)
         skin.lineEnd(select, extendSelection)
     }
 
-    protected fun scrollCharacterToVisible(index: Int) {
+    private fun scrollCharacterToVisible(index: Int) {
         skin.scrollCharacterToVisible(index)
     }
 
-    protected fun replaceText(start: Int, end: Int, txt: String) {
+    private fun replaceText(start: Int, end: Int, txt: String) {
         control.replaceText(start, end, txt)
     }
 

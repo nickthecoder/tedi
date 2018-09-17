@@ -25,11 +25,11 @@
 
 package uk.co.nickthecoder.tedi.javafx;
 
-import java.util.Collections;
-import java.util.List;
-
 import javafx.collections.ListChangeListener.Change;
 import javafx.collections.ObservableList;
+
+import java.util.Collections;
+import java.util.List;
 
 public abstract class NonIterableChange<E> extends Change<E> {
 
@@ -154,7 +154,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
         @Override
         public List<E> getRemoved() {
             checkState();
-            return Collections.<E>emptyList();
+            return Collections.emptyList();
         }
 
     }
@@ -172,7 +172,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
         @Override
         public List<E> getRemoved() {
             checkState();
-            return Collections.<E>emptyList();
+            return Collections.emptyList();
         }
 
         @Override
@@ -194,7 +194,7 @@ public abstract class NonIterableChange<E> extends Change<E> {
 
         @Override
         public List<E> getRemoved() {
-            return Collections.<E>emptyList();
+            return Collections.emptyList();
         }
 
         @Override

@@ -117,9 +117,6 @@ open class TediAreaSkin(val tediArea: TediArea)
      */
     internal var targetCaretX = -1.0
 
-    /** A shared helper object, used only by downLines().  */
-    private val tmpCaretPath = Path()
-
     /***************************************************************************
      *                                                                         *
      * Properties                                                              *
@@ -245,7 +242,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         // Add initial text content.
         createParagraphNode()
 
-        if (tediArea.getOnInputMethodTextChanged() == null) {
+        if (tediArea.onInputMethodTextChanged == null) {
             tediArea.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
         }
 
@@ -448,11 +445,11 @@ open class TediAreaSkin(val tediArea: TediArea)
 
         val bounds = characterBoundingPath.boundsInLocal
 
-        var x = bounds.minX + paragraphNode.layoutX - textArea.scrollLeft
+        val x = bounds.minX + paragraphNode.layoutX - textArea.scrollLeft
         val y = bounds.minY + paragraphNode.layoutY - textArea.scrollTop
 
         // Sometimes the bounds is empty, in which case we must ignore the width/height
-        var width = if (bounds.isEmpty) 0.0 else bounds.width
+        val width = if (bounds.isEmpty) 0.0 else bounds.width
         val height = if (bounds.isEmpty) 0.0 else bounds.height
 
         return Rectangle2D(x, y, width, height)
@@ -473,11 +470,11 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     private fun scrollCaretToVisible() {
         val textArea = skinnable
-        val bounds = caretPath.getLayoutBounds()
-        val x = bounds.getMinX() - textArea.scrollLeft
-        val y = bounds.getMinY() - textArea.scrollTop
-        val w = bounds.getWidth()
-        val h = bounds.getHeight()
+        val bounds = caretPath.layoutBounds
+        val x = bounds.minX - textArea.scrollLeft
+        val y = bounds.minY - textArea.scrollTop
+        val w = bounds.width
+        val h = bounds.height
 
         if (w > 0 && h > 0) {
             scrollBoundsToVisible(Rectangle2D(x, y, w, h))
@@ -563,7 +560,7 @@ open class TediAreaSkin(val tediArea: TediArea)
             paragraphNode.impl_caretPosition = oldPos
         }
         return hit
-    };
+    }
 
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
@@ -875,10 +872,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
     }
 
-    protected fun isRTL(): Boolean {
-        return skinnable.effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT
-    };
-
     fun setCaretAnimating(value: Boolean) {
         if (value) {
             caretBlinking.start()
@@ -1038,36 +1031,38 @@ open class TediAreaSkin(val tediArea: TediArea)
                     selectionHighlightPath.elements.addAll(*selectionShape)
                 }
                 selectionHighlightGroup.children.add(selectionHighlightPath)
-                selectionHighlightGroup.setVisible(true)
+                selectionHighlightGroup.isVisible = true
                 selectionHighlightPath.layoutX = paragraphNode.layoutX
                 selectionHighlightPath.layoutY = paragraphNode.layoutY
                 updateHighlightFill()
             } else {
                 paragraphNode.impl_selectionStart = -1
                 paragraphNode.impl_selectionEnd = -1
-                selectionHighlightGroup.setVisible(false)
+                selectionHighlightGroup.isVisible = false
             }
 
             // TODO What is this for? Do we need it?
+            /*
             if (scrollPane.prefViewportWidth == 0.0 || scrollPane.prefViewportHeight == 0.0) {
                 if (parent != null && scrollPane.prefViewportWidth > 0 || scrollPane.prefViewportHeight > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
                     parent.requestLayout()
                 }
             }
+            */
 
             // RT-36454: Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
             val viewportBounds = scrollPane.viewportBounds
-            val wasFitToWidth = scrollPane.isFitToWidth()
-            val wasFitToHeight = scrollPane.isFitToHeight()
+            val wasFitToWidth = scrollPane.isFitToWidth
+            val wasFitToHeight = scrollPane.isFitToHeight
             val setFitToWidth = computePrefWidth(-1.0) <= viewportBounds.width
             val setFitToHeight = computePrefHeight(width) <= viewportBounds.height
 
             if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
                 Platform.runLater {
-                    scrollPane.setFitToWidth(setFitToWidth)
-                    scrollPane.setFitToHeight(setFitToHeight)
+                    scrollPane.isFitToWidth = setFitToWidth
+                    scrollPane.isFitToHeight = setFitToHeight
                     scrollPane.requestLayout()
                 }
             }
@@ -1169,42 +1164,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
-
-        internal fun computeTextWidth(font: Font, text: String?, wrappingWidth: Double): Double {
-            layout.setContent(text ?: "", font.impl_getNativeFont())
-            layout.setWrapWidth(wrappingWidth.toFloat())
-            return layout.getBounds().getWidth().toDouble()
-        }
-
-        internal fun computeTextHeight(font: Font, text: String, wrappingWidth: Double, boundsType: TextBoundsType): Double {
-            return computeTextHeight(font, text, wrappingWidth, 0.0, boundsType)
-        }
-
-        internal fun computeTextHeight(font: Font, text: String?, wrappingWidth: Double, lineSpacing: Double, boundsType: TextBoundsType): Double {
-            layout.setContent(text ?: "", font.impl_getNativeFont())
-            layout.setWrapWidth(wrappingWidth.toFloat())
-            layout.setLineSpacing(lineSpacing.toFloat())
-            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-                layout.setBoundsType(TextLayout.BOUNDS_CENTER)
-            } else {
-                layout.setBoundsType(0)
-            }
-            return layout.bounds.height.toDouble()
-        }
-
-        internal fun getLineHeight(font: Font, boundsType: TextBoundsType): Double {
-            layout.setContent("", font.impl_getNativeFont())
-            layout.setWrapWidth(0f)
-            layout.setLineSpacing(0f)
-            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-                layout.setBoundsType(TextLayout.BOUNDS_CENTER)
-            } else {
-                layout.setBoundsType(0)
-            }
-
-            // RT-37092: Use the line bounds specifically, to include font leading.
-            return layout.lines[0].bounds.height.toDouble()
-        }
 
         internal fun getAscent(font: Font, boundsType: TextBoundsType): Double {
             layout.setContent("", font.impl_getNativeFont())

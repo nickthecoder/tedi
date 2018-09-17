@@ -70,7 +70,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     // Paragraphs
     private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList())
 
-    private fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
+    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
 
     val paragraphs: ObservableList<CharSequence>
         get() = content.paragraphList()
@@ -151,7 +151,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     // Indent Size
     private val indentSizeProperty = SimpleIntegerProperty(this, "indentSize", 4)
 
-    fun indentSizePropert(): IntegerProperty = indentSizeProperty
+    fun indentSizeProperty(): IntegerProperty = indentSizeProperty
 
     var indentSize: Int
         get() = indentSizeProperty.get()
@@ -202,13 +202,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun lineStartPosition(line: Int): Int {
         var result = 0
-        var i = 0
-        for (p in paragraphs) {
+        for ((i, p) in paragraphs.withIndex()) {
             if (i >= line) {
                 return result
             }
             result += p.length + 1 // 1 for the new line character
-            i++
         }
         return result
     }
@@ -380,7 +378,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
 
         override fun get(index: Int): CharSequence {
-            return content.paragraphs.get(index)
+            return content.paragraphs[index]
         }
 
         override fun addAll(elements: Collection<CharSequence>): Boolean {
@@ -469,15 +467,15 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * This data structure allows largish text documents to be edited without
      * large String objects being created and then garbage collected.
      *
-     * Note, whenever you use [Tedi.text], it builds a String object from this document.
+     * Note, whenever you use [text], it builds a String object from this document.
      *
      * Alas, TextAreaSkin does NOT make best use of this structure, and instead uses
-     * the string representation ([Tedi.text]) when making changes.
+     * the string representation ([text]) when making changes.
      * Therefore editing large documents is very inefficient.
      */
     protected class TediAreaContent : TextInputControl.Content {
 
-        internal val paragraphs = mutableListOf<StringBuilder>(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
+        internal val paragraphs = mutableListOf(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
         private var contentLength = 0
         private val paragraphList = ParagraphList(this)
         internal var listenerHelper: ListListenerHelper<CharSequence>? = null
@@ -774,22 +772,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      **************************************************************************/
     companion object {
 
-        /**
-         * The default value for [.prefColumnCount].
-         */
-        val DEFAULT_PREF_COLUMN_COUNT = 40
-
-        /**
-         * The default value for [.prefRowCount].
-         */
-        val DEFAULT_PREF_ROW_COUNT = 10
-
         val DEFAULT_PARAGRAPH_CAPACITY = 1000
 
         /**
          * A little utility method for stripping out unwanted characters.
 
-         * @param txt
+         * @param text
          * *
          * @param stripNewlines
          * *
