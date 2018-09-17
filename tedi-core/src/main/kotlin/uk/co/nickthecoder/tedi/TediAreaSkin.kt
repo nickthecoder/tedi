@@ -979,17 +979,10 @@ open class TediAreaSkin(val control: TediArea)
         public override fun layoutChildren() {
             val tediArea = skinnable
             val width = width
-            val height = height
 
-            // Lay out paragraphs
-            val topPadding = snappedTopInset()
-            val leftPadding = snappedLeftInset()
-
-            val x = leftPadding
-
-            val bounds = paragraphNode.boundsInLocal
-            paragraphNode.layoutX = x
-            paragraphNode.layoutY = topPadding
+            // Lay out paragraph
+            paragraphNode.layoutX = snappedLeftInset()
+            paragraphNode.layoutY = snappedTopInset()
 
             // Update the selection
             val selection = tediArea.selection
@@ -1027,9 +1020,8 @@ open class TediAreaSkin(val control: TediArea)
                 val selectionHighlightPath = Path()
                 selectionHighlightPath.isManaged = false
                 selectionHighlightPath.stroke = null
-                val selectionShape = paragraphNode.impl_selectionShape
-                if (selectionShape != null) {
-                    selectionHighlightPath.elements.addAll(*selectionShape)
+                paragraphNode.impl_selectionShape?.let {
+                    selectionHighlightPath.elements.addAll(*it)
                 }
                 selectionHighlightGroup.children.add(selectionHighlightPath)
                 selectionHighlightGroup.isVisible = true

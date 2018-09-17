@@ -2,16 +2,25 @@ Bugs
 ----
 
 Shift-tab doesn't work without a selection.
+maybe also make tab work "correctly" when the start of the selection is half way in the line.
+    Temporarily move selection to the start of the line.
 
 Next
 ----
+
+Consider renaming TediMatcher TextInputMatcher, and then create a subclass TediMatcher if/when highlighting matches
+is implemented.
+
+Make GotoDialog work with TextArea
+    Add the required methods as kotlin extensions for TextInputControl.
 
 Later
 -----
 
 Search and replace.
     Matches should be highlighted in a similar way to a selection (but in a different color).
-    For now, limit it to single line matches???
+    Word matches
+    Too-many matches > 1000? Abort.
 
 Consider adding back line-wrapping, but set display-line-numbers=false whenever it is set.
     Likewise setting displayLineNumbers forces line-wrap = false.

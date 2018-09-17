@@ -8,10 +8,20 @@ import javafx.scene.control.TextField
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.FlowPane
 import javafx.scene.layout.HBox
+import javafx.stage.Modality
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.TediArea
 import uk.co.nickthecoder.tedi.loadGraphic
 
+/**
+ * A dialog box, allowing the user to position the caret to a give line.
+ * They can also specify a column using the syntax :
+ *
+ *     line:column
+ *
+ * Note. Unlike [SearchBar], the GotoDialog only works with TediAreas, not TextAreas, as it uses
+ * methods only available on TediArea.
+ */
 class GotoDialog(var tediArea: TediArea) {
 
     val label = Label("Line [:Column]")
@@ -58,6 +68,7 @@ class GotoDialog(var tediArea: TediArea) {
         val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
         field.text = "${lineColumn.first + 1}:${lineColumn.second + 1}"
 
+        stage.initModality(Modality.APPLICATION_MODAL)
         stage.title = "Go to Line/Column"
         stage.scene = scene
 

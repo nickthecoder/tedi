@@ -3,7 +3,7 @@
 }
 
 .tedi-area .gutter {
-    -fx-padding: 0 4 0 10;
+    -fx-padding: 0 4 0 10; /* Note. top and bottom are ignored */
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
@@ -47,4 +47,11 @@
 
 .tedi-buttons .button {
     -fx-min-width: 80px;
+}
+
+.tedi-search-bar .match-case {
+    -fx-padding: 0 16 0 0;
+}
+.tedi-search-bar .match-regex {
+    -fx-padding: 0 4 0 0;
 }

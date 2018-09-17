@@ -82,7 +82,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     fun lineCountProperty() = lineCountProperty
 
     val lineCount
-        get() = lineCountProperty().get()
+        get() = lineCountProperty.get()
 
 
     // Display Line Numbers
@@ -211,6 +211,10 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         return result
     }
 
+    /**
+     * Returns the position within [text] of the given line number and column.
+     * Everything is zero based (so positionFor(0,0) will return 0).
+     */
     fun positionFor(line: Int, column: Int): Int {
         val lineStart = lineStartPosition(line)
         if (line >= 0 && line < paragraphs.size) {
@@ -373,6 +377,13 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * ParagraphList class                                                     *
      *                                                                         *
      **************************************************************************/
+    /**
+     * The document is stored as a list of lines, and each line is stored as a CharSequence.
+     * Each line does NOT include the new line character.
+     *
+     * The [textProperty] is referenced, is backed by this list, so the document is not stored
+     * as a string.
+     */
     protected class ParagraphList(val content: TediAreaContent)
 
         : AbstractList<CharSequence>(), ObservableList<CharSequence> {
@@ -435,6 +446,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * ParagraphListChange class                                               *
      *                                                                         *
      **************************************************************************/
+    /**
+     */
     protected class ParagraphListChange(
             list: ObservableList<CharSequence>,
             from: Int,
