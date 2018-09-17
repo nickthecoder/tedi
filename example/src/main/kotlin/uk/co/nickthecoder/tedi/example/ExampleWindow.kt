@@ -18,7 +18,8 @@ class ExampleWindow(stage: Stage = Stage()) {
 Hello World
 Line 2
 Line 3
-End""")
+End
+""" + "1\n2\n3\n4\n5\n6\n7\n8\n9\n10\nWeee !!!\n".repeat(10))
 
     val toolbar = ToolBar()
 

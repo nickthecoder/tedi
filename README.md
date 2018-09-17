@@ -16,13 +16,9 @@ TediArea already does most of what I want (highlighted search matches being the 
 
 However, it currently depends on the following non-standard classes :
 
-    com.sun.javafx.scene.control.skin.TextInputControlSkin
     com.sun.javafx.scene.control.skin.Utils
-    com.sun.javafx.scene.input.ExtendedInputMethodRequests
     com.sun.javafx.scene.text.HitInfo
     com.sun.javafx.scene.text.TextLayout
-    com.sun.javafx.tk.FontMetrics
-    com.sun.javafx.tk.Toolkit
 
 It also spews out numerous compiler warnings due to use of "deprecated" APIs.
 (most/all of these are related to the above non-standard classes).
@@ -36,7 +32,7 @@ So, I have three options :
 - Spend a lot of effort bodging around the missing APIs
 - Do nothing, and expect TediArea to break when run against a future version of JavaFX.
 
-For now, I'm doing nothing. Sorry.
+I've been whittling down the list. Only four to go!
 
 ## Differences between TediArea and TextArea
 
@@ -46,13 +42,18 @@ Given that TediArea started as a copy of TextArea, they should be fairly similar
 
 - Context menu (for copy, paste, etc)
 - Option to wrap text
+- prefRowCount and prefColumnCount.
+- mixed left-to-right and right-to-left text flow.
 
 I chose to exclude the context menu, because it is likely that any application that embeds TediArea will
 add their own context menu, with more features. Also, getting I18N (translations) of the text seems to
-require more "private" APIs, and even hard-coded strings containing "com.sun.xxx" package names. Yuck!
+require more "private" APIs, and even needs hard-coded strings containing "com.sun.xxx" package names. Yuck!
 
 Tedi is primarily designed to be for coding, where line-wrapping is just not done!
 Also, line-wrapping doesn't work with my implementation of line numbers.
+
+I don't think prefRowCount and prefColumnCount are useful for a text editor (as opposed to a text area within a form).
+It is much more likely that TediArea will be the center of a BorderPane, where its size is governed by the size of the scene.
 
 ### Additional Features
 

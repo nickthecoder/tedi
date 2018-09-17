@@ -76,7 +76,7 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(tediArea, TediAreaBehavior(tediArea)) {
 
-    private val paragraphNodes = Group()
+    private val paragraphNode = Text()
     private val gutter = Gutter(this)
 
     private val guttersAndContentView = BorderPane()
@@ -243,7 +243,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     init {
 
         // Add initial text content.
-        addParagraphNode(0, tediArea.text)
+        createParagraphNode()
 
         if (tediArea.getOnInputMethodTextChanged() == null) {
             tediArea.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
@@ -263,7 +263,8 @@ open class TediAreaSkin(val tediArea: TediArea)
         })
 
         // Initialize content
-        scrollPane.isFitToWidth = false
+        scrollPane.isFitToWidth = true
+        scrollPane.isFitToHeight = true
         scrollPane.content = guttersAndContentView
         children.add(scrollPane)
 
@@ -273,8 +274,8 @@ open class TediAreaSkin(val tediArea: TediArea)
         contentView.children.add(selectionHighlightGroup)
 
         // Add content view
-        paragraphNodes.isManaged = false
-        contentView.children.addAll(paragraphNodes)
+        paragraphNode.isManaged = false
+        contentView.children.addAll(paragraphNode)
 
 
         // gutter
@@ -351,7 +352,7 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         tediArea.textProperty().addListener { _ ->
-            (paragraphNodes.children[0] as Text).text = tediArea.textProperty().valueSafe
+            paragraphNode.text = tediArea.textProperty().valueSafe
             contentView.requestLayout()
         }
 
@@ -383,27 +384,23 @@ open class TediAreaSkin(val tediArea: TediArea)
         scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
     }
 
-    private fun addParagraphNode(i: Int, string: String) {
-        val textArea = skinnable
-        val paragraphNode = Text(string)
-
+    private fun createParagraphNode() {
         with(paragraphNode) {
+            text = tediArea.text
             textOrigin = VPos.TOP
             wrappingWidth = 0.0
             isManaged = false
             styleClass.add("text")
 
-            fontProperty().bind(textArea.fontProperty())
+            fontProperty().bind(tediArea.fontProperty())
             fillProperty().bind(textFill)
             impl_selectionFillProperty().bind(highlightTextFill)
         }
-        paragraphNodes.children.add(i, paragraphNode)
 
     }
 
     public override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
-        val firstParagraph = paragraphNodes.children[0] as Text
-        return getAscent(skinnable.font, firstParagraph.boundsType) + contentView.snappedTopInset() + tediArea.snappedTopInset()
+        return getAscent(skinnable.font, paragraphNode.boundsType) + contentView.snappedTopInset() + tediArea.snappedTopInset()
     }
 
     fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
@@ -442,26 +439,10 @@ open class TediAreaSkin(val tediArea: TediArea)
 
     fun getCharacterBounds(index: Int): Rectangle2D {
         val textArea = skinnable
-
-        var paragraphIndex = paragraphNodes.children.size
-        var paragraphOffset = textArea.length + 1
-
-        var paragraphNode: Text?
-        do {
-            paragraphNode = paragraphNodes.children[--paragraphIndex] as Text
-            paragraphOffset -= paragraphNode.text.length + 1
-        } while (index < paragraphOffset)
-
-        var characterIndex = index - paragraphOffset
         var terminator = false
 
-        if (characterIndex == paragraphNode!!.text.length) {
-            characterIndex--
-            terminator = true
-        }
-
         characterBoundingPath.elements.clear()
-        characterBoundingPath.elements.addAll(*paragraphNode.impl_getRangeShape(characterIndex, characterIndex + 1))
+        characterBoundingPath.elements.addAll(*paragraphNode.impl_getRangeShape(index, index + 1))
         characterBoundingPath.layoutX = paragraphNode.layoutX
         characterBoundingPath.layoutY = paragraphNode.layoutY
 
@@ -473,11 +454,6 @@ open class TediAreaSkin(val tediArea: TediArea)
         // Sometimes the bounds is empty, in which case we must ignore the width/height
         var width = if (bounds.isEmpty) 0.0 else bounds.width
         val height = if (bounds.isEmpty) 0.0 else bounds.height
-
-        if (terminator) {
-            x += width
-            width = 0.0
-        }
 
         return Rectangle2D(x, y, width, height)
     }
@@ -570,25 +546,21 @@ open class TediAreaSkin(val tediArea: TediArea)
         return p
     }
 
-    private fun getTextNode(): Text {
-        return paragraphNodes.children[0] as Text
-    }
-
     fun getIndex(x: Double, y: Double): HitInfo {
         // adjust the event to be in the same coordinate space as the
         // text content of the textInputControl
-        val textNode = getTextNode()
-        val p = Point2D(x - textNode.layoutX, y - getTextTranslateY())
-        val hit = textNode.impl_hitTestChar(translateCaretPosition(p))
+
+        val p = Point2D(x - paragraphNode.layoutX, y - getTextTranslateY())
+        val hit = paragraphNode.impl_hitTestChar(translateCaretPosition(p))
         val pos = hit.charIndex
         if (pos > 0) {
-            val oldPos = textNode.impl_caretPosition
-            textNode.impl_caretPosition = pos
-            val element = textNode.impl_caretShape[0]
+            val oldPos = paragraphNode.impl_caretPosition
+            paragraphNode.impl_caretPosition = pos
+            val element = paragraphNode.impl_caretShape[0]
             if (element is MoveTo && element.y > y - getTextTranslateY()) {
                 hit.charIndex = pos - 1
             }
-            textNode.impl_caretPosition = oldPos
+            paragraphNode.impl_caretPosition = oldPos
         }
         return hit
     };
@@ -615,7 +587,7 @@ open class TediAreaSkin(val tediArea: TediArea)
      * Returns a rough calculation of the line height
      */
     private fun lineHeight(): Double {
-        return paragraphNodes.children[0].prefHeight(0.0) / tediArea.lineCount
+        return paragraphNode.prefHeight(0.0) / tediArea.lineCount
     }
 
     /**
@@ -625,7 +597,7 @@ open class TediAreaSkin(val tediArea: TediArea)
      * but as it is only used for scrolling, it doesn't matter!
      */
     private fun pageSizeInLines(): Int {
-        val result = scrollPane.height / (paragraphNodes.children[0].prefHeight(0.0) / tediArea.lineCount)
+        val result = scrollPane.height / (paragraphNode.prefHeight(0.0) / tediArea.lineCount)
         return result.toInt() - 1
     }
 
@@ -722,65 +694,40 @@ open class TediAreaSkin(val tediArea: TediArea)
 
 
     private fun updateTextNodeCaretPos(pos: Int) {
-        val textNode = getTextNode()
         if (isForwardBias()) {
-            textNode.impl_caretPosition = pos
+            paragraphNode.impl_caretPosition = pos
         } else {
-            textNode.impl_caretPosition = pos - 1
+            paragraphNode.impl_caretPosition = pos - 1
         }
-        textNode.impl_caretBiasProperty().set(isForwardBias())
+        paragraphNode.impl_caretBiasProperty().set(isForwardBias())
     }
 
     protected fun getUnderlineShape(start: Int, end: Int): Array<PathElement>? {
         var pStart = 0
-        for (node in paragraphNodes.children) {
-            val p = node as Text
-            val pEnd = pStart + p.textProperty().valueSafe.length
-            if (pEnd >= start) {
-                return p.impl_getUnderlineShape(start - pStart, end - pStart)
-            }
-            pStart = pEnd + 1
+        val pEnd = pStart + paragraphNode.textProperty().valueSafe.length
+        if (pEnd >= start) {
+            return paragraphNode.impl_getUnderlineShape(start - pStart, end - pStart)
         }
+        pStart = pEnd + 1
+
         return null
     }
 
     protected fun getRangeShape(start: Int, end: Int): Array<out PathElement>? {
-        var pStart = 0
-        for (node in paragraphNodes.children) {
-            val p = node as Text
-            val pEnd = pStart + p.textProperty().valueSafe.length
-            if (pEnd >= start) {
-                return p.impl_getRangeShape(start - pStart, end - pStart)
-            }
-            pStart = pEnd + 1
-        }
-        return null
+        return paragraphNode.impl_getRangeShape(start, end)
     }
 
     protected fun addHighlight(nodes: List<Node>, start: Int) {
-        var pStart = 0
-        var paragraphNode: Text? = null
-        for (node in paragraphNodes.children) {
-            val p = node as Text
-            val pEnd = pStart + p.textProperty().valueSafe.length
-            if (pEnd >= start) {
-                paragraphNode = p
-                break
-            }
-            pStart = pEnd + 1
-        }
 
-        if (paragraphNode != null) {
-            for (node in nodes) {
-                node.layoutX = paragraphNode.layoutX
-                node.layoutY = paragraphNode.layoutY
-            }
+        for (node in nodes) {
+            node.layoutX = paragraphNode.layoutX
+            node.layoutY = paragraphNode.layoutY
         }
-        contentView.getChildren().addAll(nodes)
+        contentView.children.addAll(nodes)
     }
 
     protected fun removeHighlight(nodes: List<Node>) {
-        contentView.getChildren().removeAll(nodes)
+        contentView.children.removeAll(nodes)
     }
 
     /**
@@ -798,8 +745,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     override fun queryAccessibleAttribute(attribute: AccessibleAttribute?, vararg parameters: Any): Any {
         when (attribute) {
             AccessibleAttribute.LINE_FOR_OFFSET, AccessibleAttribute.LINE_START, AccessibleAttribute.LINE_END, AccessibleAttribute.BOUNDS_FOR_RANGE, AccessibleAttribute.OFFSET_AT_POINT -> {
-                val text = getTextNode()
-                return text.queryAccessibleAttribute(attribute, *parameters)
+                return paragraphNode.queryAccessibleAttribute(attribute, *parameters)
             }
             else -> return super.queryAccessibleAttribute(attribute, *parameters)
         }
@@ -817,7 +763,7 @@ open class TediAreaSkin(val tediArea: TediArea)
     private var imstart: Int = 0
     private var imlength: Int = 0
     // Holds concrete attributes for the composition runs
-    private val imattrs = java.util.ArrayList<Shape>()
+    private val imattrs = ArrayList<Shape>()
 
     protected fun handleInputMethodEvent(event: InputMethodEvent) {
         val textInput = skinnable
@@ -1029,16 +975,14 @@ open class TediAreaSkin(val tediArea: TediArea)
         }
 
         override fun computePrefWidth(height: Double): Double {
-            return paragraphNodes.children[0].prefWidth(height) + snappedLeftInset() + snappedRightInset()
-
+            return paragraphNode.prefWidth(height) + snappedLeftInset() + snappedRightInset()
         }
 
         override fun computePrefHeight(width: Double): Double {
-            return paragraphNodes.children[0].prefHeight(width) + snappedTopInset() + snappedBottomInset()
+            return paragraphNode.prefHeight(width) + snappedTopInset() + snappedBottomInset()
         }
 
         public override fun layoutChildren() {
-
             val tediArea = skinnable
             val width = width
             val height = height
@@ -1048,20 +992,10 @@ open class TediAreaSkin(val tediArea: TediArea)
             val leftPadding = snappedLeftInset()
 
             val x = leftPadding
-            var y = topPadding
 
-            val paragraphNodesChildren = paragraphNodes.children
-
-            for (i in paragraphNodesChildren.indices) {
-                val node = paragraphNodesChildren.get(i)
-                val paragraphNode = node as Text
-
-                val bounds = paragraphNode.boundsInLocal
-                paragraphNode.layoutX = x
-                paragraphNode.layoutY = y
-
-                y += bounds.height
-            }
+            val bounds = paragraphNode.boundsInLocal
+            paragraphNode.layoutX = x
+            paragraphNode.layoutY = topPadding
 
             // Update the selection
             val selection = tediArea.selection
@@ -1072,23 +1006,14 @@ open class TediAreaSkin(val tediArea: TediArea)
             val caretPos = tediArea.caretPosition
 
             // Position caret
-            var paragraphIndex = paragraphNodesChildren.size
-            var paragraphOffset = tediArea.length + 1
-
-            var paragraphNode: Text?
-            do {
-                paragraphNode = (paragraphNodesChildren.get(--paragraphIndex)) as Text
-                paragraphOffset -= paragraphNode.text.length + 1
-            } while (caretPos < paragraphOffset)
-
-            updateTextNodeCaretPos(caretPos - paragraphOffset)
+            updateTextNodeCaretPos(caretPos)
             caretPath.elements.clear()
-            caretPath.elements.addAll(*paragraphNode!!.impl_caretShape)
+            caretPath.elements.addAll(*paragraphNode.impl_caretShape)
 
             caretPath.layoutX = paragraphNode.layoutX
 
             // TODO: Remove this temporary workaround for RT-27533
-            paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
+            //paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
 
             caretPath.layoutY = paragraphNode.layoutY
             if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
@@ -1096,48 +1021,40 @@ open class TediAreaSkin(val tediArea: TediArea)
             }
 
             // Update selection fg and bg
-            var start = selection.start
-            var end = selection.end
+            val start = selection.start
+            val end = selection.end
             var i = 0
-            val max = paragraphNodesChildren.size
-            while (i < max) {
-                val paragraphNode = paragraphNodesChildren.get(i)
-                val textNode = paragraphNode as Text
-                val paragraphLength = textNode.text.length + 1
-                if (end > start && start < paragraphLength) {
-                    textNode.impl_selectionStart = start
-                    textNode.impl_selectionEnd = Math.min(end, paragraphLength)
 
-                    val selectionHighlightPath = Path()
-                    selectionHighlightPath.isManaged = false
-                    selectionHighlightPath.stroke = null
-                    val selectionShape = textNode.impl_selectionShape
-                    if (selectionShape != null) {
-                        selectionHighlightPath.elements.addAll(*selectionShape)
-                    }
-                    selectionHighlightGroup.getChildren().add(selectionHighlightPath)
-                    selectionHighlightGroup.setVisible(true)
-                    selectionHighlightPath.layoutX = textNode.layoutX
-                    selectionHighlightPath.layoutY = textNode.layoutY
-                    updateHighlightFill()
-                } else {
-                    textNode.impl_selectionStart = -1
-                    textNode.impl_selectionEnd = -1
-                    selectionHighlightGroup.setVisible(false)
+            val paragraphLength = paragraphNode.text.length + 1
+            if (end > start && start < paragraphLength) {
+                paragraphNode.impl_selectionStart = start
+                paragraphNode.impl_selectionEnd = Math.min(end, paragraphLength)
+
+                val selectionHighlightPath = Path()
+                selectionHighlightPath.isManaged = false
+                selectionHighlightPath.stroke = null
+                val selectionShape = paragraphNode.impl_selectionShape
+                if (selectionShape != null) {
+                    selectionHighlightPath.elements.addAll(*selectionShape)
                 }
-                start = Math.max(0, start - paragraphLength)
-                end = Math.max(0, end - paragraphLength)
-                i++
+                selectionHighlightGroup.children.add(selectionHighlightPath)
+                selectionHighlightGroup.setVisible(true)
+                selectionHighlightPath.layoutX = paragraphNode.layoutX
+                selectionHighlightPath.layoutY = paragraphNode.layoutY
+                updateHighlightFill()
+            } else {
+                paragraphNode.impl_selectionStart = -1
+                paragraphNode.impl_selectionEnd = -1
+                selectionHighlightGroup.setVisible(false)
             }
 
-            /*
+            // TODO What is this for? Do we need it?
             if (scrollPane.prefViewportWidth == 0.0 || scrollPane.prefViewportHeight == 0.0) {
                 if (parent != null && scrollPane.prefViewportWidth > 0 || scrollPane.prefViewportHeight > 0) {
                     // Force layout of viewRect in ScrollPaneSkin
                     parent.requestLayout()
                 }
             }
-            */
 
             // RT-36454: Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
@@ -1151,8 +1068,8 @@ open class TediAreaSkin(val tediArea: TediArea)
                 Platform.runLater {
                     scrollPane.setFitToWidth(setFitToWidth)
                     scrollPane.setFitToHeight(setFitToHeight)
+                    scrollPane.requestLayout()
                 }
-                parent.requestLayout()
             }
         }
     }

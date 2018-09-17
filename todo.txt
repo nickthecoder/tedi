@@ -27,15 +27,9 @@ Consider adding back line-wrapping, but set display-line-numbers=false whenever 
         import com.sun.javafx.scene.control.skin.Utils
         import com.sun.javafx.scene.text.HitInfo
         import com.sun.javafx.scene.text.TextLayout
-        import com.sun.javafx.tk.FontMetrics
-        import com.sun.javafx.tk.Toolkit
 
 The list is getting smaller ;-)
 
 Utils and HitInfo are needed for finding the text position a point is within a Text node.
     I can calculate the height using line height (which I think I can extract using standard APIs)
     I can calculate the column by binary chopping a line of text, and asking for its width.
-
-Toolkit, TextLayout and FontMetrics are all related, and are used to calculate pref widths.
-    A simple workaround would be to remove PrefColumnCount and PrefRowCount
-    After all, these are usually used for a TextArea within a Form, and TediArea isn't designed to be within a form.
