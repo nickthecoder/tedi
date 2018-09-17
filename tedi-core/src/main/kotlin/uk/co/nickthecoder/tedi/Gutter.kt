@@ -28,7 +28,7 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
 
     init {
         styleClass.add("gutter")
-        visibleProperty().bind(tediAreaSkin.tediArea.displayLineNumbersProperty())
+        visibleProperty().bind(tediAreaSkin.control.displayLineNumbersProperty())
 
         children.add(lineNumbers)
 
@@ -38,18 +38,18 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
             textOrigin = VPos.TOP
             textAlignment = TextAlignment.RIGHT
             wrappingWidth = 0.0
-            fontProperty().bind(tediAreaSkin.tediArea.fontProperty())
+            fontProperty().bind(tediAreaSkin.control.fontProperty())
             fillProperty().bind(textFill)
         }
 
         updateLineNumbers()
-        tediAreaSkin.tediArea.lineCountProperty().addListener { _, _, _ ->
+        tediAreaSkin.control.lineCountProperty().addListener { _, _, _ ->
             updateLineNumbers()
         }
     }
 
     private fun updateLineNumbers() {
-        val lines = tediAreaSkin.tediArea.lineCount
+        val lines = tediAreaSkin.control.lineCount
         val buffer = StringBuffer(lines * 3)
         for (i in 1..lines) {
             buffer.append(i.toString()).append("\n")
