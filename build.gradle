@@ -33,9 +33,6 @@ project(':tedi-core') {
 
     dependencies {
         compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
-
-        testCompile 'junit:junit:4.11'
-        testCompile 'org.jetbrains.kotlin:kotlin-test'
     }
 
     defaultTasks 'install'
@@ -50,5 +47,8 @@ project(':demo') {
 
     dependencies {
         compile project(':tedi-core')
+
+        testCompile 'junit:junit:4.11'
+        testCompile 'org.jetbrains.kotlin:kotlin-test'
     }
 }

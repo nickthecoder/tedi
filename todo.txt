@@ -7,15 +7,14 @@ maybe also make tab work "correctly" when the start of the selection is half way
 
 Next
 ----
-
+Plug it into Tickle
 
 Later
 -----
 
 Search and replace.
     Matches should be highlighted in a similar way to a selection (but in a different color).
-    Word matches
-    Too-many matches > 1000? Abort.
+        Too-many matches > 1000? Abort.
 
 Consider adding back line-wrapping, but set display-line-numbers=false whenever it is set.
     Likewise setting displayLineNumbers forces line-wrap = false.
