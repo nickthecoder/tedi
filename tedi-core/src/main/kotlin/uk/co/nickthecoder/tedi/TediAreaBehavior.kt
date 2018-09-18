@@ -30,7 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.scene.control.skin.Utils
 import javafx.beans.InvalidationListener
 import javafx.geometry.NodeOrientation
 import javafx.scene.input.KeyCode.*
@@ -213,8 +212,8 @@ class TediAreaBehavior(val control: TediArea)
 
             // if the primary button was pressed
             if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
-                val hit = skin.getIndex(e.x, e.y)
-                val i = Utils.getHitInsertionIndex(hit, control.textProperty().valueSafe)
+                val hit = skin.getHitInformation(e.x, e.y)
+                val i = hit.getInsertionIndex()
 
                 val anchor = control.anchor
                 val caretPosition = control.caretPosition
@@ -258,7 +257,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled && !e!!.isSynthesized) {
             if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown ||
                     e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown)) {
-                skin.positionCaret(skin.getIndex(e.x, e.y), true, false)
+                skin.positionCaret(skin.getHitInformation(e.x, e.y), true, false)
             }
         }
         deferClick = false
@@ -273,7 +272,7 @@ class TediAreaBehavior(val control: TediArea)
             setCaretAnimating(false)
             if (deferClick) {
                 deferClick = false
-                skin.positionCaret(skin.getIndex(e!!.x, e.y), shiftDown, false)
+                skin.positionCaret(skin.getHitInformation(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
             setCaretAnimating(true)

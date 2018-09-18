@@ -30,8 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.scene.control.skin.Utils
-import com.sun.javafx.scene.text.HitInfo
 import com.sun.javafx.scene.text.TextLayout
 import com.sun.javafx.tk.Toolkit
 import javafx.animation.KeyFrame
@@ -398,9 +396,11 @@ open class TediAreaSkin(val control: TediArea)
         return getAscent(skinnable.font, paragraphNode.boundsType) + contentView.snappedTopInset() + control.snappedTopInset()
     }
 
-    fun positionCaret(hit: HitInfo, select: Boolean, extendSelection: Boolean) {
+    fun getHitInformation(x: Double, y: Double): HitInformation = paragraphNode.hitTestChar(x, y)
 
-        var pos = Utils.getHitInsertionIndex(hit, skinnable.text)
+    fun positionCaret(hit: HitInformation, select: Boolean, extendSelection: Boolean) {
+
+        var pos = hit.getInsertionIndex()
         val isNewLine = pos > 0 &&
                 pos <= skinnable.length &&
                 skinnable.text.codePointAt(pos - 1) == 0x0a
@@ -523,28 +523,14 @@ open class TediAreaSkin(val control: TediArea)
         return contentView.snappedTopInset()
     }
 
-    private fun translateCaretPosition(p: Point2D): Point2D {
-        return p
+    /**
+     * Converts a coordinate relative to the content into a Point2D relative to the text within the content
+     * i.e. it removes the padding around the text.
+     */
+    private fun convertPoint(x: Double, y: Double): Point2D {
+        return Point2D(x - contentView.snappedLeftInset(), contentView.snappedTopInset())
     }
 
-    fun getIndex(x: Double, y: Double): HitInfo {
-        // adjust the event to be in the same coordinate space as the
-        // text content of the textInputControl
-
-        val p = Point2D(x - paragraphNode.layoutX, y - getTextTranslateY())
-        val hit = paragraphNode.impl_hitTestChar(translateCaretPosition(p))
-        val pos = hit.charIndex
-        if (pos > 0) {
-            val oldPos = paragraphNode.impl_caretPosition
-            paragraphNode.impl_caretPosition = pos
-            val element = paragraphNode.impl_caretShape[0]
-            if (element is MoveTo && element.y > y - getTextTranslateY()) {
-                hit.charIndex = pos - 1
-            }
-            paragraphNode.impl_caretPosition = oldPos
-        }
-        return hit
-    }
 
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
