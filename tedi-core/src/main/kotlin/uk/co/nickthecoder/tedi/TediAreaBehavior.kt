@@ -31,7 +31,6 @@
 package uk.co.nickthecoder.tedi
 
 import com.sun.javafx.scene.control.skin.Utils
-import com.sun.javafx.scene.text.HitInfo
 import javafx.beans.InvalidationListener
 import javafx.geometry.NodeOrientation
 import javafx.scene.input.KeyCode.*
@@ -152,7 +151,7 @@ class TediAreaBehavior(val control: TediArea)
                 "Backward" -> tediArea.backward()
                 "Right" -> nextCharacterVisually(true)
                 "Left" -> nextCharacterVisually(false)
-                "Fire" -> lastEvent?.let { fire(it) }
+                "Fire" -> lastEvent?.let {}
                 "Cancel" -> lastEvent?.let { cancelEdit(it) }
                 "Unselect" -> tediArea.deselect()
                 "SelectHome" -> selectHome()
@@ -230,8 +229,8 @@ class TediAreaBehavior(val control: TediArea)
                 } else if (!(e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown || e.isShortcutDown)) {
                     when (e.clickCount) {
                         1 -> skin.positionCaret(hit, false, false)
-                        2 -> mouseDoubleClick(hit)
-                        3 -> mouseTripleClick(hit)
+                        2 -> mouseDoubleClick()
+                        3 -> mouseTripleClick()
                     }// no-op
                 } else if (e.isShiftDown && !(e.isControlDown || e.isAltDown || e.isMetaDown || e.isShortcutDown) && e.clickCount == 1) {
                     // didn't click inside the selection, so select
@@ -285,7 +284,7 @@ class TediAreaBehavior(val control: TediArea)
         skin.setCaretAnimating(play)
     }
 
-    private fun mouseDoubleClick(hit: HitInfo) {
+    private fun mouseDoubleClick() {
         val textArea = getControl()
         textArea.previousWord()
         if (isWindows) {
@@ -295,7 +294,7 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-    private fun mouseTripleClick(hit: HitInfo) {
+    private fun mouseTripleClick() {
         // select the line
         skin.paragraphStart(false, false)
         skin.paragraphEnd(false, isWindows, true)
@@ -509,8 +508,6 @@ class TediAreaBehavior(val control: TediArea)
             nextWord()
         }
     }
-
-    private fun fire(event: KeyEvent) {}
 
     private fun cancelEdit(event: KeyEvent) {
         forwardToParent(event)

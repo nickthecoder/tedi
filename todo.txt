@@ -1,20 +1,28 @@
 Bugs
 ----
 
-Shift-tab doesn't work without a selection.
-maybe also make tab work "correctly" when the start of the selection is half way in the line.
-    Temporarily move selection to the start of the line.
-
 Next
 ----
-Plug it into Tickle
 
 Later
 -----
 
+Remove all warnings and com.sun.xxx packages
+
+Implement Skin using a list of paragraphsNodes
+
+Make ParagraphNode clever enough to handle a set of styles
+    i.e. break the line into pieces, were each piece can have their own style
+    Use this for both selection and search matches.
+    Can also use it for syntax highlighting.
+
 Search and replace.
     Matches should be highlighted in a similar way to a selection (but in a different color).
         Too-many matches > 1000? Abort.
+
+Consider adding a gutter to the right, which shows where the match results are.
+    Kate puts it IN the scroll bar, whereas IntelliJ puts it the left of the scroll bar, floating above the text.
+
 
 Consider adding back line-wrapping, but set display-line-numbers=false whenever it is set.
     Likewise setting displayLineNumbers forces line-wrap = false.
