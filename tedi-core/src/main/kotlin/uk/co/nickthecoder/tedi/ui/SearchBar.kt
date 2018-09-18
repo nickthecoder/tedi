@@ -34,6 +34,8 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
     val matchRegex = CheckBox("Regex")
 
+    val matchWords = CheckBox("Words")
+
     val status = Label()
 
     init {
@@ -50,7 +52,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
         with(toolBar) {
             styleClass.add("tedi-search-bar")
-            items.addAll(search, prev, next, Separator(), matchCase, matchRegex, Separator(), status)
+            items.addAll(search, prev, next, Separator(), matchCase, matchRegex, matchWords, Separator(), status)
         }
 
         with(search) {
@@ -88,6 +90,12 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
             selectedProperty().bindBidirectional(matcher.matchRegexProperty)
         }
 
+        with(matchWords) {
+            styleClass.add("match-words")
+            tooltip = Tooltip("Match Words (ctrl+W)")
+            selectedProperty().bindBidirectional(matcher.matchWordsProperty)
+        }
+
         with(status) {
             styleClass.add("status")
             textProperty().bind(matcher.statusProperty)
@@ -101,7 +109,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
             when (event.code) {
                 KeyCode.E -> matcher.matchRegex = !matcher.matchRegex
                 KeyCode.M -> matcher.matchCase = !matcher.matchCase
-                KeyCode.DOWN -> matcher.nextMatch()
+                KeyCode.W -> matcher.matchWords = !matcher.matchWords
                 else -> consume = false
             }
 

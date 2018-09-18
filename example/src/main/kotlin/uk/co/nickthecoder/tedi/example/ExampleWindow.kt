@@ -80,6 +80,13 @@ End
             selectedProperty().bindBidirectional(replaceBar.toolBar.visibleProperty())
         }
 
+        with(searchBar) {
+            toolBar.styleClass.add("bottom")
+        }
+        with(replaceBar) {
+            toolBar.styleClass.add("bottom")
+        }
+
         with(toolbar.items) {
             add(toggleLineNumbers)
             add(toggleSearch)
@@ -109,7 +116,10 @@ End
 
         if (event.isControlDown) {
             when (event.code) {
-                KeyCode.F -> matcher.inUse = true
+                KeyCode.F -> {
+                    matcher.inUse = true
+                    searchBar.search.requestFocusOnSceneAvailable()
+                }
                 KeyCode.R -> {
                     val wasInUse = matcher.inUse
                     replaceBar.toolBar.isVisible = true

@@ -45,6 +45,13 @@ open class TextInputControlMatcher(tediArea: TediArea) {
             matchRegexProperty.set(v)
         }
 
+    val matchWordsProperty = SimpleBooleanProperty(false)
+    var matchWords: Boolean
+        get() = matchWordsProperty.get()
+        set(v) {
+            matchWordsProperty.set(v)
+        }
+
     val statusProperty = SimpleStringProperty("")
     var status: String
         get() = statusProperty.get()
@@ -98,13 +105,14 @@ open class TextInputControlMatcher(tediArea: TediArea) {
 
     protected var currentMatchIndex = -1
 
-    protected var performingReplace = false
+    protected var state = State.NOTHING
 
     init {
         textInputControlProperty.addListener { _, oldValue, newValue -> textInputControlChanged(oldValue, newValue) }
         searchProperty.addListener { _, _, _ -> startSearch() }
         matchCaseProperty.addListener { _, _, _ -> startSearch() }
         matchRegexProperty.addListener { _, _, _ -> startSearch() }
+        matchWordsProperty.addListener { _, _, _ -> startSearch() }
         inUseProperty.addListener { _, _, _ -> startSearch() }
 
         tediArea.caretPositionProperty().addListener(selectionChangedListener)
@@ -127,9 +135,8 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     }
 
     open fun textChanged() {
-        if (performingReplace) {
+        if (state == State.NOTHING) {
             startSearch()
-            performingReplace = false
         }
     }
 
@@ -139,8 +146,17 @@ open class TextInputControlMatcher(tediArea: TediArea) {
 
         if (inUse && search.isNotEmpty()) {
 
-            val flags = (if (matchCase) 0 else Pattern.CASE_INSENSITIVE) + if (matchRegex) 0 else Pattern.LITERAL
-            pattern = Pattern.compile(search, flags + Pattern.MULTILINE)
+            val caseFlag = if (matchCase) 0 else Pattern.CASE_INSENSITIVE
+            val literalFlag = if (matchRegex) 0 else Pattern.LITERAL
+            if (matchWords) {
+                if (matchRegex) {
+                    pattern = Pattern.compile("\\b${search}\\b", caseFlag + literalFlag)
+                } else {
+                    pattern = Pattern.compile("\\b${Pattern.quote(search)}\\b", caseFlag)
+                }
+            } else {
+                pattern = Pattern.compile(search, caseFlag + literalFlag + Pattern.MULTILINE)
+            }
             matcher = pattern.matcher(textInputControl.text)
             val caret = textInputControl.caretPosition
             while (matcher.find()) {
@@ -203,7 +219,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     }
 
     protected fun selectionChanged() {
-        if (inUse && !performingReplace) {
+        if (inUse && state == State.NOTHING) {
             val start = Math.min(textInputControl.anchor, textInputControl.caretPosition)
             val end = Math.max(textInputControl.anchor, textInputControl.caretPosition)
             currentMatchIndex = findMatchIndex(Match(start, end))
@@ -215,18 +231,23 @@ open class TextInputControlMatcher(tediArea: TediArea) {
 
     open fun replace(replacement: String) {
         if (matchSelected) {
-            performingReplace = true
+            state = State.REPLACE
             textInputControl.replaceSelection(replacement)
+            state = State.NOTHING
+            startSearch() // Will select the next match
         }
     }
 
     open fun replaceAll(replacement: String) {
+        state = State.REPLACE_ALL
         currentMatchIndex = matches.size - 1
         while (currentMatchIndex >= 0) {
             updateSelection()
-            replace(replacement)
+            textInputControl.replaceSelection(replacement)
             currentMatchIndex--
         }
+        state = State.NOTHING
+        startSearch(false)
     }
 
     open fun findMatchIndex(match: Match): Int {
@@ -245,4 +266,6 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     }
 
     data class Match(val start: Int, val end: Int)
+
+    enum class State { NOTHING, REPLACE, REPLACE_ALL }
 }

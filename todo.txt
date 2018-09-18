@@ -8,11 +8,6 @@ maybe also make tab work "correctly" when the start of the selection is half way
 Next
 ----
 
-Consider renaming TediMatcher TextInputMatcher, and then create a subclass TediMatcher if/when highlighting matches
-is implemented.
-
-Make GotoDialog work with TextArea
-    Add the required methods as kotlin extensions for TextInputControl.
 
 Later
 -----

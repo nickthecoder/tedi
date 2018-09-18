@@ -49,9 +49,10 @@
     -fx-min-width: 80px;
 }
 
-.tedi-search-bar .match-case {
+.tedi-search-bar .match-case,
+.tedi-search-bar .match-regex {
     -fx-padding: 0 16 0 0;
 }
-.tedi-search-bar .match-regex {
+.tedi-search-bar .match-words {
     -fx-padding: 0 4 0 0;
 }
