@@ -432,26 +432,6 @@ open class TediAreaSkin(val control: TediArea)
         return Math.max(0.0, contentView.width - scrollPane.viewportBounds.width)
     }
 
-    fun getCharacterBounds(index: Int): Rectangle2D {
-        val textArea = skinnable
-
-        characterBoundingPath.elements.clear()
-        characterBoundingPath.elements.addAll(*paragraphNode.impl_getRangeShape(index, index + 1))
-        characterBoundingPath.layoutX = paragraphNode.layoutX
-        characterBoundingPath.layoutY = paragraphNode.layoutY
-
-        val bounds = characterBoundingPath.boundsInLocal
-
-        val x = bounds.minX + paragraphNode.layoutX - textArea.scrollLeft
-        val y = bounds.minY + paragraphNode.layoutY - textArea.scrollTop
-
-        // Sometimes the bounds is empty, in which case we must ignore the width/height
-        val width = if (bounds.isEmpty) 0.0 else bounds.width
-        val height = if (bounds.isEmpty) 0.0 else bounds.height
-
-        return Rectangle2D(x, y, width, height)
-    }
-
     private fun scrollCaretToVisible() {
         val textArea = skinnable
         val bounds = caretPath.layoutBounds
@@ -657,13 +637,10 @@ open class TediAreaSkin(val control: TediArea)
     }
 
     protected fun getUnderlineShape(start: Int, end: Int): Array<PathElement>? {
-        var pStart = 0
-        val pEnd = pStart + paragraphNode.textProperty().valueSafe.length
+        val pEnd = paragraphNode.textProperty().valueSafe.length
         if (pEnd >= start) {
-            return paragraphNode.impl_getUnderlineShape(start - pStart, end - pStart)
+            return paragraphNode.impl_getUnderlineShape(start, end)
         }
-        pStart = pEnd + 1
-
         return null
     }
 
@@ -671,7 +648,7 @@ open class TediAreaSkin(val control: TediArea)
         return paragraphNode.impl_getRangeShape(start, end)
     }
 
-    protected fun addHighlight(nodes: List<Node>, start: Int) {
+    protected fun addHighlight(nodes: List<Node>) {
 
         for (node in nodes) {
             node.layoutX = paragraphNode.layoutX
@@ -690,7 +667,7 @@ open class TediAreaSkin(val control: TediArea)
      * based on the return value.
      */
     fun deleteChar(previous: Boolean) {
-        val shouldBeep = if (previous)
+        if (previous)
             !skinnable.deletePreviousChar()
         else
             !skinnable.deleteNextChar()
@@ -751,7 +728,7 @@ open class TediAreaSkin(val control: TediArea)
                     createInputMethodAttributes(run.highlight, pos, endPos)
                     pos = endPos
                 }
-                addHighlight(imattrs, imstart)
+                addHighlight(imattrs)
 
                 // Set caret position in composed text
                 val caretPos = event.caretPosition
@@ -953,7 +930,6 @@ open class TediAreaSkin(val control: TediArea)
             // Update selection fg and bg
             val start = selection.start
             val end = selection.end
-            var i = 0
 
             val paragraphLength = paragraphNode.text.length + 1
             if (end > start && start < paragraphLength) {
