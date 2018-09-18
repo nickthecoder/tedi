@@ -42,7 +42,7 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
 
     val lines = text.split("\n")
     val lineHeight = boundsInLocal.height / lines.size
-    val lineNumber = (y / lineHeight).toInt()
+    val lineNumber = (normY / lineHeight).toInt()
     // println("Lines = ${lines.size} lineHeight=${lineHeight} textHeight=${text.boundsInLocal.height} Line Number $lineNumber}")
     var lineStartPosition = 0
     for (i in 0..lineNumber - 1) {
