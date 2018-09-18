@@ -159,12 +159,10 @@ class TediAreaBehavior(val control: TediArea)
                 "SelectEndExtend" -> selectEndExtend()
                 "ToParent" -> lastEvent?.let { forwardToParent(it) }
 
-                "LineStart" -> lineStart(false, false)
-                "LineEnd" -> lineEnd(false, false)
-                "SelectLineStart" -> lineStart(true, false)
-                "SelectLineStartExtend" -> lineStart(true, true)
-                "SelectLineEnd" -> lineEnd(true, false)
-                "SelectLineEndExtend" -> lineEnd(true, true)
+                "LineStart" -> skin.lineStart(false)
+                "LineEnd" -> skin.lineEnd(false)
+                "SelectLineStart" -> skin.lineStart(true)
+                "SelectLineEnd" -> skin.lineEnd(true)
                 "PreviousLine" -> skin.previousLine(false)
                 "NextLine" -> skin.nextLine(false)
                 "SelectPreviousLine" -> skin.previousLine(true)
@@ -612,20 +610,12 @@ class TediAreaBehavior(val control: TediArea)
         val end = textArea.caretPosition
 
         if (end > 0) {
-            lineStart(false, false)
+            skin.lineStart(false)
             val start = textArea.caretPosition
             if (end > start) {
                 replaceText(start, end, "")
             }
         }
-    }
-
-    private fun lineStart(select: Boolean, extendSelection: Boolean) {
-        skin.lineStart(select, extendSelection)
-    }
-
-    private fun lineEnd(select: Boolean, extendSelection: Boolean) {
-        skin.lineEnd(select, extendSelection)
     }
 
     private fun replaceText(start: Int, end: Int, txt: String) {

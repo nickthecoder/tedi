@@ -569,7 +569,7 @@ open class TediAreaSkin(val control: TediArea)
         changeLine(lines, select)
     }
 
-    fun lineStart(select: Boolean, extendSelection: Boolean) {
+    fun lineStart(select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
         val newPosition = control.positionFor(lineColumn.first, 0)
         if (select) {
@@ -579,7 +579,7 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    fun lineEnd(select: Boolean, extendSelection: Boolean) {
+    fun lineEnd(select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
         val newPosition = control.positionFor(lineColumn.first, Int.MAX_VALUE)
         if (select) {
