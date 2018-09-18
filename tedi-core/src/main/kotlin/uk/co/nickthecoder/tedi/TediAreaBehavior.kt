@@ -539,32 +539,43 @@ class TediAreaBehavior(val control: TediArea)
         textInputControl.extendSelection(textInputControl.length)
     }
 
+    private fun extendSelectionToStartOfLine() {
+        val textArea = getControl()
+
+        val selection = textArea.selection
+        val lc = textArea.lineColumnFor(selection.start)
+        if (lc.second != 0) {
+            textArea.selectRange(textArea.lineStartPosition(lc.first), selection.end)
+        }
+    }
+
     private fun insertTab() {
         val textArea = getControl()
         val tabOrSpaces = textArea.tabIndentation()
 
-        val from = Math.min(textArea.caretPosition, textArea.anchor)
-        val to = Math.max(textArea.caretPosition, textArea.anchor)
-
         if (textArea.selection.length == 0) {
             // No selection. Just add the tab (or spaces)
             textArea.replaceSelection(tabOrSpaces)
+
         } else {
+
+            extendSelectionToStartOfLine()
+            val selection = textArea.selection
+
             var extraNL = ""
-            var selection = textArea.selectedText
-            if (selection.endsWith("\n")) {
-                selection = selection.substring(0, selection.length - 1)
+            var selectedText = textArea.selectedText
+            if (selectedText.endsWith("\n")) {
+                selectedText = selectedText.substring(0, selectedText.length - 1)
                 extraNL = "\n"
             }
-            val lines = selection.split('\n').map { tabOrSpaces + it }
+            val lines = selectedText.split('\n').map { tabOrSpaces + it }
             val replacement = lines.joinToString(separator = "\n") + extraNL
 
             textArea.replaceSelection(replacement)
-            textArea.selectRange(from, to + tabOrSpaces.length * lines.size)
+            textArea.selectRange(selection.start, selection.end + tabOrSpaces.length * lines.size)
         }
 
     }
-
 
     /**
      * Unindents the current line, or selection. (Shift+Tab)
@@ -572,13 +583,14 @@ class TediAreaBehavior(val control: TediArea)
     private fun unindent() {
         val textArea = getControl()
         val spaces = " ".repeat(textArea.indentSize)
-        val selection = textArea.selectedText
 
-        val from = Math.min(textArea.caretPosition, textArea.anchor)
-        val to = Math.max(textArea.caretPosition, textArea.anchor)
+        extendSelectionToStartOfLine()
+        val selection = textArea.selection
+
+        val selectedText = textArea.selectedText
 
         var deleted = 0
-        val lines = selection.split('\n').map {
+        val lines = selectedText.split('\n').map {
             if (it.startsWith("\t")) {
                 deleted += 1
                 it.substring(1)
@@ -591,7 +603,9 @@ class TediAreaBehavior(val control: TediArea)
         }
         val replacement = lines.joinToString(separator = "\n")
         textArea.replaceSelection(replacement)
-        textArea.selectRange(from - if (selection.startsWith("\t")) 1 else 0, to - deleted)
+
+        textArea.selectRange(selection.start - if (selectedText.startsWith("\t")) 1 else 0,
+                selection.end - deleted)
     }
 
     private fun deleteChar(previous: Boolean) {

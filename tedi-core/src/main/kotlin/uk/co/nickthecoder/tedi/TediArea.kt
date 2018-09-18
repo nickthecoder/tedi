@@ -212,6 +212,21 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     }
 
     /**
+     * Returns the position within [text] of the end of the nth line.
+     * [line] and the returned result are zero based.
+     */
+    fun lineEndPosition(line: Int): Int {
+        var result = 0
+        for ((i, p) in paragraphs.withIndex()) {
+            if (i >= line) {
+                return result + p.length
+            }
+            result += p.length + 1 // 1 for the new line character
+        }
+        return result
+    }
+
+    /**
      * Returns the position within [text] of the given line number and column.
      * Everything is zero based (so positionFor(0,0) will return 0).
      */
