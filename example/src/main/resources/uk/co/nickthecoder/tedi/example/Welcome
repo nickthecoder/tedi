@@ -1,0 +1,6 @@
+This is a demo application, showing how to use some of the features
+of TediArea, and its helper classes, such as SearchBar, ReplaceBar,
+TextInputControlMatcher and GotoDialog.
+
+The contents of these tabs are from this demo app's jar file.
+Note that the source code for ExampleWindow.kt may be an OLD version!

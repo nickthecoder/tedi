@@ -1,5 +1,7 @@
 package uk.co.nickthecoder.tedi.example
 
+import javafx.event.ActionEvent
+import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
@@ -18,56 +20,26 @@ class ExampleWindow(stage: Stage = Stage()) {
 
     val dummyArea = TediArea("dummy")
 
-    /**
-     * The root of the scene. top=toolbar, center = tabPane, bottom = searchAndReplace
-     */
+    val toolbar = ToolBar()
+
     val borderPane = BorderPane()
 
-    /**
-     * The tool bar at the top of the scene
-     */
-    val toolBar = ToolBar()
-
-    /**
-     * Contains a set of EditorTabs, which contain the TediViews.
-     */
     val tabPane = TabPane()
-
-    /**
-     * The non-gui part of search and replace.
-     */
-    val matcher = TextInputControlMatcher(dummyArea)
-
-    /**
-     * A tool bar, which appears below the tabPane (inside searchAndReplaceToolBars)
-     */
-    val searchBar = SearchBar(matcher)
-
-    /**
-     * A tool bar, which appears below the searchBar (inside searchAndReplaceToolBars)
-     */
-    val replaceBar = ReplaceBar(matcher)
-
-    /**
-     * At the bottom of the scene. Contains searchBar and replaceBar.
-     */
-    val searchAndReplaceToolBars = VBox()
-
-    // Buttons within the toolBar
-    val toggleLineNumbers = ToggleButton()
-    val toggleSearch = ToggleButton()
-    val toggleSearchAndReplace = ToggleButton()
-    val goto = GotoDialog.createGotoButton { currentArea }.apply { tooltip = Tooltip("Go to Line (ctrl+G)") }
 
     val scene = Scene(borderPane, 700.0, 500.0)
 
-    /**
-     * Keep track of the "current" TediArea, so that search and replace, and the line-number toggle button
-     * affect the correct TediArea.
-     * This is set from within EditorTab (when a TediArea gains focus).
-     *
-     * Note, if we were able to close tabs, then closing the last tab should set this back to dummyArea.
-     */
+    val matcher = TextInputControlMatcher(dummyArea)
+    val searchBar = SearchBar(matcher)
+    val replaceBar = ReplaceBar(matcher)
+
+    val searchAndReplaceToolBars = VBox()
+
+    val toggleLineNumbers = ToggleButton()
+    val toggleSearch = ToggleButton()
+    val toggleSearchAndReplace = ToggleButton()
+
+    val goto = GotoDialog.createGotoButton { currentArea }.apply { tooltip = Tooltip("Go to Line (ctrl+G)") }
+
     var currentArea = dummyArea
         set(v) {
             field.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
@@ -79,30 +51,26 @@ class ExampleWindow(stage: Stage = Stage()) {
         }
 
     init {
-        /*
-         * Automatically removes children when they are made invisible.
-         * Then replaces them if they are made visible again.
-         * Without this, the searchAndReplaceToolBars VBox would take up space even when its children were hidden.
+        /**
+         * Auto removes and replaces children when they are made invisible.
+         * Without this, the VBox would take up space even when its children were hidden.
          */
         RemoveHiddenChildren(searchAndReplaceToolBars.children)
 
-        // Applies tedi.css found in tedi-core's jar file.
         TediArea.style(scene)
 
         with(borderPane) {
             styleClass.add("example")
             center = tabPane
-            top = toolBar
+            top = toolbar
             bottom = searchAndReplaceToolBars
         }
 
-        // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(EditorTab(ExampleWindow::class.java.getResource("Welcome")))
+            tabs.add(EditorTab(ExampleWindow::class.java.getResource("welcome.txt")))
             tabs.add(EditorTab(ExampleWindow::class.java.getResource("LICENSE")))
-            tabs.add(EditorTab(ExampleWindow::class.java.getResource("ExampleWindow")))
+            tabs.add(EditorTab(ExampleWindow::class.java.getResource("ExampleWindow.kt")))
             tabs.add(EditorTab(TediArea::class.java.getResource("tedi.css")))
-            // Plus an empty tab
             tabs.add(EditorTab())
         }
 
@@ -123,7 +91,6 @@ class ExampleWindow(stage: Stage = Stage()) {
             selectedProperty().bindBidirectional(replaceBar.toolBar.visibleProperty())
         }
 
-        // Without this, the highlights on the tool bars are wrong.
         with(searchBar) {
             toolBar.styleClass.add("bottom")
         }
@@ -131,8 +98,11 @@ class ExampleWindow(stage: Stage = Stage()) {
             toolBar.styleClass.add("bottom")
         }
 
-        with(toolBar) {
-            items.addAll(toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
+        with(toolbar.items) {
+            add(toggleLineNumbers)
+            add(toggleSearch)
+            add(toggleSearchAndReplace)
+            add(goto)
         }
 
         with(searchAndReplaceToolBars) {
@@ -148,7 +118,6 @@ class ExampleWindow(stage: Stage = Stage()) {
             show()
         }
 
-        // Handle keyboard shortcuts (Hover over buttons etc to see the shortcuts in their tooltips)
         borderPane.addEventFilter(KeyEvent.KEY_PRESSED) { onKeyPressed(it) }
     }
 
@@ -164,8 +133,6 @@ class ExampleWindow(stage: Stage = Stage()) {
                     matcher.inUse = true
                     searchBar.search.requestFocusOnSceneAvailable()
                 }
-                KeyCode.G -> GotoDialog(currentArea).show()
-                KeyCode.L -> toggleLineNumbers.isSelected = !toggleLineNumbers.isSelected
                 KeyCode.R -> {
                     val wasInUse = matcher.inUse
                     replaceBar.toolBar.isVisible = true
@@ -173,6 +140,7 @@ class ExampleWindow(stage: Stage = Stage()) {
                         replaceBar.replacement.requestFocusOnSceneAvailable()
                     }
                 }
+                KeyCode.G -> GotoDialog(currentArea).show()
                 else -> consume = false
             }
 
@@ -193,10 +161,12 @@ class ExampleWindow(stage: Stage = Stage()) {
         matcher.inUse = false
     }
 
-    /**
-     * A [Tab] within the [tabPane].
-     * Contains a TediArea.
-     */
+    fun createButton(text: String, action: () -> Unit): Button {
+        val button = Button(text)
+        button.onAction = EventHandler<ActionEvent> { action() }
+        return button
+    }
+
     inner class EditorTab(title: String = "New Document") : Tab() {
 
         constructor(url: URL) : this(url.path.replace(Regex(".*/"), "")) {
@@ -206,25 +176,23 @@ class ExampleWindow(stage: Stage = Stage()) {
         val tediArea = TediArea()
 
         init {
+            println("Creating a tab")
             content = tediArea
             text = title
 
-            // When selecting "words", this is much better that the default when editing source code.
             tediArea.wordIterator = CodeWordBreakIterator()
 
-            // Make toggleLineNumbers button and the matcher refer this this tediArea whenever it gains focus.
-            tediArea.focusedProperty().addListener { _, _, newValue ->
-                if (newValue == true) {
-                    currentArea = tediArea
-                }
-            }
-            // Select the TediArea when this tab is selected
-            selectedProperty().addListener { _, _, newValue ->
+            this.selectedProperty().addListener { _, _, newValue ->
                 if (newValue == true) {
                     tediArea.requestFocusOnSceneAvailable()
                 }
             }
 
+            tediArea.focusedProperty().addListener { _, _, newValue ->
+                if (newValue == true) {
+                    currentArea = tediArea
+                }
+            }
         }
 
     }
