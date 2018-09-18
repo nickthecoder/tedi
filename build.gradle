@@ -41,12 +41,12 @@ project(':tedi-core') {
     defaultTasks 'install'
 }
 
-project(':example') {
+project(':demo') {
 
     apply plugin: 'kotlin'
     apply plugin: 'application'
     
-    mainClassName = "uk.co.nickthecoder.tedi.example.ExampleKt"
+    mainClassName = "uk.co.nickthecoder.tedi.demo.DemoKt"
 
     dependencies {
         compile project(':tedi-core')

@@ -17,5 +17,5 @@ build
 out
 /tedi-core/build
 /tedi-core/out
-/example/build
-/example/out
+/demo/build
+/demo/out

@@ -1,4 +1,4 @@
-package uk.co.nickthecoder.tedi.example
+package uk.co.nickthecoder.tedi.demo
 
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -14,7 +14,7 @@ import uk.co.nickthecoder.tedi.requestFocusOnSceneAvailable
 import uk.co.nickthecoder.tedi.ui.*
 import java.net.URL
 
-class ExampleWindow(stage: Stage = Stage()) {
+class DemoWindow(stage: Stage = Stage()) {
 
     val dummyArea = TediArea("dummy")
 
@@ -98,9 +98,9 @@ class ExampleWindow(stage: Stage = Stage()) {
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(EditorTab(ExampleWindow::class.java.getResource("Welcome")))
-            tabs.add(EditorTab(ExampleWindow::class.java.getResource("LICENSE")))
-            tabs.add(EditorTab(ExampleWindow::class.java.getResource("ExampleWindow")))
+            tabs.add(EditorTab(DemoWindow::class.java.getResource("Welcome")))
+            tabs.add(EditorTab(DemoWindow::class.java.getResource("LICENSE")))
+            tabs.add(EditorTab(DemoWindow::class.java.getResource("DemoWindow")))
             tabs.add(EditorTab(TediArea::class.java.getResource("tedi.css")))
             // Plus an empty tab
             tabs.add(EditorTab())
