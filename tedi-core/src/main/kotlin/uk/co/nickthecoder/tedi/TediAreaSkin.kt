@@ -771,9 +771,6 @@ open class TediAreaSkin(val control: TediArea)
 
             caretPath.layoutX = paragraphNode.layoutX
 
-            // TODO: Remove this temporary workaround for RT-27533
-            //paragraphNode.layoutX = 2 * paragraphNode.layoutX - paragraphNode.boundsInParent.minX
-
             caretPath.layoutY = paragraphNode.layoutY
             if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
                 scrollCaretToVisible()
@@ -805,16 +802,6 @@ open class TediAreaSkin(val control: TediArea)
                 selectionHighlightGroup.isVisible = false
             }
 
-            // TODO What is this for? Do we need it?
-            /*
-            if (scrollPane.prefViewportWidth == 0.0 || scrollPane.prefViewportHeight == 0.0) {
-                if (parent != null && scrollPane.prefViewportWidth > 0 || scrollPane.prefViewportHeight > 0) {
-                    // Force layout of viewRect in ScrollPaneSkin
-                    parent.requestLayout()
-                }
-            }
-            */
-
             // Fit to width/height only if smaller than viewport.
             // That is, grow to fit but don't shrink to fit.
             val viewportBounds = scrollPane.viewportBounds
@@ -824,7 +811,6 @@ open class TediAreaSkin(val control: TediArea)
             val setFitToHeight = computePrefHeight(width) <= viewportBounds.height
 
             if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
-                // println("Changing fit from $wasFitToWidth , $wasFitToHeight to  $setFitToWidth , $setFitToHeight ")
                 Platform.runLater {
                     scrollPane.isFitToWidth = setFitToWidth
                     scrollPane.isFitToHeight = setFitToHeight
