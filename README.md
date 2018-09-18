@@ -16,23 +16,12 @@ TediArea already does most of what I want (highlighted search matches being the 
 
 However, it currently depends on the following non-standard classes :
 
-    com.sun.javafx.scene.control.skin.Utils
-    com.sun.javafx.scene.text.HitInfo
+    com.sun.javafx.tk.Toolkit
     com.sun.javafx.scene.text.TextLayout
 
 It also spews out numerous compiler warnings due to use of "deprecated" APIs.
-(most/all of these are related to the above non-standard classes).
 
-It's not going to be easy to remove these using the current version of JavaFX, because it
-doesn't have a sufficient public API (especially regarding fonts).
-
-So, I have three options :
-
-- Wait for the next version of JavaFX, (which hopefully has a complete public API for creating a text editor)
-- Spend a lot of effort bodging around the missing APIs
-- Do nothing, and expect TediArea to break when run against a future version of JavaFX.
-
-I've been whittling down the list. Only four to go!
+I've been whittling down the list, and am quietly confident of getting rid of the rest of them!
 
 ## Differences between TediArea and TextArea
 

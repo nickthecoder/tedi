@@ -519,19 +519,6 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    private fun getTextTranslateY(): Double {
-        return contentView.snappedTopInset()
-    }
-
-    /**
-     * Converts a coordinate relative to the content into a Point2D relative to the text within the content
-     * i.e. it removes the padding around the text.
-     */
-    private fun convertPoint(x: Double, y: Double): Point2D {
-        return Point2D(x - contentView.snappedLeftInset(), contentView.snappedTopInset())
-    }
-
-
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
         val newPosition = control.positionFor(lineColumn.first + n, lineColumn.second)
