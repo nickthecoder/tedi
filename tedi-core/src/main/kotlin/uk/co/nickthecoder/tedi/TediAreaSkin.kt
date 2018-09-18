@@ -30,8 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.scene.text.TextLayout
-import com.sun.javafx.tk.Toolkit
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
 import javafx.application.Platform
@@ -59,9 +57,7 @@ import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.Path
-import javafx.scene.text.Font
 import javafx.scene.text.Text
-import javafx.scene.text.TextBoundsType
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 import java.lang.ref.WeakReference
@@ -384,10 +380,6 @@ open class TediAreaSkin(val control: TediArea)
             fillProperty().bind(textFill)
         }
 
-    }
-
-    public override fun computeBaselineOffset(topInset: Double, rightInset: Double, bottomInset: Double, leftInset: Double): Double {
-        return getAscent(skinnable.font, paragraphNode.boundsType) + contentView.snappedTopInset() + control.snappedTopInset()
     }
 
     fun getHitInformation(x: Double, y: Double): HitInformation = paragraphNode.hitTestChar(x, y)
@@ -748,6 +740,7 @@ open class TediAreaSkin(val control: TediArea)
             return paragraphNode.prefHeight(width) + snappedTopInset() + snappedBottomInset()
         }
 
+
         public override fun layoutChildren() {
             val tediArea = skinnable
             val width = width
@@ -770,7 +763,6 @@ open class TediAreaSkin(val control: TediArea)
             caretPath.elements.addAll(*paragraphNode.impl_caretShape)
 
             caretPath.layoutX = paragraphNode.layoutX
-
             caretPath.layoutY = paragraphNode.layoutY
             if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
                 scrollCaretToVisible()
@@ -902,8 +894,6 @@ open class TediAreaSkin(val control: TediArea)
 
         private val STYLEABLES: List<CssMetaData<out Styleable, *>>
 
-        internal val layout = Toolkit.getToolkit().textLayoutFactory.createLayout()
-
         init {
             val styleables = ArrayList(TextInputControl.getClassCssMetaData())
             styleables.add(StyleableProperties.TEXT_FILL)
@@ -915,18 +905,6 @@ open class TediAreaSkin(val control: TediArea)
         }
 
         fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
-
-        internal fun getAscent(font: Font, boundsType: TextBoundsType): Double {
-            layout.setContent("", font.impl_getNativeFont())
-            layout.setWrapWidth(0f)
-            layout.setLineSpacing(0f)
-            if (boundsType == TextBoundsType.LOGICAL_VERTICAL_CENTER) {
-                layout.setBoundsType(TextLayout.BOUNDS_CENTER)
-            } else {
-                layout.setBoundsType(0)
-            }
-            return (-layout.bounds.minY).toDouble()
-        }
 
     }
 }
