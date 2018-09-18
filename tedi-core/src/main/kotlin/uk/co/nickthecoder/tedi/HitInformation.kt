@@ -73,11 +73,7 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
             if (guess < 0) {
                 return HitInformation(lineStartPosition, true)
             } else {
-                if (diff > -previousDiff) {
-                    return HitInformation(lineStartPosition + guess, false)
-                } else {
-                    return HitInformation(lineStartPosition + guess, true)
-                }
+                return HitInformation(lineStartPosition + guess, diff < -previousDiff)
             }
         } else {
             while (diff > 0 && guess < lineText.length) {
@@ -86,15 +82,7 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
                 previousDiff = diff
                 diff = normX - tempText.boundsInLocal.width
             }
-            if (guess >= lineText.length) {
-                return HitInformation(lineStartPosition + lineText.length - 1, false)
-            } else {
-                if (diff > -previousDiff) {
-                    return HitInformation(lineStartPosition + guess - 1, false)
-                } else {
-                    return HitInformation(lineStartPosition + guess - 1, true)
-                }
-            }
+            return HitInformation(lineStartPosition + guess - 1, diff < -previousDiff)
         }
     }
 }
