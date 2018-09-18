@@ -53,14 +53,12 @@ import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.control.ScrollPane
 import javafx.scene.control.TextInputControl
-import javafx.scene.input.InputMethodEvent
-import javafx.scene.input.InputMethodHighlight
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
-import javafx.scene.shape.*
+import javafx.scene.shape.Path
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.scene.text.TextBoundsType
@@ -238,10 +236,6 @@ open class TediAreaSkin(val control: TediArea)
 
         // Add initial text content.
         createParagraphNode()
-
-        if (control.onInputMethodTextChanged == null) {
-            control.setOnInputMethodTextChanged({ event -> handleInputMethodEvent(event) })
-        }
 
         caretPosition.addListener { _, oldValue, newValue ->
             targetCaretX = -1.0
@@ -626,7 +620,6 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-
     private fun updateTextNodeCaretPos(pos: Int) {
         if (isForwardBias()) {
             paragraphNode.impl_caretPosition = pos
@@ -634,31 +627,6 @@ open class TediAreaSkin(val control: TediArea)
             paragraphNode.impl_caretPosition = pos - 1
         }
         paragraphNode.impl_caretBiasProperty().set(isForwardBias())
-    }
-
-    protected fun getUnderlineShape(start: Int, end: Int): Array<PathElement>? {
-        val pEnd = paragraphNode.textProperty().valueSafe.length
-        if (pEnd >= start) {
-            return paragraphNode.impl_getUnderlineShape(start, end)
-        }
-        return null
-    }
-
-    protected fun getRangeShape(start: Int, end: Int): Array<out PathElement>? {
-        return paragraphNode.impl_getRangeShape(start, end)
-    }
-
-    protected fun addHighlight(nodes: List<Node>) {
-
-        for (node in nodes) {
-            node.layoutX = paragraphNode.layoutX
-            node.layoutY = paragraphNode.layoutY
-        }
-        contentView.children.addAll(nodes)
-    }
-
-    protected fun removeHighlight(nodes: List<Node>) {
-        contentView.children.removeAll(nodes)
     }
 
     /**
@@ -688,122 +656,6 @@ open class TediAreaSkin(val control: TediArea)
 
     fun isForwardBias(): Boolean {
         return forwardBias.get()
-    }
-
-    // Start/Length of the text under input method composition
-    private var imstart: Int = 0
-    private var imlength: Int = 0
-    // Holds concrete attributes for the composition runs
-    private val imattrs = ArrayList<Shape>()
-
-    protected fun handleInputMethodEvent(event: InputMethodEvent) {
-        val textInput = skinnable
-        if (textInput.isEditable && !textInput.textProperty().isBound && !textInput.isDisabled) {
-
-            // remove previous input method text (if any) or selected text
-            if (imlength != 0) {
-                removeHighlight(imattrs)
-                imattrs.clear()
-                textInput.selectRange(imstart, imstart + imlength)
-            }
-
-            // Insert committed text
-            if (event.committed.isNotEmpty()) {
-                val committed = event.committed
-                textInput.replaceText(textInput.selection, committed)
-            }
-
-            // Replace composed text
-            imstart = textInput.selection.start
-            val composed = StringBuilder()
-            for (run in event.composed) {
-                composed.append(run.text)
-            }
-            textInput.replaceText(textInput.selection, composed.toString())
-            imlength = composed.length
-            if (imlength != 0) {
-                var pos = imstart
-                for (run in event.composed) {
-                    val endPos = pos + run.text.length
-                    createInputMethodAttributes(run.highlight, pos, endPos)
-                    pos = endPos
-                }
-                addHighlight(imattrs)
-
-                // Set caret position in composed text
-                val caretPos = event.caretPosition
-                if (caretPos >= 0 && caretPos < imlength) {
-                    textInput.selectRange(imstart + caretPos, imstart + caretPos)
-                }
-            }
-        }
-    }
-
-    private fun createInputMethodAttributes(highlight: InputMethodHighlight, start: Int, end: Int) {
-        var minX = 0.0
-        var maxX = 0.0
-        var minY = 0.0
-        var maxY = 0.0
-
-        val elements = getUnderlineShape(start, end) ?: return
-
-        for (i in elements.indices) {
-            val pe = elements[i]
-            if (pe is MoveTo) {
-                maxX = pe.x
-                minX = maxX
-                maxY = pe.y
-                minY = maxY
-            } else if (pe is LineTo) {
-                minX = if (minX < pe.x) minX else pe.x
-                maxX = if (maxX > pe.x) maxX else pe.x
-                minY = if (minY < pe.y) minY else pe.y
-                maxY = if (maxY > pe.y) maxY else pe.y
-            } else if (pe is HLineTo) {
-                minX = if (minX < pe.x) minX else pe.x
-                maxX = if (maxX > pe.x) maxX else pe.x
-            } else if (pe is VLineTo) {
-                minY = if (minY < pe.y) minY else pe.y
-                maxY = if (maxY > pe.y) maxY else pe.y
-            }
-            // Don't assume that shapes are ended with ClosePath.
-            if (pe is ClosePath ||
-                    i == elements.size - 1 ||
-                    i < elements.size - 1 && elements[i + 1] is MoveTo) {
-                // Now, create the attribute.
-                var attr: Shape? = null
-                if (highlight == InputMethodHighlight.SELECTED_RAW) {
-                    // blue background
-                    attr = Path()
-                    attr.elements.addAll(getRangeShape(start, end)!!)
-                    attr.fill = Color.BLUE
-                    attr.opacity = 0.3
-                } else if (highlight == InputMethodHighlight.UNSELECTED_RAW) {
-                    // dash underline.
-                    attr = Line(minX + 2, maxY + 1, maxX - 2, maxY + 1)
-                    attr.stroke = textFill.get()
-                    attr.strokeWidth = maxY - minY
-                    val dashArray = attr.strokeDashArray
-                    dashArray.add(java.lang.Double.valueOf(2.0))
-                    dashArray.add(java.lang.Double.valueOf(2.0))
-                } else if (highlight == InputMethodHighlight.SELECTED_CONVERTED) {
-                    // thick underline.
-                    attr = Line(minX + 2, maxY + 1, maxX - 2, maxY + 1)
-                    attr.stroke = textFill.get()
-                    attr.strokeWidth = (maxY - minY) * 3
-                } else if (highlight == InputMethodHighlight.UNSELECTED_CONVERTED) {
-                    // single underline.
-                    attr = Line(minX + 2, maxY + 1, maxX - 2, maxY + 1)
-                    attr.stroke = textFill.get()
-                    attr.strokeWidth = maxY - minY
-                }
-
-                if (attr != null) {
-                    attr.isManaged = false
-                    imattrs.add(attr)
-                }
-            }
-        }
     }
 
     fun setCaretAnimating(value: Boolean) {

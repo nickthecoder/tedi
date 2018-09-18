@@ -19,9 +19,9 @@ However, it currently depends on the following non-standard classes :
     com.sun.javafx.tk.Toolkit
     com.sun.javafx.scene.text.TextLayout
 
-It also spews out numerous compiler warnings due to use of "deprecated" APIs.
+It also spews out 12 compiler warnings due to use of "deprecated" APIs.
 
-I've been whittling down the list, and am quietly confident of getting rid of the rest of them!
+I've been whittling down the list, and am quietly confident I will get rid of the rest of them!
 
 ## Differences between TediArea and TextArea
 
@@ -104,6 +104,7 @@ CodeWordBreakIterator is horribly inefficient. Sorry!
 
 ## Right-to-Left and Accessibility
 
-I've keep code which handles right-to-left support, and accessibility support.
-However, I don't understand them, nor how to use them, so I may have broken them without knowing.
-Help will be appreciated; even just a confirmation on whether they do work!
+I've probably butchered some/all right-to-left handling.
+
+I have removed some of the accessibility code, because it used non-standard APIs.
+Given that I don't know how to test, I couldn't really re-implement it using only standard APIs. Sorry.
