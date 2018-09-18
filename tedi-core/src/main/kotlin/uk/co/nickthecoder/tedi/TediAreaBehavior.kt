@@ -334,7 +334,6 @@ class TediAreaBehavior(val control: TediArea)
             val end = selection.end
 
             replaceText(start, end, character)
-            scrollCharacterToVisible(start)
         }
     }
 
@@ -628,10 +627,6 @@ class TediAreaBehavior(val control: TediArea)
 
     private fun lineEnd(select: Boolean, extendSelection: Boolean) {
         skin.lineEnd(select, extendSelection)
-    }
-
-    private fun scrollCharacterToVisible(index: Int) {
-        skin.scrollCharacterToVisible(index)
     }
 
     private fun replaceText(start: Int, end: Int, txt: String) {

@@ -50,7 +50,6 @@ import javafx.css.*
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
 import javafx.geometry.*
-import javafx.scene.AccessibleAction
 import javafx.scene.AccessibleAttribute
 import javafx.scene.Group
 import javafx.scene.Node
@@ -391,7 +390,6 @@ open class TediAreaSkin(val control: TediArea)
 
             fontProperty().bind(control.fontProperty())
             fillProperty().bind(textFill)
-            impl_selectionFillProperty().bind(highlightTextFill)
         }
 
     }
@@ -436,7 +434,6 @@ open class TediAreaSkin(val control: TediArea)
 
     fun getCharacterBounds(index: Int): Rectangle2D {
         val textArea = skinnable
-        var terminator = false
 
         characterBoundingPath.elements.clear()
         characterBoundingPath.elements.addAll(*paragraphNode.impl_getRangeShape(index, index + 1))
@@ -453,19 +450,6 @@ open class TediAreaSkin(val control: TediArea)
         val height = if (bounds.isEmpty) 0.0 else bounds.height
 
         return Rectangle2D(x, y, width, height)
-    }
-
-    fun scrollCharacterToVisible(index: Int) {
-        // TODO We queue a callback because when characters are added or
-        // removed the bounds are not immediately updated; is this really
-        // necessary?
-
-        Platform.runLater {
-            if (skinnable.length != 0) {
-                val characterBounds = getCharacterBounds(index)
-                scrollBoundsToVisible(characterBounds)
-            }
-        }
     }
 
     private fun scrollCaretToVisible() {
@@ -880,20 +864,6 @@ open class TediAreaSkin(val control: TediArea)
             blink.set(true)
         }
     }
-
-    override fun executeAccessibleAction(action: AccessibleAction?, vararg parameters: Any) {
-        when (action) {
-            AccessibleAction.SHOW_TEXT_RANGE -> {
-                val start = parameters[0] as Int
-                val end = parameters[1] as Int
-                scrollCharacterToVisible(end)
-                scrollCharacterToVisible(start)
-                scrollCharacterToVisible(end)
-            }
-            else -> super.executeAccessibleAction(action, *parameters)
-        }
-    }
-
 
     /***************************************************************************
      *                                                                         *
