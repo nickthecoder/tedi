@@ -499,12 +499,10 @@ open class TediAreaSkin(val control: TediArea)
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
         tmpText.font = paragraphNode.font
-        tmpText.layoutY = paragraphNode.layoutX
+        tmpText.layoutX = 0.0// paragraphNode.layoutX
         val hit = tmpText.hitTestChar(requiredX, 1.0)
         val columnIndex = hit.charIndex
-
-        // TODO, Why aren't we using hit.isLeading? Maybe there's a bug win HitInformation
-        setForwardBias(true)
+        setForwardBias(hit.isLeading)
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex
 

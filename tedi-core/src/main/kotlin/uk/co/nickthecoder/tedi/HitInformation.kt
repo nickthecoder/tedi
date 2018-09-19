@@ -13,6 +13,10 @@ import javafx.scene.text.Text
  */
 class HitInformation(var charIndex: Int, var isLeading: Boolean) {
 
+    //init {
+    //    println("Hit Information : $this")
+    //}
+
     fun getInsertionIndex(): Int {
         return if (isLeading) charIndex else charIndex + 1
     }
@@ -56,11 +60,12 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
     val lineText = if (lineNumber < 0 || lineNumber >= lines.size) "" else lines[lineNumber]
     tempText.font = font
     tempText.text = lineText
+    //println("REAL HitInfo : " + tempText.impl_hitTestChar(Point2D(normX, normY)))
 
     if (normX < 0) {
         return HitInformation(lineStartPosition, true)
     } else if (normX > tempText.boundsInLocal.width) {
-        return HitInformation(lineStartPosition + lineText.length, false)
+        return HitInformation(lineStartPosition + lineText.length, true)
     } else {
         var guess = (normX / tempText.boundsInLocal.width * lineText.length).toInt()
         tempText.text = lineText.substring(0, guess)

@@ -6,8 +6,6 @@ Also, scrolling the view, then then typing also hides the caret.
 
 Moving up/down lines doesn't work correctly with a proportional font. Do I care?
 
-Moving up/down multiple lines changes the column when smaller line is encountered.
-
 Next
 ----
 
