@@ -3,4 +3,4 @@ of TediArea, and its helper classes, such as SearchBar, ReplaceBar,
 TextInputControlMatcher and GotoDialog.
 
 The contents of these tabs are from this demo app's jar file.
-Note that the source code for ExampleWindow.kt may be an OLD version!
+Note that the source code for DemoWindow.kt may be an OLD version!

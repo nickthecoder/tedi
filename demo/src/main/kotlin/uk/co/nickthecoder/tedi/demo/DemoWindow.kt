@@ -1,5 +1,6 @@
 package uk.co.nickthecoder.tedi.demo
 
+import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
@@ -54,6 +55,8 @@ class DemoWindow(stage: Stage = Stage()) {
     val searchAndReplaceToolBars = VBox()
 
     // Buttons within the toolBar
+    val undo = Button()
+    val redo = Button()
     val toggleLineNumbers = ToggleButton()
     val toggleSearch = ToggleButton()
     val toggleSearchAndReplace = ToggleButton()
@@ -76,6 +79,8 @@ class DemoWindow(stage: Stage = Stage()) {
 
             toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
             matcher.textInputControl = v
+            undo.disableProperty().bind(v.undoableProperty().not())
+            redo.disableProperty().bind(v.redoableProperty().not())
         }
 
     init {
@@ -106,6 +111,18 @@ class DemoWindow(stage: Stage = Stage()) {
             tabs.add(EditorTab())
         }
 
+        with(undo) {
+            loadGraphic(DemoWindow::class.java, "undo.png")
+            tooltip = Tooltip("Undo (ctrl+Z)")
+            onAction = EventHandler { currentArea.undo() }
+        }
+
+        with(redo) {
+            loadGraphic(DemoWindow::class.java, "redo.png")
+            tooltip = Tooltip("Redo (ctrl+shift+Z)")
+            onAction = EventHandler { currentArea.redo() }
+        }
+
         with(toggleLineNumbers) {
             loadGraphic(SearchBar::class.java, "line-numbers.png")
             tooltip = Tooltip("Show/Hide Line Numbers (ctrl+L)")
@@ -132,7 +149,7 @@ class DemoWindow(stage: Stage = Stage()) {
         }
 
         with(toolBar) {
-            items.addAll(toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
+            items.addAll(undo, redo, toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
         }
 
         with(searchAndReplaceToolBars) {

@@ -4,7 +4,6 @@ Bugs
 Using Home key on the first line SOMETIMES the caret vanishes
 Also, scrolling the view, then then typing also hides the caret.
 
-Moving up/down lines doesn't work correctly with a proportional font. Do I care?
 
 Next
 ----
