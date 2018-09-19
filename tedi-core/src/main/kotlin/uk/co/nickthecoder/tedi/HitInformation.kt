@@ -60,7 +60,7 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
     if (normX < 0) {
         return HitInformation(lineStartPosition, true)
     } else if (normX > tempText.boundsInLocal.width) {
-        return HitInformation(lineStartPosition + lineText.length - 1, false)
+        return HitInformation(lineStartPosition + lineText.length, false)
     } else {
         var guess = (normX / tempText.boundsInLocal.width * lineText.length).toInt()
         tempText.text = lineText.substring(0, guess)

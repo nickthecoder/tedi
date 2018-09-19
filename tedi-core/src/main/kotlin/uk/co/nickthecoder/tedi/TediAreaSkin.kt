@@ -89,8 +89,6 @@ open class TediAreaSkin(val control: TediArea)
 
     private val scrollDirection: VerticalDirection? = null
 
-    private val characterBoundingPath = Path()
-
     private val scrollSelectionTimeline = Timeline()
 
     private val scrollSelectionHandler = EventHandler<ActionEvent> {
@@ -485,14 +483,40 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
+    private val tmpText = Text()
+
+    /**
+     *
+     */
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
-        val newPosition = control.positionFor(lineColumn.first + n, lineColumn.second)
+
+        val caretBounds = caretPath.layoutBounds
+        val requiredX = if (targetCaretX < 0) caretBounds.maxX else targetCaretX
+
+        val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
+        val lineText = skinnable.paragraphs[requiredLine].toString()
+        // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
+        tmpText.text = lineText
+        tmpText.font = paragraphNode.font
+        tmpText.layoutY = paragraphNode.layoutX
+        val hit = tmpText.hitTestChar(requiredX, 1.0)
+        val columnIndex = hit.charIndex
+
+        // TODO, Why aren't we using hit.isLeading? Maybe there's a bug win HitInformation
+        setForwardBias(true)
+
+        val newPosition = control.positionFor(requiredLine, 0) + columnIndex
+
+        //println("line=$requiredLine column=$columnIndex pos=$newPosition hit=$hit")
+
         if (select) {
             control.selectRange(control.anchor, newPosition)
         } else {
             control.selectRange(newPosition, newPosition)
         }
+
+        targetCaretX = requiredX
     }
 
     fun previousLine(select: Boolean) {

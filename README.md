@@ -2,26 +2,35 @@
 
 A simple text editor component suitable for embedding inside a JavaFX application.
 
-The main usage is for writing simple text files, as well as short pieces of code.
-(I want to use it as a simple code editor in my
-[Tickle Game Engine](https://github.com/nickthecoder/tickle)
-)
+The main usage is for writing simple text files, and source code.
 
 I've tried looking for a suitable alternative, and the best I found is
 [RichTextFX](https://github.com/FXMisc/RichTextFX).
+However, I don't it this for a number of reasons :
+
+- It does not inherit from TextIntputControl, and
+  therefore cannot be dropped into places that currently use a TextArea.
+  (It actually extends from Region, which IMHO is bad, it should be a Control).
+- Isn't integrated with JavaFX in other ways - e.g. it doesn't use the same css styles for selected text
+  as every other text based control.
+- Doesn't seem to support multiple views of the same document (though I may be wrong).
+- Doesn't support indent/un-indent (Tab and Shift+Tab), and IMHO, is useless as a code editor (my main use case).
+- Doesn't support tabs as spaces (I love the tab key, and hate the tab character!)
+- It is large (has 4 external dependencies)
+- The code is weird.
 
 ## Progress
 
-TediArea already does most of what I want (highlighted search matches being the most notable exception).
+TediArea already does most of what I want (with one notable exception : highlight all search matches).
 
-However, it currently depends on the following non-standard classes :
+It started out as a simple copy/paste of JavaFX's TextArea (isn't Free software great!)
 
-    com.sun.javafx.tk.Toolkit
-    com.sun.javafx.scene.text.TextLayout
-
-It also spews out 12 compiler warnings due to use of "deprecated" APIs.
+However, it spews out 9 compiler warnings due to use of "deprecated" APIs.
 
 I've been whittling down the list, and am quietly confident I will get rid of the rest of them!
+
+I'm already using Tedi within another of my projects. As a script editor in my
+[Tickle Game Engine](https://github.com/nickthecoder/tickle).
 
 ## Differences between TediArea and TextArea
 
@@ -29,26 +38,29 @@ Given that TediArea started as a copy of TextArea, they should be fairly similar
 
 ### Missing Features
 
-- Context menu (for copy, paste, etc)
+- prefRowCount and prefColumnCount
 - Option to wrap text
-- prefRowCount and prefColumnCount.
-- mixed left-to-right and right-to-left text flow.
-
-I chose to exclude the context menu, because it is likely that any application that embeds TediArea will
-add their own context menu, with more features. Also, getting I18N (translations) of the text seems to
-require more "private" APIs, and even needs hard-coded strings containing "com.sun.xxx" package names. Yuck!
-
-Tedi is primarily designed to be for coding, where line-wrapping is just not done!
-Also, line-wrapping doesn't work with my implementation of line numbers.
+- Context menu (for copy, paste, etc)
+- right-to-left text flow
+- Input methods
+- Accessibility
 
 I don't think prefRowCount and prefColumnCount are useful for a text editor (as opposed to a text area within a form).
 It is much more likely that TediArea will be the center of a BorderPane, where its size is governed by the size of the scene.
 
+I may add word-wrapping back at some point.
+
+The other are missing primarily due to TextArea using non-standard (com.sun.xxx) or deprecated APIs.
+Rather than spend time re-implementing features that I don't need, with standard APIs, I removed them.
+
 ### Additional Features
 
+- Option to display line numbers
+- Better word breaks for coding : (myTediArea.wordIterator = CodeWordBreakIterator())
+- Tab indent/un-indent
+- Tabs as spaces (optional)
 - Exposes a lineCount property
-- Exposes a paragraphsProperty (should this be called linesProperty??)
-- Can use a better word breaks for coding : (myTediArea.wordIterator = CodeWordBreakIterator())
+- Plus other minor details
 
 ## Styling TediArea
 
@@ -59,27 +71,30 @@ As with TextArea, you can style ".tedi-area", ".tedi-area .content" and ".tedi-a
 TediArea has similar styleable properties as TextArea, with the addition of :
 - -fx-display-line-numbers (boolean)
 
-You can also style "".tedi-area .gutter" (a Region), which is where the line numbers appear.
+You can also style ".tedi-area .gutter" (a Region), which is where the line numbers appear.
 Note that the top padding and bottom padding of .gutter are ignored (it uses the padding of .content,
 to ensure that the line numbers align with the content!)
 
-Use .tedi-area .gutter { -fx-text-fill: xxx } to change the color of the line numbers.
+e.g. Use .tedi-area .gutter { -fx-text-fill: xxx } to change the color of the line numbers.
 You cannot change the line number's font, as it must be the same as the content's font.
 
 I have included a style sheet as a resource in package uk.co.nickthecoder.tedi called "tedi.css".
 This applies a monospaced font to .tedi-area, and styles the gutter containing the line numbers.
+It also has styles for the optional "search and replace" and "Go to Line" GUI components.
+
 
 ## Planned additional features
 
-Possibly in the order that I'll develop them :
-
-- Goto (go to a line number / column position)
-- Search and replace, with matches highlighted.
-- Create a full-featured example application, i.e. a simple text editor.
-- Remove dependencies on com.sun.xxx
+- Highlight all search matches
+- Get rid of remaining deprecation warning messages.
 - Optimise for large documents. TextArea (on which this is based), is not efficient at all. See below.
+- Expose properties for current line number and column.
+- Syntax highlighting
 
 ## Performance
+
+TLDR; Don't use Tedi for large documents until I get round to optimising it.
+A 10,000 line document is sluggish, but bearable. RichTextFX is noticeably quicker than Tedi.
 
 While digging through the TextArea code, I soon realised that it isn't very efficient.
 The TextArea class breaks a large document into a list of StringBuffers (one per line of the document).
@@ -97,14 +112,5 @@ It's code like this that burns through the CPU power of today's PCs without givi
 over "well written" code on crusty old hardware of yesteryear. Now get off my lawn ;-)
 
 So it seems there's a lot of work to be done to convert TextArea into an efficient general purpose editor.
-Alas, there's a good chance that I won't put in that amount of work, so Tedi will probably remain
-as poorly written as TextArea. Sorry.
 
-CodeWordBreakIterator is horribly inefficient. Sorry!
-
-## Right-to-Left and Accessibility
-
-I've probably butchered some/all right-to-left handling.
-
-I have removed some of the accessibility code, because it used non-standard APIs.
-Given that I don't know how to test, I couldn't really re-implement it using only standard APIs. Sorry.
+I've also added to the inefficiency : CodeWordBreakIterator is horribly inefficient at the moment. Sorry!
