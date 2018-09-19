@@ -1,5 +1,6 @@
 package uk.co.nickthecoder.tedi.demo
 
+import javafx.application.Platform
 import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
@@ -81,6 +82,10 @@ class DemoWindow(stage: Stage = Stage()) {
             matcher.textInputControl = v
             undo.disableProperty().bind(v.undoableProperty().not())
             redo.disableProperty().bind(v.redoableProperty().not())
+
+            Platform.runLater {
+                v.requestFocusOnSceneAvailable()
+            }
         }
 
     init {
@@ -167,6 +172,7 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Handle keyboard shortcuts (Hover over buttons etc to see the shortcuts in their tooltips)
         borderPane.addEventFilter(KeyEvent.KEY_PRESSED) { onKeyPressed(it) }
+
     }
 
     /**
