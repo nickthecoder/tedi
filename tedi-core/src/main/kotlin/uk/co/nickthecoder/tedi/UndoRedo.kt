@@ -89,9 +89,16 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
             while (changes.size > index + 1) {
                 changes.removeAt(changes.size - 1)
             }
-            changes.add(change)
-            index++
-            updateState()
+
+            // Can we merge this with the top-most change?
+            if (changes.isNotEmpty() && change.mergeWith(changes.last())) {
+                // Do nothing, the merge is sufficient
+            } else {
+                changes.add(change)
+                index++
+                updateState()
+            }
+
         } else {
             cc.changes.add(change)
         }
@@ -179,17 +186,45 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
     interface Change {
         fun applyUndo()
         fun applyRedo()
+        /**
+         * Return true, if this change can be merged with [other], in which case, this
+         * change will NOT be added to the list, and instead, the merged one will suffice.
+         */
+        fun mergeWith(other: Change): Boolean = false
     }
 
-    inner class ReplaceTextChange(val start: Int, oldEnd: Int, val newText: String) : Change {
+    inner class ReplaceTextChange(var start: Int, oldEnd: Int, var newText: String) : Change {
 
-        val oldText: String
+        var oldText: String
 
         init {
             inUndoRedo = true
             tediArea.selectRange(start, oldEnd)
             oldText = tediArea.selectedText
             inUndoRedo = false
+        }
+
+        override fun mergeWith(other: Change): Boolean {
+            if (other is ReplaceTextChange) {
+
+                if (start == other.start + other.newText.length && other.oldText.isEmpty()) {
+                    // Additions to the end of the previous insertion can be merged
+                    other.newText = other.newText + newText
+                    return true
+
+                } else if (start == other.start && other.newText.isEmpty() && newText.isEmpty()) {
+                    // Deletions from the start of the previous insertion can be merged
+                    other.oldText = other.oldText + oldText
+                    return true
+                } else if (start == other.start - oldText.length && newText.isEmpty()) {
+                    other.start = start
+                    other.oldText = oldText + other.oldText
+                    return true
+                } else {
+                    println("Nope : $this and $other")
+                }
+            }
+            return false
         }
 
         override fun applyUndo() {
@@ -219,6 +254,7 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
         override fun applyUndo() {
             changes.asReversed().forEach { it.applyUndo() }
         }
+
     }
 
 }
