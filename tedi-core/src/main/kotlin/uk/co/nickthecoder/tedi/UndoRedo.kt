@@ -2,6 +2,7 @@ package uk.co.nickthecoder.tedi
 
 import javafx.beans.property.BooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
+import java.util.*
 
 abstract class UndoRedo {
 
@@ -71,6 +72,18 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
     private var inUndoRedo: Boolean = false
 
     /**
+     * Used in conjunction with [mergeThreshold] to decide if new changes should be merged with old ones.
+     */
+    private var previousAddTime = 0L
+
+    /**
+     * Number of milliseconds between changes, before they can be merged.
+     * This means a pause in typing will NOT be merged with previous changes.
+     * The default is half a second.
+     */
+    val mergeThreshold = 500
+
+    /**
      * The index of the change that will be applied if undo() is called.
      * The redo will be index + 1
      */
@@ -91,7 +104,8 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
             }
 
             // Can we merge this with the top-most change?
-            if (changes.isNotEmpty() && change.mergeWith(changes.last())) {
+            val now = Date().time
+            if (previousAddTime + mergeThreshold > now && changes.isNotEmpty() && change.mergeWith(changes.last())) {
                 // Do nothing, the merge is sufficient
             } else {
                 changes.add(change)
@@ -102,6 +116,7 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
         } else {
             cc.changes.add(change)
         }
+        previousAddTime = Date().time
     }
 
     override fun beginCompound() {
@@ -211,7 +226,6 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
                     // Additions to the end of the previous insertion can be merged
                     other.newText = other.newText + newText
                     return true
-
                 } else if (start == other.start && other.newText.isEmpty() && newText.isEmpty()) {
                     // Deletions from the start of the previous insertion can be merged
                     other.oldText = other.oldText + oldText
@@ -221,10 +235,11 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
                     other.oldText = oldText + other.oldText
                     return true
                 } else {
-                    println("Nope : $this and $other")
+                    return false
                 }
+            } else {
+                return false
             }
-            return false
         }
 
         override fun applyUndo() {
