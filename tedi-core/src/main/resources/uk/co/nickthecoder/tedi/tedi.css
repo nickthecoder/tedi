@@ -12,14 +12,15 @@
 }
 
 /*
- * This is copied from modena.css, only I've changed text-input to tedi-area.
- * I don't know why I need this, because tedi-area DOES have a styleClass of text-input.
- * In fact, even if I use .text-input:focuses is works, however, if I leave this out,
- * then the dark blue outline does not appear.
- * (Only the faint blue outline of the .content appears.)
- * Weird.
+ * This is copied from modena.css.
+ * I don't know why I need this, but if I leave it out,
+ * then the dark blue outline does not appear around TediAreas OR TextAreas. Weird.
+ * Only the faint blue outline of the .content appears.
+ *
+ * It isn't a bug in this css file though, because if I don't style the scene with this file, the dark blue
+ * outline still doesn't appear on TextAreas. Is it a bug in the version of JavaFX that I'm using???
  */
-.tedi-area:focused {
+.text-input:focused {
     -fx-highlight-fill: -fx-accent;
     -fx-highlight-text-fill: white;
     -fx-background-color:

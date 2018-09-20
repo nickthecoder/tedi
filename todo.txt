@@ -4,15 +4,17 @@ Bugs
 Using Home key on the first line SOMETIMES the caret vanishes
 Also, scrolling the view, then then typing also hides the caret.
 
+Some positional movements use selectRange(x,x), which causes a new Change to the undo/redo list.
+    I don't think this should cause a new Change
+
+Redo a selection change does NOT show the new selection.
 
 Next
 ----
 
+Add "history" to search and replace fields
+
 Remove remaining deprecation warnings
-
-Add Undo/Redo buttons to the demo application (images in the demo, not tedi-core).
-
-Focus on TediArea when changing tabs in demo app
 
 Later
 -----

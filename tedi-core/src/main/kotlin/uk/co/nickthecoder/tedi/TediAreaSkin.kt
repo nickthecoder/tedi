@@ -297,6 +297,8 @@ open class TediAreaSkin(val control: TediArea)
 
         control.selectionProperty().addListener { _, _, _ ->
             // Why do we need two calls here? (from original)
+            // Also, do we need to layout the whole control, why not just change the caret's position, if
+            // the selection is empty before and after?
             control.requestLayout()
             contentView.requestLayout()
         }
@@ -502,6 +504,8 @@ open class TediAreaSkin(val control: TediArea)
         tmpText.layoutX = 0.0// paragraphNode.layoutX
         val hit = tmpText.hitTestChar(requiredX, 1.0)
         val columnIndex = hit.charIndex
+
+        // TODO, Why aren't we using hit.isLeading? Maybe there's a bug win HitInformation
         setForwardBias(hit.isLeading)
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex

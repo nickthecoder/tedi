@@ -82,6 +82,29 @@ I have included a style sheet as a resource in package uk.co.nickthecoder.tedi c
 This applies a monospaced font to .tedi-area, and styles the gutter containing the line numbers.
 It also has styles for the optional "search and replace" and "Go to Line" GUI components.
 
+## Known Bugs/Issues
+
+### Undo/Redo is weird.
+
+I am currently using the Undo/Redo feature built into TextInputControl
+which, is weird.
+
+- It considers changes to the caret position a change that can be undone.
+  IMHO, that should NOT be part of the undo/redo list.
+- It doesn't undo/redo selection changes, which I think it SHOULD do.
+
+TextInputControl uses private access to its undo/redo features, so I may
+need to re-implement undo/redo completely to improve the behaviour. Grr.
+
+Also the Change object is a concrete class, not an interface, so there's
+not much flexibility. For example, "Replace All"
+cannot be undone as a single operation, instead, each individual replacement
+will have its own Change object in the undo/redo list.
+
+Argg! TextInputControl.undo() etc are final. I cannot re-implement them. WTF?
+Do I have to abandon TediArea extends TextInputControl? I really don't want
+to do that! It would be a horrible bodge to create betterUndo() and
+betterUndoableProperty.
 
 ## Planned additional features
 

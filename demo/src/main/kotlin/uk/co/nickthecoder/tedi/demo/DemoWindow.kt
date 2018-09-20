@@ -66,19 +66,29 @@ class DemoWindow(stage: Stage = Stage()) {
     val scene = Scene(borderPane, 700.0, 500.0)
 
     /**
-     * Keep track of the "current" TediArea, so that search and replace, and the line-number toggle button
-     * affect the correct TediArea.
-     * This is set from within EditorTab (when a TediArea gains focus).
+     * Keep track of the "current" TextArea/TediArea, so that search and replace, and the line-number toggle button
+     * affect the correct Control.
+     * This is set from within EditorTab (when a the TextInputControl gains focus).
      *
      * Note, if we were able to close tabs, then closing the last tab should set this back to dummyArea.
      */
-    var currentArea = dummyArea
+    var currentArea: TextInputControl = dummyArea
         set(v) {
-            field.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
+            val oldValue = field
+            if (oldValue is TediArea) {
+                oldValue.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
+            }
 
             field = v
 
-            toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
+            if (v is TediArea) {
+                toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
+                toggleLineNumbers.isDisable = false
+            } else {
+                toggleLineNumbers.isSelected = false
+                toggleLineNumbers.isDisable = true
+            }
+
             matcher.textInputControl = v
             undo.disableProperty().bind(v.undoableProperty().not())
             redo.disableProperty().bind(v.redoableProperty().not())
@@ -108,24 +118,45 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("Welcome")))
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("LICENSE")))
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("DemoWindow")))
-            tabs.add(EditorTab(TediArea::class.java.getResource("tedi.css")))
-            // Plus an empty tab
-            tabs.add(EditorTab())
+            tabs.add(TediTab(DemoWindow::class.java.getResource("Welcome")))
+            tabs.add(TediTab(DemoWindow::class.java.getResource("LICENSE")))
+            tabs.add(TediTab(DemoWindow::class.java.getResource("DemoWindow")))
+            tabs.add(TediTab(TediArea::class.java.getResource("tedi.css")))
+
+            // Now a TextArea (so that I can compare behaviour)
+            tabs.add(TextAreaTab("""This is a regular TextArea.
+Notice how TediArea and TextArea can be used seamlessly, because they both extend from TextInputControl.
+
+Some differences between this TextArea, and the other TediAreas :
+
+The word selection is worse (for source code at least!).
+Try double clicking inside : uk.co.nickthecoder.tedi, and compare it with the package statement in DemoWindow.
+
+Tab and shift+Tab in a TextArea are useless for source code.
+
+The "line numbers" button (ctrl+L) won't work here.
+
+"""))
         }
 
         with(undo) {
             loadGraphic(DemoWindow::class.java, "undo.png")
             tooltip = Tooltip("Undo (ctrl+Z)")
-            onAction = EventHandler { currentArea.undo() }
+            onAction = EventHandler {
+                currentArea.undo()
+                println("Selection = ${currentArea.selection}")
+                currentArea.requestFocus()
+            }
         }
 
         with(redo) {
             loadGraphic(DemoWindow::class.java, "redo.png")
             tooltip = Tooltip("Redo (ctrl+shift+Z)")
-            onAction = EventHandler { currentArea.redo() }
+            onAction = EventHandler {
+                currentArea.redo()
+                println("Selection = ${currentArea.selection}")
+                currentArea.requestFocus()
+            }
         }
 
         with(toggleLineNumbers) {
@@ -220,35 +251,43 @@ class DemoWindow(stage: Stage = Stage()) {
      * A [Tab] within the [tabPane].
      * Contains a TediArea.
      */
-    inner class EditorTab(title: String = "New Document") : Tab() {
+    abstract inner class EditorTab(
+            val textInput: TextInputControl,
+            title: String = "New Document") : Tab() {
 
-        constructor(url: URL) : this(url.path.replace(Regex(".*/"), "")) {
-            tediArea.text = url.readText()
+        constructor(textInput: TextInputControl, url: URL) : this(textInput, url.path.replace(Regex(".*/"), "")) {
+            textInput.text = url.readText()
         }
 
-        val tediArea = TediArea()
-
         init {
-            content = tediArea
-            text = title
+            content = textInput
+            this.text = title
 
-            // When selecting "words", this is much better that the default when editing source code.
-            tediArea.wordIterator = CodeWordBreakIterator()
-
-            // Make toggleLineNumbers button and the matcher refer this this tediArea whenever it gains focus.
-            tediArea.focusedProperty().addListener { _, _, newValue ->
-                if (newValue == true) {
-                    currentArea = tediArea
-                }
-            }
             // Select the TediArea when this tab is selected
             selectedProperty().addListener { _, _, newValue ->
                 if (newValue == true) {
-                    tediArea.requestFocusOnSceneAvailable()
+                    textInput.requestFocusOnSceneAvailable()
                 }
             }
 
+            // Make toggleLineNumbers button and the matcher refer this this textInput whenever it gains focus.
+            textInput.focusedProperty().addListener { _, _, newValue ->
+                if (newValue == true) {
+                    currentArea = textInput
+                }
+            }
         }
-
     }
+
+    inner class TediTab(url: URL)
+        : EditorTab(TediArea(), url) {
+
+        init {
+            // When selecting "words", this is much better that the default when editing source code.
+            (textInput as TediArea).wordIterator = CodeWordBreakIterator()
+        }
+    }
+
+    inner class TextAreaTab(content: String) : EditorTab(TextArea(content), "TextArea")
+
 }

@@ -200,28 +200,28 @@ class DemoWindow(stage: Stage = Stage()) {
     inner class EditorTab(title: String = "New Document") : Tab() {
 
         constructor(url: URL) : this(url.path.replace(Regex(".*/"), "")) {
-            tediArea.text = url.readText()
+            textInput.text = url.readText()
         }
 
-        val tediArea = TediArea()
+        val textInput = TediArea()
 
         init {
-            content = tediArea
+            content = textInput
             text = title
 
             // When selecting "words", this is much better that the default when editing source code.
-            tediArea.wordIterator = CodeWordBreakIterator()
+            textInput.wordIterator = CodeWordBreakIterator()
 
-            // Make toggleLineNumbers button and the matcher refer this this tediArea whenever it gains focus.
-            tediArea.focusedProperty().addListener { _, _, newValue ->
+            // Make toggleLineNumbers button and the matcher refer this this textInput whenever it gains focus.
+            textInput.focusedProperty().addListener { _, _, newValue ->
                 if (newValue == true) {
-                    currentArea = tediArea
+                    currentArea = textInput
                 }
             }
             // Select the TediArea when this tab is selected
             selectedProperty().addListener { _, _, newValue ->
                 if (newValue == true) {
-                    tediArea.requestFocusOnSceneAvailable()
+                    textInput.requestFocusOnSceneAvailable()
                 }
             }
 

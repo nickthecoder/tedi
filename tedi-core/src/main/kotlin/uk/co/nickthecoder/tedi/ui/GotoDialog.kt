@@ -5,13 +5,13 @@ import javafx.scene.Scene
 import javafx.scene.control.Button
 import javafx.scene.control.Label
 import javafx.scene.control.TextField
+import javafx.scene.control.TextInputControl
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.FlowPane
 import javafx.scene.layout.HBox
 import javafx.stage.Modality
 import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.TediArea
-import uk.co.nickthecoder.tedi.loadGraphic
+import uk.co.nickthecoder.tedi.*
 
 /**
  * A dialog box, allowing the user to position the caret to a give line.
@@ -19,10 +19,9 @@ import uk.co.nickthecoder.tedi.loadGraphic
  *
  *     line:column
  *
- * Note. Unlike [SearchBar], the GotoDialog only works with TediAreas, not TextAreas, as it uses
- * methods only available on TediArea.
+ * Note. the GotoDialog only works with any TextInputControl, including TextArea and TediArea.
  */
-class GotoDialog(var tediArea: TediArea) {
+class GotoDialog(private var textInputControl: TextInputControl) {
 
     val label = Label("Line [:Column]")
     val field = TextField()
@@ -65,7 +64,7 @@ class GotoDialog(var tediArea: TediArea) {
         }
 
         // Initial value is the current position.
-        val lineColumn = tediArea.lineColumnFor(tediArea.caretPosition)
+        val lineColumn = textInputControl.lineColumnFor(textInputControl.caretPosition)
         field.text = "${lineColumn.first + 1}:${lineColumn.second + 1}"
 
         stage.initModality(Modality.APPLICATION_MODAL)
@@ -74,6 +73,7 @@ class GotoDialog(var tediArea: TediArea) {
 
         TediArea.style(scene)
     }
+
 
     fun show() {
         stage.show()
@@ -85,10 +85,10 @@ class GotoDialog(var tediArea: TediArea) {
         val line = split[0].toInt() - 1
         val column = if (split.size > 1) (split[1].toInt() - 1) else 0
 
-        val position = tediArea.positionFor(line, column)
-        tediArea.selectRange(position, position)
+        val position = textInputControl.positionFor(line, column)
+        textInputControl.selectRange(position, position)
         stage.hide()
-        tediArea.requestFocus()
+        textInputControl.requestFocus()
     }
 
     fun onCancel() {
@@ -96,14 +96,26 @@ class GotoDialog(var tediArea: TediArea) {
     }
 
     companion object {
-        @JvmStatic fun createGotoButton(tediArea: () -> TediArea): Button {
+        /**
+         * Note [textInputContol] is a lambda, which returns a TextInputControl, so that the button can be
+         * used in applications where it may need to apply to one of many text fields.
+         * e.g. See the DemoWindow, where a single Button is created, which when pressed show a GotoDialog
+         * for the current tab's text field.
+         */
+        @JvmStatic fun createGotoButton(textInputContol: () -> TextInputControl): Button {
             val button = Button()
             button.onAction = EventHandler {
-                GotoDialog(tediArea()).show()
+                GotoDialog(textInputContol()).show()
             }
 
             button.loadGraphic(GotoDialog::class.java, "goto.png")
             return button
         }
+
+        /**
+         * Creates a "Goto" button for a single TextInputControl.
+         * This is only useful if the button will only be used for a single TextInputControl.
+         */
+        @JvmStatic fun createGoButton(textInputControl: TextInputControl) = createGotoButton { textInputControl }
     }
 }
