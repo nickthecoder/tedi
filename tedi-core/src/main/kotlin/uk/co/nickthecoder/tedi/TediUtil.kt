@@ -8,6 +8,7 @@ import javafx.scene.control.ButtonBase
 import javafx.scene.control.TextInputControl
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
+import java.lang.reflect.Field
 
 private fun getOs(): String = System.getProperty("os.name").toLowerCase()
 
@@ -108,4 +109,61 @@ fun Node.requestFocusOnSceneAvailable() {
     } else {
         requestFocus()
     }
+}
+
+/**
+ * Uses reflection to set a private field
+ */
+fun Any.setPrivateField(fieldName: String, value: Any?) {
+    val field = this::class.java.findField(fieldName) ?: throw IllegalArgumentException("Field $fieldName not found in ${this::class.java.name}")
+    // I'm not sure if the Field returned by [Class.getDeclaredField] is a new instance or not,
+    // but I'll err on the safe side, and reset isAccessible to its original state.
+    val oldAccessible = field.isAccessible
+
+    try {
+        field.isAccessible = true
+        field.set(this, value)
+    } finally {
+        try {
+            field.isAccessible = oldAccessible
+        } catch (e: Exception) {
+        }
+    }
+}
+
+fun Any.getPrivateField(fieldName: String): Any? {
+    val field = this::class.java.findField(fieldName) ?: throw IllegalArgumentException("Field $fieldName not found in ${this::class.java.name}")
+    // I'm not sure if the Field returned by [Class.getDeclaredField] is a new instance or not,
+    // but I'll err on the safe side, and reset isAccessible to its original state.
+    val oldAccessible = field.isAccessible
+
+    try {
+        field.isAccessible = true
+        return field.get(this)
+    } finally {
+        try {
+            field.isAccessible = oldAccessible
+        } catch (e: Exception) {
+        }
+    }
+}
+
+/**
+ * Go up the class hierarchy looking for a field with a given name.
+ * Unlike [Class.getField], this will find private fields as well as public ones.
+ * Unlike [Class.getDeclaredField], this will find fields declared in a super class too.
+ *
+ * If no such field is found, then null is returned.
+ */
+fun Class<*>.findField(fieldName: String): Field? {
+    var klass: Class<out Any?>? = this
+    do {
+        try {
+            klass?.getDeclaredField(fieldName)?.let { return it }
+        } catch (e: NoSuchFieldException) {
+        }
+        klass = klass?.superclass
+    } while (klass != null)
+
+    return null
 }

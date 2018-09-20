@@ -29,6 +29,7 @@ import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
+import uk.co.nickthecoder.tedi.TediUtilKt;
 
 /**
  * KeyBindings are used to describe which action should occur based on some
@@ -100,8 +101,11 @@ public class KeyBinding {
     }
 
     public KeyBinding shortcut() {
-        // TODO For mac, this should return meta
-        return ctrl();
+        if (TediUtilKt.isMac()) {
+            return meta();
+        } else {
+            return ctrl();
+        }
     }
 
     public final KeyCode getCode() {

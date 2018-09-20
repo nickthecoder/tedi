@@ -1,3 +1,17 @@
+Working on Undo/Redo
+
+Allow changes to be merged.
+    A selection change ignores the previous, and just remembers the latest selection.
+        Bug. selecting a WORD using double click : the first click clears the selection (Change isn't creates),
+        and the 2nd click creates Change. therefore selecting a DIFFERENT word, will not undo to the selection of the first word.
+    A ReplaceTextChange merges changes to contiguous text
+    Add a time limit, so that if text is being typed, then it gets merged, but if there is a pause in typing,
+        then the next change will NOT be merged. Same with SelectRangeChange.
+
+Add a CompoundChange
+    Use this for indent/unindent
+    Use this for Replace All in Matcher
+
 Bugs
 ----
 

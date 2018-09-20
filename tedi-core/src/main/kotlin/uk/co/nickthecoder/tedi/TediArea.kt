@@ -260,6 +260,41 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     /***************************************************************************
      *                                                                         *
+     * TextInputControl has a rather limited (and crap) undo/redo facility.    *
+     * It also uses private and final, so extending the existing functionality *
+     * is impossible, so instead, I've created my own undo/redo, and           *
+     * disabled the existing undo/redo features.                               *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * By default, TediArea uses the standard undo/redo of its base class
+     * TextInputControl, which isn't very good!
+     *
+     * So, for better undo/redo, set this to [BetterUndoRedo]!
+     * If you do though, be sure not to use [undo], [redo],
+     * [undoableProperty], [redoableProperty], [isUndoable] or [isRedoable].
+     * Instead, use the equivalents within [BetterUndoRedo].
+     *
+     * Alas, because InputTextControl uses private fields and final methods,
+     * TediArea isn't able to use improve Undo/Redo in a more seamless fashion.
+     * Sorry.
+     */
+    var undoRedo: UndoRedo = StandardUndoRedo(this)
+
+    override fun selectRange(anchor: Int, caretPosition: Int) {
+        super.selectRange(anchor, caretPosition)
+        undoRedo.postChange()
+    }
+
+    override fun replaceText(start: Int, end: Int, text: String) {
+        undoRedo.replaceText(start, end, text)
+        super.replaceText(start, end, text)
+        undoRedo.postChange()
+    }
+
+    /***************************************************************************
+     *                                                                         *
      * Word Selection. These are basically an EXACT copy of those from         *
      * TextInputControl, except that I need to access the private              *
      * wordIterator. And therefore, I've had to duplicate the lot. Grr.        *
