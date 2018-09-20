@@ -239,12 +239,19 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     }
 
     open fun replaceAll(replacement: String) {
+        val control = textInputControl
+        if (control is TediArea) {
+            control.undoRedo.beginCompound()
+        }
         state = State.REPLACE_ALL
         currentMatchIndex = matches.size - 1
         while (currentMatchIndex >= 0) {
             updateSelection()
             textInputControl.replaceSelection(replacement)
             currentMatchIndex--
+        }
+        if (control is TediArea) {
+            control.undoRedo.endCompound()
         }
         state = State.NOTHING
         startSearch(false)

@@ -19,6 +19,9 @@ abstract class UndoRedo {
             redoableProperty.set(v)
         }
 
+    open fun beginCompound() {}
+    open fun endCompound() {}
+
     abstract fun undo()
 
     abstract fun redo()
@@ -74,17 +77,42 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
     private var index = -1
     private val changes = mutableListOf<Change>()
 
+    private var compoundChange: CompoundChange? = null
+
     init {
         destroyStandardUndoList()
     }
 
     fun add(change: Change) {
-        while (changes.size > index + 1) {
-            changes.removeAt(changes.size - 1)
+        val cc = compoundChange
+        if (cc == null) {
+            while (changes.size > index + 1) {
+                changes.removeAt(changes.size - 1)
+            }
+            changes.add(change)
+            index++
+            updateState()
+        } else {
+            cc.changes.add(change)
         }
-        changes.add(change)
-        index++
-        updateState()
+    }
+
+    override fun beginCompound() {
+        if (compoundChange != null) {
+            throw IllegalStateException("A CompoundChange is already in use")
+        }
+        compoundChange = CompoundChange()
+    }
+
+    override fun endCompound() {
+        val cc = compoundChange
+        cc ?: throw IllegalStateException("A CompoundChange is not in use")
+
+        compoundChange = null
+        if (cc.changes.isNotEmpty()) {
+            // Only add the compound if it contains child changes.
+            add(cc)
+        }
     }
 
     override fun postChange() {
@@ -174,4 +202,23 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
 
         override fun toString() = "ReplaceTextChange start:$start was:$oldText now:$newText"
     }
+
+    /**
+     * Places all changes into a group.
+     * For example, when doing a "Replace All", each of the individual changes is placed into a CompoundChange,
+     * so that undo/redo will apply all these changes together.
+     */
+    class CompoundChange : Change {
+
+        val changes = mutableListOf<Change>()
+
+        override fun applyRedo() {
+            changes.forEach { it.applyRedo() }
+        }
+
+        override fun applyUndo() {
+            changes.asReversed().forEach { it.applyUndo() }
+        }
+    }
+
 }

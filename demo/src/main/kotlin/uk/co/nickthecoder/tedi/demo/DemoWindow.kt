@@ -205,7 +205,6 @@ The "line numbers" button (ctrl+L) won't work here.
         } else {
             control.undo()
         }
-        control.requestFocus()
     }
 
     fun redo() {
@@ -216,7 +215,6 @@ The "line numbers" button (ctrl+L) won't work here.
         } else {
             control.redo()
         }
-        control.requestFocus()
     }
 
     /**
@@ -225,12 +223,14 @@ The "line numbers" button (ctrl+L) won't work here.
     fun onKeyPressed(event: KeyEvent) {
         var consume = true
 
-        if (event.isControlDown) {
+        if (event.isShortcutDown) {
             when (event.code) {
                 KeyCode.F -> {
                     matcher.inUse = true
                     searchBar.search.requestFocusOnSceneAvailable()
                 }
+                KeyCode.Z -> if (event.isShiftDown) redo() else undo()
+                KeyCode.Y -> redo()
                 KeyCode.G -> GotoDialog(currentArea).show()
                 KeyCode.L -> toggleLineNumbers.isSelected = !toggleLineNumbers.isSelected
                 KeyCode.R -> {
@@ -288,6 +288,7 @@ The "line numbers" button (ctrl+L) won't work here.
         }
 
         fun load(url: URL) {
+            text = url.path.split("/").last()
             textInput.text = url.readText()
         }
     }
