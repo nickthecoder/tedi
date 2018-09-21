@@ -67,11 +67,6 @@ class TediAreaBehavior(val control: TediArea)
     private var editing = false
 
     init {
-        // Register for change events
-        control.focusedProperty().addListener { _, _, _ ->
-            setCaretAnimating(control.isFocused)
-        }
-
         control.textProperty().addListener(textListener)
     }
 
@@ -203,11 +198,6 @@ class TediAreaBehavior(val control: TediArea)
                 control.requestFocus()
             }
 
-            // stop the caret animation
-            setCaretAnimating(false)
-            // only if there is no selection should we see the caret
-            //            setCaretOpacity(if (textInputControl.dot == textInputControl.mark) then 1.0 else 0.0);
-
             // if the primary button was pressed
             if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
                 val hit = skin.getHitInformation(e.x, e.y)
@@ -267,18 +257,12 @@ class TediAreaBehavior(val control: TediArea)
         // we never respond to events if disabled, but we do notify any onXXX
         // event listeners on the control
         if (!textArea.isDisabled) {
-            setCaretAnimating(false)
             if (deferClick) {
                 deferClick = false
                 skin.positionCaret(skin.getHitInformation(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
-            setCaretAnimating(true)
         }
-    }
-
-    private fun setCaretAnimating(play: Boolean) {
-        skin.setCaretAnimating(play)
     }
 
     private fun mouseDoubleClick() {

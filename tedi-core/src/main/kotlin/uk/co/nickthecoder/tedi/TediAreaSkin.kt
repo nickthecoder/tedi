@@ -60,7 +60,6 @@ import javafx.scene.shape.Path
 import javafx.scene.text.Text
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
-import java.lang.ref.WeakReference
 import java.util.*
 
 open class TediAreaSkin(val control: TediArea)
@@ -195,30 +194,30 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    private val blink = SimpleBooleanProperty(this, "blink", true)
-
-    private val caretBlinking = CaretBlinking(blink)
-
     /**
      * The caret is visible when the text box is focused AND when the selection
      * is empty. If the selection is non empty or the text box is not focused
      * then we don't want to show the caret. Also, we show the caret while
      * performing some operations such as most key strokes. In that case we
      * simply toggle its opacity.
+     *
+     * Note, this value does NOT include the caret animation's on/off state.
      */
     protected var caretVisible: ObservableBooleanValue = object : BooleanBinding() {
         init {
             bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
-                    control.disabledProperty(), control.editableProperty(), displayCaret, blink)
+                    control.disabledProperty(), control.editableProperty(), displayCaret)
         }
 
         override fun computeValue(): Boolean {
-            return !blink.get() && displayCaret.get() && control.isFocused() &&
+            return displayCaret.get() && control.isFocused &&
                     (control.caretPosition == control.anchor) &&
-                    !control.isDisabled() &&
+                    !control.isDisabled &&
                     control.isEditable
         }
     }
+
+    private val caretAnimation = CaretAnimation(caretVisible, caretPath)
 
     /***************************************************************************
      *                                                                         *
@@ -273,17 +272,6 @@ open class TediAreaSkin(val control: TediArea)
         caretPath.strokeWidth = 1.0
         caretPath.fillProperty().bind(textFill)
         caretPath.strokeProperty().bind(textFill)
-        // modifying visibility of the caret forces a layout-pass (RT-32373), so
-        // instead we modify the opacity.
-        caretPath.opacityProperty().bind(object : DoubleBinding() {
-            init {
-                bind(caretVisible)
-            }
-
-            override fun computeValue(): Double {
-                return if (caretVisible.get()) 1.0 else 0.0
-            }
-        })
         contentView.children.add(caretPath)
 
         scrollPane.hvalueProperty().addListener { _, _, newValue -> skinnable.scrollLeft = newValue.toDouble() * getScrollLeftMax() }
@@ -341,7 +329,6 @@ open class TediAreaSkin(val control: TediArea)
         }
 
         updateHighlightFill()
-        if (control.isFocused) setCaretAnimating(true)
 
     }
 
@@ -676,50 +663,57 @@ open class TediAreaSkin(val control: TediArea)
         return forwardBias.get()
     }
 
-    fun setCaretAnimating(value: Boolean) {
-        if (value) {
-            caretBlinking.start()
-        } else {
-            caretBlinking.stop()
-            blink.set(true)
-        }
-    }
-
     /***************************************************************************
      *                                                                         *
      * Caret Blinking class                                                    *
      *                                                                         *
      **************************************************************************/
-    private class CaretBlinking(blinkProperty: BooleanProperty) {
+    /**
+     * [caretVisible] determines if the caret should be seen at all
+     * (irrespective of the animation's on/off state).
+     * The animation is stopped and started based on [caretVisible].
+     *
+     * [blinkProperty] is true if [caretVisible] is true AND the animation is
+     * in its "ON" phase. Therefore the caret Node's opacity property
+     * is bound to [blinkProperty]. We use the opacity, rather than visible
+     * for efficiency (no additional layout pass).
+     */
+    private class CaretAnimation(val caretVisible: ObservableBooleanValue, val caretNode: Node) {
 
-        private val caretTimeline = Timeline()
+        private val animation = Timeline()
 
-        private val blinkPropertyRef = WeakReference(blinkProperty)
+        private val blinkProperty = SimpleBooleanProperty()
 
-        init {
-            caretTimeline.cycleCount = Timeline.INDEFINITE
-            caretTimeline.keyFrames.addAll(
-                    KeyFrame(Duration.ZERO, EventHandler<ActionEvent> { setBlink(false) }),
-                    KeyFrame(Duration.seconds(.5), EventHandler<ActionEvent> { setBlink(true) }),
-                    KeyFrame(Duration.seconds(1.0)))
-        }
-
-        fun start() {
-            caretTimeline.play()
-        }
-
-        fun stop() {
-            caretTimeline.stop()
-        }
-
-        private fun setBlink(value: Boolean) {
-            val blinkProperty = blinkPropertyRef.get()
-            if (blinkProperty == null) {
-                caretTimeline.stop()
-                return
+        private var blinkOn: Boolean = false
+            set(v) {
+                field = v
+                blinkProperty.value = caretVisible.get() && v
             }
 
-            blinkProperty.set(value)
+        init {
+            animation.cycleCount = Timeline.INDEFINITE
+            animation.keyFrames.addAll(
+                    KeyFrame(Duration.ZERO, EventHandler<ActionEvent> { blinkOn = false }),
+                    KeyFrame(Duration.seconds(.5), EventHandler<ActionEvent> { blinkOn = true }),
+                    KeyFrame(Duration.seconds(1.0)))
+            caretVisible.addListener { _, _, newValue ->
+                if (newValue == true) {
+                    animation.play()
+                } else {
+                    animation.stop()
+                }
+            }
+            // modifying visibility of the caret forces a layout-pass (RT-32373), so
+            // instead we modify the opacity.
+            caretNode.opacityProperty().bind(object : DoubleBinding() {
+                init {
+                    bind(blinkProperty)
+                }
+
+                override fun computeValue(): Double {
+                    return if (blinkProperty.get()) 1.0 else 0.0
+                }
+            })
         }
     }
 

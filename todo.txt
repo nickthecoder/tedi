@@ -2,7 +2,6 @@ Bugs
 ----
 
 Using Home key on the first line SOMETIMES the caret vanishes
-Also, scrolling the view, then then typing also hides the caret.
 
 Next
 ----
