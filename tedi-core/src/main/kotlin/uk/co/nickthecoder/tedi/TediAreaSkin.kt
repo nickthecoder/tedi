@@ -111,8 +111,6 @@ open class TediAreaSkin(val control: TediArea)
      *                                                                         *
      **************************************************************************/
 
-    private val forwardBias = SimpleBooleanProperty(this, "forwardBias", true)
-
     /**
      * The fill to use for the text under normal conditions
      */
@@ -229,19 +227,6 @@ open class TediAreaSkin(val control: TediArea)
 
         // Add initial text content.
         createParagraphNode()
-
-        caretPosition.addListener { _, oldValue, newValue ->
-            targetCaretX = -1.0
-            if (newValue.toInt() > oldValue.toInt()) {
-                setForwardBias(true)
-            }
-        }
-
-        forwardBias.addListener({ _ ->
-            if (control.width > 0) {
-                updateTextNodeCaretPos(control.caretPosition)
-            }
-        })
 
         // Initialize content
         scrollPane.isFitToWidth = true
@@ -369,20 +354,12 @@ open class TediAreaSkin(val control: TediArea)
 
     }
 
-    fun getHitInformation(x: Double, y: Double): HitInformation = paragraphNode.hitTestChar(x, y)
+    fun getCaretPosition(x: Double, y: Double): Int {
+        val hit = paragraphNode.hitTestChar(x, y)
+        return hit.charIndex + if (hit.isLeading) 0 else 1
+    }
 
-    fun positionCaret(hit: HitInformation, select: Boolean, extendSelection: Boolean) {
-
-        var pos = hit.getInsertionIndex()
-        val isNewLine = pos > 0 &&
-                pos <= skinnable.length &&
-                skinnable.text.codePointAt(pos - 1) == 0x0a
-
-        // special handling for a new line
-        if (!hit.isLeading && isNewLine) {
-            hit.isLeading = true
-            pos -= 1
-        }
+    fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
 
         if (select) {
             if (extendSelection) {
@@ -393,8 +370,6 @@ open class TediAreaSkin(val control: TediArea)
         } else {
             skinnable.positionCaret(pos)
         }
-
-        setForwardBias(hit.isLeading)
     }
 
     private fun getScrollTopMax(): Double {
@@ -491,9 +466,6 @@ open class TediAreaSkin(val control: TediArea)
         tmpText.layoutX = 0.0// paragraphNode.layoutX
         val hit = tmpText.hitTestChar(requiredX, 1.0)
         val columnIndex = hit.charIndex
-
-        // TODO, Why aren't we using hit.isLeading? Maybe there's a bug win HitInformation
-        setForwardBias(hit.isLeading)
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex
 
@@ -625,15 +597,6 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    private fun updateTextNodeCaretPos(pos: Int) {
-        if (isForwardBias()) {
-            paragraphNode.impl_caretPosition = pos
-        } else {
-            paragraphNode.impl_caretPosition = pos - 1
-        }
-        paragraphNode.impl_caretBiasProperty().set(isForwardBias())
-    }
-
     /**
      * Use this implementation instead of the one provided on TextInputControl
      * Simply calls into TextInputControl.deletePrevious/NextChar and responds appropriately
@@ -653,14 +616,6 @@ open class TediAreaSkin(val control: TediArea)
             }
             else -> return super.queryAccessibleAttribute(attribute, *parameters)
         }
-    }
-
-    fun setForwardBias(isLeading: Boolean) {
-        forwardBias.set(isLeading)
-    }
-
-    fun isForwardBias(): Boolean {
-        return forwardBias.get()
     }
 
     /***************************************************************************
@@ -778,7 +733,7 @@ open class TediAreaSkin(val control: TediArea)
             val caretPos = tediArea.caretPosition
 
             // Position caret
-            updateTextNodeCaretPos(caretPos)
+            paragraphNode.impl_caretPosition = caretPos
             caretPath.elements.clear()
             caretPath.elements.addAll(*paragraphNode.impl_caretShape)
 

@@ -200,12 +200,11 @@ class TediAreaBehavior(val control: TediArea)
 
             // if the primary button was pressed
             if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
-                val hit = skin.getHitInformation(e.x, e.y)
-                val i = hit.getInsertionIndex()
+                val mousePosition = skin.getCaretPosition(e.x, e.y)
 
                 val anchor = control.anchor
                 val caretPosition = control.caretPosition
-                if (e.clickCount < 2 && (e.isSynthesized || anchor != caretPosition && (i > anchor && i < caretPosition || i < anchor && i > caretPosition))) {
+                if (e.clickCount < 2 && (e.isSynthesized || anchor != caretPosition && (mousePosition > anchor && mousePosition < caretPosition || mousePosition < anchor && mousePosition > caretPosition))) {
                     // if there is a selection, then we will NOT handle the
                     // press now, but will defer until the release. If you
                     // select some text and then press down, we change the
@@ -215,7 +214,7 @@ class TediAreaBehavior(val control: TediArea)
                     deferClick = true
                 } else if (!(e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown || e.isShortcutDown)) {
                     when (e.clickCount) {
-                        1 -> skin.positionCaret(hit, false, false)
+                        1 -> skin.positionCaret(mousePosition, false, false)
                         2 -> mouseDoubleClick()
                         3 -> mouseTripleClick()
                     }// no-op
@@ -229,9 +228,9 @@ class TediAreaBehavior(val control: TediArea)
                     // the dot to be the new position.
                     // everywhere else we just move the dot.
                     if (isMac) {
-                        control.extendSelection(i)
+                        control.extendSelection(mousePosition)
                     } else {
-                        skin.positionCaret(hit, true, false)
+                        skin.positionCaret(mousePosition, true, false)
                     }
                 }
             }
@@ -245,7 +244,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled && !e!!.isSynthesized) {
             if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown ||
                     e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown)) {
-                skin.positionCaret(skin.getHitInformation(e.x, e.y), true, false)
+                skin.positionCaret(skin.getCaretPosition(e.x, e.y), true, false)
             }
         }
         deferClick = false
@@ -259,7 +258,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled) {
             if (deferClick) {
                 deferClick = false
-                skin.positionCaret(skin.getHitInformation(e!!.x, e.y), shiftDown, false)
+                skin.positionCaret(skin.getCaretPosition(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
         }
