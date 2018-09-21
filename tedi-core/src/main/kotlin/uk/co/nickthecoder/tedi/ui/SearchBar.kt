@@ -42,6 +42,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
     val status = Label()
 
     init {
+
         search.isEditable = true
 
         toolBar.visibleProperty().addListener { _, _, newValue ->

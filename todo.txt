@@ -7,43 +7,24 @@ Also, scrolling the view, then then typing also hides the caret.
 Next
 ----
 
+Implement Skin using a list of paragraphsNodes
+
+Make ParagraphNode clever enough to handle a set of styles
+    i.e. break the line into pieces, where each piece can have their own style
+    Use this for selection
+    Later use this for search matches
+        if match count > 1000 stop adding highlights.
+    Later use it for syntax highlighting
+
 Remove remaining deprecation warnings
 
 Later
 -----
 
-Implement Skin using a list of paragraphsNodes
-
-Make ParagraphNode clever enough to handle a set of styles
-    i.e. break the line into pieces, where each piece can have their own style
-    Use this for both selection and search matches.
-    Can also use it for syntax highlighting.
-
-Search and replace.
-    Matches should be highlighted in a similar way to a selection (but in a different color).
-        Too-many matches > 1000? Abort.
-
 Consider adding a gutter to the right, which shows where the match results are.
     Kate puts it IN the scroll bar, whereas IntelliJ puts it the left of the scroll bar, floating above the text.
-
+    Copy IntelliJ - don't make it a "gutter", float it over the content.
 
 Consider adding back line-wrapping, but set display-line-numbers=false whenever it is set.
     Likewise setting displayLineNumbers forces line-wrap = false.
 
-"Private" API references
-------------------------
-    My code still references com.sum.xxx classes.
-
-    TediAreaBehaviour uses :
-        com.sun.javafx.scene.control.skin.Utils
-        import com.sun.javafx.scene.text.HitInfo
-    TediAreaSkin uses :
-        import com.sun.javafx.scene.control.skin.Utils
-        import com.sun.javafx.scene.text.HitInfo
-        import com.sun.javafx.scene.text.TextLayout
-
-The list is getting smaller ;-)
-
-Utils and HitInfo are needed for finding the text position a point is within a Text node.
-    I can calculate the height using line height (which I think I can extract using standard APIs)
-    I can calculate the column by binary chopping a line of text, and asking for its width.

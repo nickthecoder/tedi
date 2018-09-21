@@ -1,6 +1,6 @@
 package uk.co.nickthecoder.tedi
 
-import com.sun.javafx.scene.control.skin.ComboBoxPopupControl
+import com.sun.javafx.scene.control.skin.ComboBoxPopupControl.FakeFocusTextField
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import javafx.scene.Node
@@ -146,8 +146,9 @@ fun ComboBox<*>.requestFocusWithCaret() {
 
     if (javaFXVersion.startsWith("8.")) {
         try {
-            if (editor is ComboBoxPopupControl.FakeFocusTextField) {
-                (editor as ComboBoxPopupControl.FakeFocusTextField).setFakeFocus(true)
+            val theEditor = editor
+            if (theEditor is FakeFocusTextField) {
+                theEditor.setFakeFocus(true)
             }
         } catch (e: Exception) {
 

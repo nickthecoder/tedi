@@ -11,6 +11,9 @@ import javafx.scene.Parent
  * same order as JavaFX's normal navigation.
  *
  * @param attempts - In case there is a bug, prevent infinite loops by stopping after checking this many nodes.
+ *
+ * I've added this as a github gist :
+ * https://gist.github.com/nickthecoder/57ac20829214f1209e41e851d955ed35
  */
 fun Node.focusNext(attempts: Int = 1000) = FocusNext(this, attempts).start()
 
@@ -28,13 +31,13 @@ fun Node.focusPrevious(attempts: Int = 1000) = FocusPrevious(this, attempts).sta
 
 /**
  * Look at all later siblings one at a time.
- * If it isFocusTraversable and visible, then we are done!.
- * If it is a parent, then we also need to check its children (recursively),
- * before moving onto the next sibling.
+ * If it isFocusTraversable and visible and not disabled, then we are done!.
+ * If it is a parent, visible and not disabled, then we also need to check its
+ * children (recursively) before moving onto the next sibling.
  *
  * If we reach the end of the later siblings, then we need to look to our parent,
  * and check its later siblings (in the same manner, recursively into its children).
- * Again, if we find one that is focusTraversable and visible, then we are done.
+ * Again, if we find one that is focusTraversable, visible and not disabled, then we are done.
  *
  * If we reach the top-most parent, without success, then we need to start
  * from its first child, working forwards as before.
@@ -47,7 +50,8 @@ fun Node.focusPrevious(attempts: Int = 1000) = FocusPrevious(this, attempts).sta
  * Also, in case this code is buggy, if we check too many nodes (the default is 1000), then
  * we give up.
  *
- * All methods return true when a visible focusTraversable node is found, false otherwise.
+ * All methods return true on success or the max attempts is exceeded,
+ * and false if further searching is required..
  */
 
 private class FocusNext(val startNode: Node, var attempts: Int) {
