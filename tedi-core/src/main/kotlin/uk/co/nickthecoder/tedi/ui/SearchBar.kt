@@ -63,7 +63,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
             promptText = "search"
             styleClass.add("search")
             valueProperty().bindBidirectional(matcher.searchProperty)
-            addEventFilter(KeyEvent.KEY_PRESSED) { keyPressedInSearchField(it) }
+            addEventHandler(KeyEvent.KEY_PRESSED) { keyPressedInSearchField(it) }
         }
 
         with(prev) {

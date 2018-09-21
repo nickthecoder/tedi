@@ -7,19 +7,12 @@ Also, scrolling the view, then then typing also hides the caret.
 Next
 ----
 
-Add "history" to search and replace fields
-
 Remove remaining deprecation warnings
 
 Later
 -----
 
 Implement Skin using a list of paragraphsNodes
-
-Is Undo/Redo exposed?
-
-Check Undo/Redo when indenting/un-indenting - it may need improving.
-    Maybe I can merge multiple Change objects into one.
 
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style

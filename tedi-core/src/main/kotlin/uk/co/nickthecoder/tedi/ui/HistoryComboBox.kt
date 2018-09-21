@@ -43,20 +43,28 @@ class HistoryComboBox(history: ObservableList<String>)
         history.addListener { _: ListChangeListener.Change<out String>? -> updateItems() }
         items.addAll(history.reversed())
 
-        // editor.textProperty().addListener { _, _, _ -> onValueChanged() }
         valueProperty().addListener { _, _, newValue ->
-            if (!ignoreUpdates) {
+            if (!ignoreUpdates && !isShowing) {
                 if (newValue.isNotBlank()) {
+                    println("valueProperty changed")
                     history.remove(newValue)
                     history.add(newValue)
                 }
             }
         }
 
-        if (javaFXVersion.startsWith("8.")) {
+        addEventFilter(KeyEvent.KEY_PRESSED) { event ->
+            if (!isShowing && event.code == KeyCode.DOWN && event.isShortcutDown) {
+                event.consume()
+                // Without this line, the popup gets into a weird state (up key doesn't work, and the selected item
+                // is off by one). JavaFX 8
+                // With this line, up key still doesn't work, but there is no selection problem
+                value = ""
+                show()
+            }
             // If don't handle TAB and shift+TAB myself, JavaFX 8 moves the focus to the WRONG node!
             // It seems that ComboBox is REALLY buggy!
-            addEventFilter(KeyEvent.KEY_PRESSED) { event ->
+            if (javaFXVersion.startsWith("8.")) {
                 if (event.code == KeyCode.TAB) {
                     if (event.isShiftDown) {
                         focusPrevious()
