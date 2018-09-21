@@ -25,7 +25,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
         }
 
     val searchProperty = SimpleStringProperty("")
-    var search: String
+    var search: String?
         get() = searchProperty.get()
         set(v) {
             searchProperty.set(v)
@@ -144,7 +144,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
         matches.clear()
         currentMatchIndex = -1
 
-        if (inUse && search.isNotEmpty()) {
+        if (inUse && search?.isNotEmpty() ?: false) {
 
             val caseFlag = if (matchCase) 0 else Pattern.CASE_INSENSITIVE
             val literalFlag = if (matchRegex) 0 else Pattern.LITERAL
@@ -180,7 +180,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     protected fun updatePrevNext() {
         hasPrev = currentMatchIndex > 0
         hasNext = currentMatchIndex < matches.size - 1
-        status = if (search.isEmpty()) {
+        status = if (search?.isEmpty() ?: true) {
             ""
         } else if (inUse) {
             if (matches.isEmpty()) {

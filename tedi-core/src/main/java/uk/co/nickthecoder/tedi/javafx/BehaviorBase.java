@@ -268,7 +268,6 @@ public class BehaviorBase<C extends Control> {
      * go the previous focusTraversable Node in the focus traversal cycle.
      */
     public final void traversePrevious() {
-        System.out.println("traversePrevious");
         FocusHelperKt.focusPrevious(getControl(), 1000);
     }
 

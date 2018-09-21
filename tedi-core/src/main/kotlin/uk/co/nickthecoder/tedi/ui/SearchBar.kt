@@ -1,11 +1,14 @@
 package uk.co.nickthecoder.tedi.ui
 
+import com.sun.javafx.collections.ObservableListWrapper
 import javafx.event.EventHandler
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import uk.co.nickthecoder.tedi.loadGraphic
+import uk.co.nickthecoder.tedi.onSceneAvailable
 import uk.co.nickthecoder.tedi.requestFocusOnSceneAvailable
+import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
 /**
  * An example GUI for use with [TextInputControlMatcher].
@@ -24,7 +27,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
     val toolBar = ToolBar()
 
-    val search = TextField()
+    val search = HistoryComboBox(searchHistory)
 
     val prev = Button()
 
@@ -39,6 +42,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
     val status = Label()
 
     init {
+        search.isEditable = true
 
         toolBar.visibleProperty().addListener { _, _, newValue ->
             if (newValue == true) {
@@ -58,7 +62,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         with(search) {
             promptText = "search"
             styleClass.add("search")
-            textProperty().bindBidirectional(matcher.searchProperty)
+            valueProperty().bindBidirectional(matcher.searchProperty)
             addEventFilter(KeyEvent.KEY_PRESSED) { keyPressedInSearchField(it) }
         }
 
@@ -102,6 +106,17 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         }
     }
 
+    /**
+     * This is a work-around for a bug in ComboBox.
+     * I want to focus on [search], but doing search.requestFocus causes the caret to be hidden.
+     * See https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
+     */
+    fun requestFocus() {
+        search.onSceneAvailable {
+            search.requestFocusWithCaret()
+        }
+    }
+
     fun keyPressedInSearchField(event: KeyEvent) {
         var consume = true
         if (event.isControlDown) {
@@ -125,4 +140,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         if (consume) event.consume()
     }
 
+    companion object {
+        val searchHistory = ObservableListWrapper(mutableListOf<String>())
+    }
 }

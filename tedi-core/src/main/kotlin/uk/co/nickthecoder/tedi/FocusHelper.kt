@@ -72,11 +72,11 @@ private class FocusNext(val startNode: Node, var attempts: Int) {
             return true
         }
 
-        if (node.isFocusTraversable && node.isVisible) {
+        if (node.isFocusTraversable && node.isVisible && !node.isDisabled) {
             node.requestFocus()
             return true
         }
-        if (node is Parent) {
+        if (node is Parent && node.isVisible && !node.isDisabled) {
             if (tryAllChildren(node)) {
                 return true
             }
@@ -152,11 +152,11 @@ private class FocusPrevious(val startNode: Node, var attempts: Int) {
             return true
         }
 
-        if (node.isFocusTraversable && node.isVisible) {
+        if (node.isFocusTraversable && node.isVisible && !node.isDisabled) {
             node.requestFocus()
             return true
         }
-        if (node is Parent) {
+        if (node is Parent && node.isVisible && !node.isDisabled) {
             if (tryAllChildren(node)) {
                 return true
             }

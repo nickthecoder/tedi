@@ -11,7 +11,6 @@ import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
 import uk.co.nickthecoder.tedi.ui.*
-import java.net.URL
 
 class DemoWindow(stage: Stage = Stage()) {
 
@@ -118,10 +117,11 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(TediTab().apply { load(DemoWindow::class.java.getResource("Welcome")) })
-            tabs.add(TediTab().apply { load(DemoWindow::class.java.getResource("LICENSE")) })
-            tabs.add(TediTab().apply { load(DemoWindow::class.java.getResource("DemoWindow")) })
-            tabs.add(TediTab().apply { load(TediArea::class.java.getResource("tedi.css")) })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Welcome") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "LICENSE") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Demo") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "DemoWindow") })
+            tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css") })
 
             tabs.add(TextAreaTab("""This is a regular TextArea.
 Notice how TediArea and TextArea can be used seamlessly, because they both extend from TextInputControl.
@@ -215,6 +215,7 @@ The "line numbers" button (ctrl+L) won't work here.
         } else {
             control.redo()
         }
+        control.requestFocus()
     }
 
     /**
@@ -227,7 +228,7 @@ The "line numbers" button (ctrl+L) won't work here.
             when (event.code) {
                 KeyCode.F -> {
                     matcher.inUse = true
-                    searchBar.search.requestFocusOnSceneAvailable()
+                    searchBar.requestFocus()
                 }
                 KeyCode.Z -> if (event.isShiftDown) redo() else undo()
                 KeyCode.Y -> redo()
@@ -237,7 +238,7 @@ The "line numbers" button (ctrl+L) won't work here.
                     val wasInUse = matcher.inUse
                     replaceBar.toolBar.isVisible = true
                     if (wasInUse) {
-                        replaceBar.replacement.requestFocusOnSceneAvailable()
+                        replaceBar.requestFocus()
                     }
                 }
                 else -> consume = false
@@ -287,9 +288,20 @@ The "line numbers" button (ctrl+L) won't work here.
             }
         }
 
-        fun load(url: URL) {
-            text = url.path.split("/").last()
-            textInput.text = url.readText()
+        fun load(klass: Class<*>, name: String) {
+            val url = klass.getResource(name)
+            text = name
+
+            if (url == null) {
+                textInput.text = "Couldn't find resource :\n\n    ${klass.name}.$name"
+                return
+            }
+
+            try {
+                textInput.text = url.readText()
+            } catch (e: Exception) {
+                textInput.text = "Couldn't load resource :\n\n    ${klass.name}.$name"
+            }
         }
     }
 

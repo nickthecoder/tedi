@@ -29,6 +29,11 @@ abstract class UndoRedo {
 
     abstract fun replaceText(start: Int, end: Int, text: String)
 
+    /**
+     * Called from TediArea after each action with affects TextInputControl's default undo/redo list
+     * (replaceText and selectRange).
+     * When we are using BetterUndoRedo, this will clear TextInputControl's undo/redo list.
+     */
     abstract fun postChange()
 }
 
@@ -180,6 +185,13 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
      */
     private var undoWarningIssued = false
 
+    /**
+     * We can't have two undo/redo lists in operation at the same time!
+     * So, let's try to scupper TextInputControl's undo/redo list. Alas, this requires access to private fields,
+     * so I've done my best to fail gracefully if the private fields change in a later version of JavaFX.
+     * A warning will be issued once.
+     * Even if this fails, nothing bad will happen as long as only one of the undo/redo lists are used.
+     */
     private fun destroyStandardUndoList() {
         try {
             val head = tediArea.getPrivateField("undoChangeHead")

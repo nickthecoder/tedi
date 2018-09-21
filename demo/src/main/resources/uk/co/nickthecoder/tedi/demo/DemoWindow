@@ -1,5 +1,7 @@
 package uk.co.nickthecoder.tedi.demo
 
+import javafx.application.Platform
+import javafx.event.EventHandler
 import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
@@ -7,12 +9,8 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.CodeWordBreakIterator
-import uk.co.nickthecoder.tedi.TediArea
-import uk.co.nickthecoder.tedi.loadGraphic
-import uk.co.nickthecoder.tedi.requestFocusOnSceneAvailable
+import uk.co.nickthecoder.tedi.*
 import uk.co.nickthecoder.tedi.ui.*
-import java.net.URL
 
 class DemoWindow(stage: Stage = Stage()) {
 
@@ -54,6 +52,8 @@ class DemoWindow(stage: Stage = Stage()) {
     val searchAndReplaceToolBars = VBox()
 
     // Buttons within the toolBar
+    val undo = Button()
+    val redo = Button()
     val toggleLineNumbers = ToggleButton()
     val toggleSearch = ToggleButton()
     val toggleSearchAndReplace = ToggleButton()
@@ -62,20 +62,39 @@ class DemoWindow(stage: Stage = Stage()) {
     val scene = Scene(borderPane, 700.0, 500.0)
 
     /**
-     * Keep track of the "current" TediArea, so that search and replace, and the line-number toggle button
-     * affect the correct TediArea.
-     * This is set from within EditorTab (when a TediArea gains focus).
+     * Keep track of the "current" TextArea/TediArea, so that search and replace, and the line-number toggle button
+     * affect the correct Control.
+     * This is set from within EditorTab (when a the TextInputControl gains focus).
      *
      * Note, if we were able to close tabs, then closing the last tab should set this back to dummyArea.
      */
-    var currentArea = dummyArea
+    var currentArea: TextInputControl = dummyArea
         set(v) {
-            field.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
+            val oldValue = field
+            if (oldValue is TediArea) {
+                oldValue.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
+            }
 
             field = v
 
-            toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
+            if (v is TediArea) {
+                toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
+                toggleLineNumbers.isDisable = false
+                // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.undoableProperty().
+                undo.disableProperty().bind(v.undoRedo.undoableProperty.not())
+                redo.disableProperty().bind(v.undoRedo.redoableProperty.not())
+            } else {
+                toggleLineNumbers.isSelected = false
+                toggleLineNumbers.isDisable = true
+                undo.disableProperty().bind(v.undoableProperty().not())
+                redo.disableProperty().bind(v.redoableProperty().not())
+            }
+
             matcher.textInputControl = v
+
+            Platform.runLater {
+                v.requestFocusOnSceneAvailable()
+            }
         }
 
     init {
@@ -98,12 +117,37 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("Welcome")))
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("LICENSE")))
-            tabs.add(EditorTab(DemoWindow::class.java.getResource("ExampleWindow")))
-            tabs.add(EditorTab(TediArea::class.java.getResource("tedi.css")))
-            // Plus an empty tab
-            tabs.add(EditorTab())
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Welcome") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "LICENSE") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Demo") })
+            tabs.add(TediTab().apply { load(DemoWindow::class.java, "DemoWindow") })
+            tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css") })
+
+            tabs.add(TextAreaTab("""This is a regular TextArea.
+Notice how TediArea and TextArea can be used seamlessly, because they both extend from TextInputControl.
+
+Some differences between this TextArea, and the other TediAreas :
+
+The word selection is worse (for source code at least!).
+Try double clicking inside : uk.co.nickthecoder.tedi, and compare it with the package statement in DemoWindow.
+
+Tab and shift+Tab in a TextArea are useless for source code.
+
+The "line numbers" button (ctrl+L) won't work here.
+
+"""))
+        }
+
+        with(undo) {
+            loadGraphic(DemoWindow::class.java, "undo.png")
+            tooltip = Tooltip("Undo (ctrl+Z)")
+            onAction = EventHandler { undo() }
+        }
+
+        with(redo) {
+            loadGraphic(DemoWindow::class.java, "redo.png")
+            tooltip = Tooltip("Redo (ctrl+shift+Z)")
+            onAction = EventHandler { redo() }
         }
 
         with(toggleLineNumbers) {
@@ -132,7 +176,7 @@ class DemoWindow(stage: Stage = Stage()) {
         }
 
         with(toolBar) {
-            items.addAll(toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
+            items.addAll(undo, redo, toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
         }
 
         with(searchAndReplaceToolBars) {
@@ -150,6 +194,28 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Handle keyboard shortcuts (Hover over buttons etc to see the shortcuts in their tooltips)
         borderPane.addEventFilter(KeyEvent.KEY_PRESSED) { onKeyPressed(it) }
+
+    }
+
+    fun undo() {
+        val control = currentArea
+        if (control is TediArea) {
+            // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.undo.
+            control.undoRedo.undo()
+        } else {
+            control.undo()
+        }
+    }
+
+    fun redo() {
+        val control = currentArea
+        if (control is TediArea) {
+            // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.redo.
+            control.undoRedo.redo()
+        } else {
+            control.redo()
+        }
+        control.requestFocus()
     }
 
     /**
@@ -158,19 +224,21 @@ class DemoWindow(stage: Stage = Stage()) {
     fun onKeyPressed(event: KeyEvent) {
         var consume = true
 
-        if (event.isControlDown) {
+        if (event.isShortcutDown) {
             when (event.code) {
                 KeyCode.F -> {
                     matcher.inUse = true
-                    searchBar.search.requestFocusOnSceneAvailable()
+                    searchBar.requestFocus()
                 }
+                KeyCode.Z -> if (event.isShiftDown) redo() else undo()
+                KeyCode.Y -> redo()
                 KeyCode.G -> GotoDialog(currentArea).show()
                 KeyCode.L -> toggleLineNumbers.isSelected = !toggleLineNumbers.isSelected
                 KeyCode.R -> {
                     val wasInUse = matcher.inUse
                     replaceBar.toolBar.isVisible = true
                     if (wasInUse) {
-                        replaceBar.replacement.requestFocusOnSceneAvailable()
+                        replaceBar.requestFocus()
                     }
                 }
                 else -> consume = false
@@ -197,27 +265,14 @@ class DemoWindow(stage: Stage = Stage()) {
      * A [Tab] within the [tabPane].
      * Contains a TediArea.
      */
-    inner class EditorTab(title: String = "New Document") : Tab() {
-
-        constructor(url: URL) : this(url.path.replace(Regex(".*/"), "")) {
-            textInput.text = url.readText()
-        }
-
-        val textInput = TediArea()
+    abstract inner class EditorTab(
+            val textInput: TextInputControl,
+            title: String = "New Document") : Tab() {
 
         init {
             content = textInput
-            text = title
+            this.text = title
 
-            // When selecting "words", this is much better that the default when editing source code.
-            textInput.wordIterator = CodeWordBreakIterator()
-
-            // Make toggleLineNumbers button and the matcher refer this this textInput whenever it gains focus.
-            textInput.focusedProperty().addListener { _, _, newValue ->
-                if (newValue == true) {
-                    currentArea = textInput
-                }
-            }
             // Select the TediArea when this tab is selected
             selectedProperty().addListener { _, _, newValue ->
                 if (newValue == true) {
@@ -225,7 +280,49 @@ class DemoWindow(stage: Stage = Stage()) {
                 }
             }
 
+            // Make toggleLineNumbers button and the matcher refer this this textInput whenever it gains focus.
+            textInput.focusedProperty().addListener { _, _, newValue ->
+                if (newValue == true) {
+                    currentArea = textInput
+                }
+            }
         }
 
+        fun load(klass: Class<*>, name: String) {
+            val url = klass.getResource(name)
+            text = name
+
+            if (url == null) {
+                textInput.text = "Couldn't find resource :\n\n    ${klass.name}.$name"
+                return
+            }
+
+            try {
+                textInput.text = url.readText()
+            } catch (e: Exception) {
+                textInput.text = "Couldn't load resource :\n\n    ${klass.name}.$name"
+            }
+        }
     }
+
+    inner class TediTab
+        : EditorTab(TediArea()) {
+
+        val tediArea = textInput as TediArea
+
+        init {
+            with(tediArea) {
+                // When selecting "words", this is much better that the default when editing source code.
+                wordIterator = CodeWordBreakIterator()
+
+                // Replace the standard undo/redo feature in TextInputControl with a better one.
+                // Note, when using this, we cannot use TediArea.undo() etc, and instead use TediArea.undoRedo.undo().
+                undoRedo = BetterUndoRedo(tediArea)
+            }
+
+        }
+    }
+
+    inner class TextAreaTab(content: String) : EditorTab(TextArea(content), "TextArea")
+
 }

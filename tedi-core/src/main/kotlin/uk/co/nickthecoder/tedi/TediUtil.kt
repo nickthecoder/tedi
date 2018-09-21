@@ -1,14 +1,17 @@
 package uk.co.nickthecoder.tedi
 
+import com.sun.javafx.scene.control.skin.ComboBoxPopupControl
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.ButtonBase
+import javafx.scene.control.ComboBox
 import javafx.scene.control.TextInputControl
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import java.lang.reflect.Field
+
 
 private fun getOs(): String = System.getProperty("os.name").toLowerCase()
 
@@ -16,6 +19,7 @@ val isMac by lazy { getOs().startsWith("mac") }
 val isLinux by lazy { getOs().startsWith("linux") }
 val isWindows by lazy { getOs().startsWith("windows") }
 
+val javaFXVersion by lazy { System.getProperties().getProperty("javafx.runtime.version") }
 
 /**
  * Simple utility function which clamps the given value to be strictly
@@ -110,6 +114,47 @@ fun Node.requestFocusOnSceneAvailable() {
         requestFocus()
     }
 }
+
+fun Node.onSceneAvailable(action: () -> Unit) {
+    if (scene == null) {
+        val listener = object : ChangeListener<Scene> {
+            override fun changed(observable: ObservableValue<out Scene>?, oldValue: Scene?, newValue: Scene?) {
+                if (newValue != null) {
+                    sceneProperty().removeListener(this)
+                    action()
+                }
+            }
+        }
+        sceneProperty().addListener(listener)
+    } else {
+        action()
+    }
+}
+
+/**
+ * A work-around for a JavaFX 8 bug :
+ * https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
+ *
+ * The bodge is only performed if [javaFXVersion] is "8.xxx", to avoid issues with using the non-standard class
+ * com.sun.javafx.scene.control.skin.ComboBoxPopupControl
+ *
+ * Hopefully it will be fixed in version 9!
+ */
+fun ComboBox<*>.requestFocusWithCaret() {
+    // Without this first line, I could end up with TWO ComboBoxes appearing to have focus at the same time!
+    requestFocus()
+
+    if (javaFXVersion.startsWith("8.")) {
+        try {
+            if (editor is ComboBoxPopupControl.FakeFocusTextField) {
+                (editor as ComboBoxPopupControl.FakeFocusTextField).setFakeFocus(true)
+            }
+        } catch (e: Exception) {
+
+        }
+    }
+}
+
 
 /**
  * Uses reflection to set a private field

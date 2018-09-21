@@ -1,20 +1,8 @@
-Working on Undo/Redo
-
-Allow changes to be merged.
-    A ReplaceTextChange merges changes to contiguous text
-    Add a time limit, so that if text is being typed, then it gets merged, but if there is a pause in typing,
-        then the next change will NOT be merged. Same with SelectRangeChange.
-
 Bugs
 ----
 
 Using Home key on the first line SOMETIMES the caret vanishes
 Also, scrolling the view, then then typing also hides the caret.
-
-Some positional movements use selectRange(x,x), which causes a new Change to the undo/redo list.
-    I don't think this should cause a new Change
-
-Redo a selection change does NOT show the new selection.
 
 Next
 ----

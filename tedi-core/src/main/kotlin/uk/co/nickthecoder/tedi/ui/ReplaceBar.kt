@@ -1,15 +1,17 @@
 package uk.co.nickthecoder.tedi.ui
 
+import com.sun.javafx.collections.ObservableListWrapper
 import javafx.event.EventHandler
 import javafx.scene.control.Button
-import javafx.scene.control.TextField
 import javafx.scene.control.ToolBar
+import uk.co.nickthecoder.tedi.onSceneAvailable
+import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
 open class ReplaceBar(val matcher: TextInputControlMatcher) {
 
     val toolBar = ToolBar()
 
-    val replacement = TextField()
+    val replacement = HistoryComboBox(replacementHistory)
 
     val replace = Button("Replace")
 
@@ -30,13 +32,13 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
         with(replace) {
             styleClass.add("replace")
             disableProperty().bind(matcher.matchSelectedProperty.not())
-            onAction = EventHandler { matcher.replace(replacement.text) }
+            onAction = EventHandler { matcher.replace(replacement.value ?: "") }
         }
 
         with(replaceAll) {
             styleClass.add("replaceAll")
             disableProperty().bind(matcher.matchSelectedProperty.not())
-            onAction = EventHandler { matcher.replaceAll(replacement.text) }
+            onAction = EventHandler { matcher.replaceAll(replacement.value ?: "") }
         }
 
         matcher.inUseProperty.addListener { _, _, newValue ->
@@ -52,4 +54,21 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
         }
     }
 
+    /**
+     * This is a work-around for a bug in ComboBox.
+     * I want to focus on [search], but doing search.requestFocus causes the caret to be hidden.
+     * See https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
+     *
+     * Note, I really wanted search.requestFocusOnSceneAvailable()
+     */
+    fun requestFocus() {
+        replacement.onSceneAvailable {
+            replacement.requestFocusWithCaret()
+        }
+    }
+
+
+    companion object {
+        val replacementHistory = ObservableListWrapper(mutableListOf<String>())
+    }
 }
