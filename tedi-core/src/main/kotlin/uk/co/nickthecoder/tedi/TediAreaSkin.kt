@@ -62,48 +62,49 @@ import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 import java.util.*
 
-open class TediAreaSkin(val control: TediArea)
+class TediAreaSkin(val control: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
 
+    /**
+     * Currently, visible text is one HUGE Text object, which is inefficient, and should be
+     * broken into parts.
+     */
     private val paragraphNode = Text()
+
+    /**
+     * A Region containing line numbers, to the left of the main content.
+     */
     private val gutter = Gutter(this)
 
+    /**
+     * A simple BorderPane with left=[gutter], center=[contentView]
+     */
     private val guttersAndContentView = BorderPane()
+
+    /**
+     * The main content responsible for displaying the [paragraphNode], the caret and the selection.
+     *
+     * Internal, as Gutter uses this to sync its top margin with the contentView's top margin to
+     * ensure the line numbers line up with the main text.
+     */
     internal val contentView = ContentView()
 
     /**
-     * A path, provided by the textNode, which represents the caret.
-     * I assume this has to be updated whenever the caretPosition
-     * changes. Perhaps more frequently (including text changes),
-     * but I'm not sure.
+     * A path, used to display the caret.
      */
-    protected val caretPath = Path()
+    private val caretPath = Path()
 
     private val selectionHighlightGroup = Group()
 
     private val scrollPane = ScrollPane()
 
-    private var oldViewportBounds: Bounds? = null
-
-    private val scrollDirection: VerticalDirection? = null
-
-    private val scrollSelectionTimeline = Timeline()
-
-    private val scrollSelectionHandler = EventHandler<ActionEvent> {
-        when (scrollDirection) {
-            VerticalDirection.UP -> {
-            }// TODO Get previous offset
-
-            VerticalDirection.DOWN -> {
-            }// TODO Get next offset
-        }
-    }
+    private var oldViewportBounds: Bounds = BoundingBox(0.0, 0.0, 0.0, 0.0)
 
     /**
      * Remembers horizontal position when traversing up / down.
      */
-    internal var targetCaretX = -1.0
+    private var targetCaretX = -1.0
 
     /***************************************************************************
      *                                                                         *
@@ -114,7 +115,7 @@ open class TediAreaSkin(val control: TediArea)
     /**
      * The fill to use for the text under normal conditions
      */
-    protected val textFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
+    private val textFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
 
         override fun getBean(): Any {
             return this@TediAreaSkin
@@ -132,7 +133,7 @@ open class TediAreaSkin(val control: TediArea)
     /**
      * The fill to use for the text when highlighted.
      */
-    protected val highlightFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
+    private val highlightFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
         override fun invalidated() {
             updateHighlightFill()
         }
@@ -150,7 +151,7 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    protected val highlightTextFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+    private val highlightTextFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
         override fun invalidated() {
             updateHighlightTextFill()
         }
@@ -168,7 +169,7 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    protected val displayCaret: BooleanProperty = object : StyleableBooleanProperty(true) {
+    private val displayCaret: BooleanProperty = object : StyleableBooleanProperty(true) {
         override fun getBean(): Any {
             return this@TediAreaSkin
         }
@@ -201,7 +202,7 @@ open class TediAreaSkin(val control: TediArea)
      *
      * Note, this value does NOT include the caret animation's on/off state.
      */
-    protected var caretVisible: ObservableBooleanValue = object : BooleanBinding() {
+    private var caretVisible: ObservableBooleanValue = object : BooleanBinding() {
         init {
             bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
                     control.disabledProperty(), control.editableProperty(), displayCaret)
@@ -225,122 +226,30 @@ open class TediAreaSkin(val control: TediArea)
 
     init {
 
-        // Add initial text content.
-        createParagraphNode()
-
         // Initialize content
-        scrollPane.isFitToWidth = true
-        scrollPane.isFitToHeight = true
-        scrollPane.content = guttersAndContentView
-        children.add(scrollPane)
+        with(scrollPane) {
+            isFitToWidth = true
+            isFitToHeight = true
+            content = guttersAndContentView
+            hvalueProperty().addListener { _, _, newValue -> skinnable.scrollLeft = newValue.toDouble() * getScrollLeftMax() }
+            vvalueProperty().addListener { _, _, newValue -> skinnable.scrollTop = newValue.toDouble() * getScrollTopMax() }
 
-        // Add selection
-        selectionHighlightGroup.isManaged = false
-        selectionHighlightGroup.isVisible = false
-        contentView.children.add(selectionHighlightGroup)
-
-        // Add content view
-        paragraphNode.isManaged = false
-        contentView.children.addAll(paragraphNode)
-
-
-        // gutter
-        guttersAndContentView.left = if (gutter.isVisible) gutter else null
-        guttersAndContentView.center = contentView
-
-        control.displayLineNumbersProperty().addListener { _, _, _ ->
-            updateGutters()
-        }
-
-        // Add caret
-        caretPath.isManaged = false
-        caretPath.strokeWidth = 1.0
-        caretPath.fillProperty().bind(textFill)
-        caretPath.strokeProperty().bind(textFill)
-        contentView.children.add(caretPath)
-
-        scrollPane.hvalueProperty().addListener { _, _, newValue -> skinnable.scrollLeft = newValue.toDouble() * getScrollLeftMax() }
-        scrollPane.vvalueProperty().addListener { _, _, newValue -> skinnable.scrollTop = newValue.toDouble() * getScrollTopMax() }
-
-        // Initialize the scroll selection timeline
-        scrollSelectionTimeline.cycleCount = Timeline.INDEFINITE
-        val scrollSelectionFrames = scrollSelectionTimeline.keyFrames
-        scrollSelectionFrames.clear()
-        scrollSelectionFrames.add(KeyFrame(Duration.millis(350.0), scrollSelectionHandler))
-
-        control.selectionProperty().addListener { _, _, _ ->
-            // Why do we need two calls here? (from original)
-            // Also, do we need to layout the whole control, why not just change the caret's position, if
-            // the selection is empty before and after?
-            control.requestLayout()
-            contentView.requestLayout()
-        }
-
-        scrollPane.viewportBoundsProperty().addListener { _ ->
-            if (scrollPane.viewportBounds != null) {
-                // ScrollPane creates a new Bounds instance for each
-                // layout pass, so we need to check if the width/height
-                // have really changed to avoid infinite layout requests.
-                val newViewportBounds = scrollPane.viewportBounds
-                if (oldViewportBounds == null ||
-                        oldViewportBounds?.width != newViewportBounds.width ||
-                        oldViewportBounds?.height != newViewportBounds.height) {
-
-                    oldViewportBounds = newViewportBounds
-                    contentView.requestLayout()
+            viewportBoundsProperty().addListener { _ ->
+                if (scrollPane.viewportBounds != null) {
+                    // ScrollPane creates a new Bounds instance for each
+                    // layout pass, so we need to check if the width/height
+                    // have really changed to avoid infinite layout requests.
+                    val newViewportBounds = scrollPane.viewportBounds
+                    if (oldViewportBounds.width != newViewportBounds.width || oldViewportBounds.height != newViewportBounds.height) {
+                        oldViewportBounds = newViewportBounds
+                        contentView.requestLayout()
+                    }
                 }
             }
         }
+        children.add(scrollPane)
 
-        control.scrollTopProperty().addListener { _, _, newValue ->
-            val vValue = if (newValue.toDouble() < getScrollTopMax())
-                newValue.toDouble() / getScrollTopMax()
-            else
-                1.0
-            scrollPane.vvalue = vValue
-        }
-
-        control.scrollLeftProperty().addListener { _, _, newValue ->
-            val hValue = if (newValue.toDouble() < getScrollLeftMax())
-                newValue.toDouble() / getScrollLeftMax()
-            else
-                1.0
-            scrollPane.hvalue = hValue
-        }
-
-        control.textProperty().addListener { _ ->
-            paragraphNode.text = control.textProperty().valueSafe
-            contentView.requestLayout()
-        }
-
-        updateHighlightFill()
-
-    }
-
-    override fun dispose() {
-        // TODO Unregister listeners on text editor, paragraph list
-        throw UnsupportedOperationException()
-    }
-
-    /***************************************************************************
-     *                                                                         *
-     * Methods                                                                 *
-     *                                                                         *
-     **************************************************************************/
-
-    private fun updateGutters() {
-        if (control.displayLineNumbers) {
-            guttersAndContentView.left = gutter
-        } else {
-            guttersAndContentView.left = null
-        }
-    }
-
-    override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
-        scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
-    }
-
-    private fun createParagraphNode() {
+        // paragraphNode
         with(paragraphNode) {
             text = control.text
             textOrigin = VPos.TOP
@@ -352,11 +261,77 @@ open class TediAreaSkin(val control: TediArea)
             fillProperty().bind(textFill)
         }
 
+        // selection
+        with(selectionHighlightGroup) {
+            isManaged = false
+            isVisible = false
+        }
+
+        // gutter
+        with(guttersAndContentView) {
+            left = if (gutter.isVisible) gutter else null
+            center = contentView
+        }
+        control.displayLineNumbersProperty().addListener { _, _, newValue ->
+            if (newValue) {
+                guttersAndContentView.left = gutter
+            } else {
+                guttersAndContentView.left = null
+            }
+        }
+
+        // caretPath
+        with(caretPath) {
+            isManaged = false
+            strokeWidth = 1.0
+            fillProperty().bind(textFill)
+            strokeProperty().bind(textFill)
+        }
+
+        // contentView
+        contentView.children.addAll(selectionHighlightGroup, paragraphNode, caretPath)
+
+        // control
+
+        control.selectionProperty().addListener { _, _, _ ->
+            contentView.requestLayout()
+        }
+
+        control.scrollTopProperty().addListener { _, _, newValue ->
+            scrollPane.vvalue = if (newValue.toDouble() < getScrollTopMax()) {
+                newValue.toDouble() / getScrollTopMax()
+            } else {
+                1.0
+            }
+        }
+
+        control.scrollLeftProperty().addListener { _, _, newValue ->
+            scrollPane.hvalue = if (newValue.toDouble() < getScrollLeftMax()) {
+                newValue.toDouble() / getScrollLeftMax()
+            } else {
+                1.0
+            }
+        }
+
+        control.textProperty().addListener { _ ->
+            paragraphNode.text = control.textProperty().valueSafe
+            contentView.requestLayout()
+        }
     }
 
+    /***************************************************************************
+     *                                                                         *
+     * Methods                                                                 *
+     *                                                                         *
+     **************************************************************************/
+
+    override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
+        scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
+    }
+
+
     fun getCaretPosition(x: Double, y: Double): Int {
-        val hit = paragraphNode.hitTestChar(x, y)
-        return hit.charIndex + if (hit.isLeading) 0 else 1
+        return paragraphNode.hitTestChar(x, y).getInsertionIndex()
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
@@ -433,14 +408,14 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    protected fun updateHighlightTextFill() {
+    private fun updateHighlightTextFill() {
         for (node in selectionHighlightGroup.children) {
             val selectionHighlightPath = node as Path
             selectionHighlightPath.fill = highlightFill.get()
         }
     }
 
-    protected fun updateHighlightFill() {
+    private fun updateHighlightFill() {
         for (node in selectionHighlightGroup.children) {
             val selectionHighlightPath = node as Path
             selectionHighlightPath.fill = highlightFill.get()
@@ -465,7 +440,7 @@ open class TediAreaSkin(val control: TediArea)
         tmpText.font = paragraphNode.font
         tmpText.layoutX = 0.0// paragraphNode.layoutX
         val hit = tmpText.hitTestChar(requiredX, 1.0)
-        val columnIndex = hit.charIndex
+        val columnIndex = hit.getInsertionIndex()
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex
 
@@ -597,30 +572,17 @@ open class TediAreaSkin(val control: TediArea)
         }
     }
 
-    /**
-     * Use this implementation instead of the one provided on TextInputControl
-     * Simply calls into TextInputControl.deletePrevious/NextChar and responds appropriately
-     * based on the return value.
-     */
     fun deleteChar(previous: Boolean) {
-        if (previous)
-            !skinnable.deletePreviousChar()
-        else
-            !skinnable.deleteNextChar()
-    }
-
-    override fun queryAccessibleAttribute(attribute: AccessibleAttribute?, vararg parameters: Any): Any {
-        when (attribute) {
-            AccessibleAttribute.LINE_FOR_OFFSET, AccessibleAttribute.LINE_START, AccessibleAttribute.LINE_END, AccessibleAttribute.BOUNDS_FOR_RANGE, AccessibleAttribute.OFFSET_AT_POINT -> {
-                return paragraphNode.queryAccessibleAttribute(attribute, *parameters)
-            }
-            else -> return super.queryAccessibleAttribute(attribute, *parameters)
+        if (previous) {
+            skinnable.deletePreviousChar()
+        } else {
+            skinnable.deleteNextChar()
         }
     }
 
     /***************************************************************************
      *                                                                         *
-     * Caret Blinking class                                                    *
+     * CaretAnimation class                                                    *
      *                                                                         *
      **************************************************************************/
     /**
@@ -739,7 +701,7 @@ open class TediAreaSkin(val control: TediArea)
 
             caretPath.layoutX = paragraphNode.layoutX
             caretPath.layoutY = paragraphNode.layoutY
-            if (oldCaretBounds == null || oldCaretBounds != caretPath.boundsInParent) {
+            if (oldCaretBounds != caretPath.boundsInParent) {
                 scrollCaretToVisible()
             }
 

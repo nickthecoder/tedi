@@ -2,14 +2,11 @@ package uk.co.nickthecoder.tedi
 
 import javafx.scene.text.Text
 
-
 /**
  * This is similar to JavaFX's non-public HitInfo class.
  * It holds information about where 2d point touches a [Text] object.
  * [charIndex] is the zero based index into the [Text's] text
  * [isLeading] true iff the point was to the left of the hit character's mid point.
- *
- * Use  [impl_hitTestChar]
  */
 class HitInformation(var charIndex: Int, var isLeading: Boolean) {
 
