@@ -46,7 +46,6 @@ import javafx.css.*
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
 import javafx.geometry.*
-import javafx.scene.AccessibleAttribute
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.control.ScrollPane
@@ -315,6 +314,7 @@ class TediAreaSkin(val control: TediArea)
 
         control.textProperty().addListener { _ ->
             paragraphNode.text = control.textProperty().valueSafe
+            targetCaretX = -1.0
             contentView.requestLayout()
         }
     }
@@ -434,7 +434,7 @@ class TediAreaSkin(val control: TediArea)
         val requiredX = if (targetCaretX < 0) caretBounds.maxX else targetCaretX
 
         val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
-        val lineText = skinnable.paragraphs[requiredLine].toString()
+        val lineText = skinnable.getLine(requiredLine).toString()
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
         tmpText.font = paragraphNode.font
@@ -443,8 +443,6 @@ class TediAreaSkin(val control: TediArea)
         val columnIndex = hit.getInsertionIndex()
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex
-
-        //println("line=$requiredLine column=$columnIndex pos=$newPosition hit=$hit")
 
         if (select) {
             control.selectRange(control.anchor, newPosition)

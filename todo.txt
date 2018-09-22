@@ -1,8 +1,15 @@
 Bugs
 ----
 
+Mouse clicking isn't using the optimised methods.
+
 Next
 ----
+
+Consider adding a Location class, which holds a position:Int, and also a line:Int and column:Int
+Listens to something new??? so that its values update when the document changes.
+caret and anchor could use these??? Make them internally mutable???
+    I need to think this through.
 
 Implement Skin using a list of paragraphsNodes
 

@@ -41,6 +41,7 @@ import javafx.scene.AccessibleRole
 import javafx.scene.Scene
 import javafx.scene.control.Skin
 import javafx.scene.control.TextInputControl
+import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
 import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import uk.co.nickthecoder.tedi.javafx.NonIterableChange
@@ -67,17 +68,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
 
-    // Paragraphs
-    private val paragraphsProperty = ReadOnlyListWrapper(content.paragraphList())
 
-    fun paragraphsProperty(): ReadOnlyListProperty<CharSequence> = paragraphsProperty
-
-    val paragraphs: ObservableList<CharSequence>
-        get() = content.paragraphList()
-
+    fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = content.paragraphsProperty()
 
     // Line Count
-    private val lineCountProperty = Bindings.size(paragraphsProperty)!!
+    private val lineCountProperty = Bindings.size(paragraphsProperty())!!
 
     fun lineCountProperty() = lineCountProperty
 
@@ -196,48 +191,25 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
 
+    fun getLine(line: Int) = content.getLine(line)
+
     /**
      * Returns the position within [text] of the start of the nth line.
      * [line] and the returned result are zero based.
      */
-    fun lineStartPosition(line: Int): Int {
-        var result = 0
-        for ((i, p) in paragraphs.withIndex()) {
-            if (i >= line) {
-                return result
-            }
-            result += p.length + 1 // 1 for the new line character
-        }
-        return result
-    }
+    fun lineStartPosition(line: Int) = content.lineStartPosition(line)
 
     /**
      * Returns the position within [text] of the end of the nth line.
      * [line] and the returned result are zero based.
      */
-    fun lineEndPosition(line: Int): Int {
-        var result = 0
-        for ((i, p) in paragraphs.withIndex()) {
-            if (i >= line) {
-                return result + p.length
-            }
-            result += p.length + 1 // 1 for the new line character
-        }
-        return result
-    }
+    fun lineEndPosition(line: Int) = content.lineEndPosition(line)
 
     /**
      * Returns the position within [text] of the given line number and column.
      * Everything is zero based (so positionFor(0,0) will return 0).
      */
-    fun positionFor(line: Int, column: Int): Int {
-        val lineStart = lineStartPosition(line)
-        if (line >= 0 && line < paragraphs.size) {
-            return lineStart + clamp(0, paragraphs[line].length, column)
-        } else {
-            return lineStart
-        }
-    }
+    fun positionFor(line: Int, column: Int) = content.positionFor(line, column)
 
     /**
      * Returns the line/column as a [Pair] for the given position within the [text].
@@ -245,18 +217,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *
      * If the position is less than 0, or >= text.length then the result is undefined.
      */
-    fun lineColumnFor(position: Int): Pair<Int, Int> {
-        var count = 0
-        var i = 0
-        for (p in paragraphs) {
-            if (count + p.length >= position) {
-                return Pair(i, position - count)
-            }
-            count += p.length + 1 // 1 for the new line character
-            i++
-        }
-        return Pair(i, position - count)
-    }
+    fun lineColumnFor(position: Int) = content.lineColumnFor(position)
 
     /***************************************************************************
      *                                                                         *
@@ -428,52 +389,81 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
     /**
-     * The document is stored as a list of lines, and each line is stored as a CharSequence.
-     * Each line does NOT include the new line character.
+     * The document is stored as a list of [Paragraph]s, split by new-line characters.
+     * The [Paragraph] does not store the new-line characters (they are implied).
      *
-     * The [textProperty] is referenced, is backed by this list, so the document is not stored
-     * as a string.
+     * Note, TediArea's [text] and [textProperty] are backed by this ParagraphList (via [TediAreaContent]).
+     * At no point does TediArea store the document as a String (or even a set of strings).
      */
-    protected class ParagraphList(val content: TediAreaContent)
+    class ParagraphList
 
-        : AbstractList<CharSequence>(), ObservableList<CharSequence> {
+        : AbstractList<Paragraph>(), ObservableList<Paragraph> {
 
-        override fun get(index: Int): CharSequence {
-            return content.paragraphs[index]
-        }
+        internal var listenerHelper: ListListenerHelper<Paragraph>? = null
 
-        override fun addAll(elements: Collection<CharSequence>): Boolean {
-            throw UnsupportedOperationException()
-        }
+        internal val paragraphs = mutableListOf(Paragraph(""))
 
-        override fun addAll(vararg paragraphs: CharSequence): Boolean {
-            throw UnsupportedOperationException()
-        }
+        internal var contentLength = 0
 
-        override fun setAll(paragraphs: Collection<CharSequence>): Boolean {
-            throw UnsupportedOperationException()
-        }
+        /**
+         * The highest index into the [paragraphs] list with a valid [Paragraph.lineStartPosition].
+         * If < 0, then none are valid.
+         */
+        internal var lineStartValidIndex = 0
 
-        override fun setAll(vararg paragraphs: CharSequence): Boolean {
-            throw UnsupportedOperationException()
+        override fun get(index: Int): Paragraph {
+            return paragraphs[index]
         }
 
         override val size: Int
-            get() = content.paragraphs.size
+            get() = paragraphs.size
 
-        override fun addListener(listener: ListChangeListener<in CharSequence>) {
-            content.listenerHelper = ListListenerHelper.addListener(content.listenerHelper, listener)
+
+        override fun addListener(listener: ListChangeListener<in Paragraph>) {
+            listenerHelper = ListListenerHelper.addListener(listenerHelper, listener)
         }
 
-        override fun removeListener(listener: ListChangeListener<in CharSequence>) {
-            content.listenerHelper = ListListenerHelper.removeListener(content.listenerHelper, listener)
+        override fun removeListener(listener: ListChangeListener<in Paragraph>) {
+            listenerHelper = ListListenerHelper.removeListener(listenerHelper, listener)
         }
 
-        override fun removeAll(vararg elements: CharSequence): Boolean {
+        override fun addListener(listener: InvalidationListener) {
+            listenerHelper = ListListenerHelper.addListener<Paragraph>(listenerHelper, listener)
+        }
+
+        override fun removeListener(listener: InvalidationListener) {
+            listenerHelper = ListListenerHelper.removeListener<Paragraph>(listenerHelper, listener)
+        }
+
+
+        override fun addAll(elements: Collection<Paragraph>): Boolean {
+            return paragraphs.addAll(elements)
+        }
+
+        override fun addAll(vararg elements: Paragraph): Boolean {
+            return paragraphs.addAll(elements)
+        }
+
+        override fun removeAt(index: Int): Paragraph {
+            val result = paragraphs.removeAt(index)
+            invalidateLineStartPosition(index)
+            return result
+        }
+
+
+        override fun setAll(paragraphs: Collection<Paragraph>): Boolean {
             throw UnsupportedOperationException()
         }
 
-        override fun retainAll(vararg elements: CharSequence): Boolean {
+        override fun setAll(vararg paragraphs: Paragraph): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun removeAll(vararg elements: Paragraph): Boolean {
+            throw UnsupportedOperationException()
+        }
+
+        override fun retainAll(vararg elements: Paragraph): Boolean {
             throw UnsupportedOperationException()
         }
 
@@ -481,73 +471,14 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             throw UnsupportedOperationException()
         }
 
-        override fun addListener(listener: InvalidationListener) {
-            content.listenerHelper = ListListenerHelper.addListener<CharSequence>(content.listenerHelper, listener)
+
+        private fun invalidateLineStartPosition(line: Int) {
+            //println("Invalidating line $line (was $lineStartValidIndex now ${Math.min(lineStartValidIndex, line - 1)})")
+            lineStartValidIndex = Math.min(lineStartValidIndex, line - 1)
         }
 
-        override fun removeListener(listener: InvalidationListener) {
-            content.listenerHelper = ListListenerHelper.removeListener<CharSequence>(content.listenerHelper, listener)
-        }
-    }
-    // End ParagraphList
+        fun get(start: Int, end: Int): String {
 
-    /***************************************************************************
-     *                                                                         *
-     * ParagraphListChange class                                               *
-     *                                                                         *
-     **************************************************************************/
-    /**
-     */
-    protected class ParagraphListChange(
-            list: ObservableList<CharSequence>,
-            from: Int,
-            to: Int,
-            private val removed: List<CharSequence>)
-
-        : NonIterableChange<CharSequence>(from, to, list) {
-
-        override fun getRemoved(): List<CharSequence> {
-            return removed
-        }
-
-        override fun getPermutation(): IntArray {
-            return IntArray(0)
-        }
-    }
-    // End ParagraphListChange
-
-    /***************************************************************************
-     *                                                                         *
-     * TediAreaContent class                                                   *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * You can think of this as a "Document".
-     * It stores the text as a list of lines, where each line is stored as a
-     * StringBuffer.
-     *
-     * This data structure allows largish text documents to be edited without
-     * large String objects being created and then garbage collected.
-     *
-     * Note, whenever you use [text], it builds a String object from this document.
-     *
-     * Alas, TextAreaSkin does NOT make best use of this structure, and instead uses
-     * the string representation ([text]) when making changes.
-     * Therefore editing large documents is very inefficient.
-     */
-    protected class TediAreaContent : TextInputControl.Content {
-
-        internal val paragraphs = mutableListOf(StringBuilder(DEFAULT_PARAGRAPH_CAPACITY))
-        private var contentLength = 0
-        private val paragraphList = ParagraphList(this)
-        internal var listenerHelper: ListListenerHelper<CharSequence>? = null
-
-        private var helper: ExpressionHelper<String>? = null
-
-        fun paragraphList() = paragraphList
-
-        override fun get(start: Int, end: Int): String {
             val length = end - start
             val textBuilder = StringBuilder(length)
 
@@ -579,7 +510,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     paragraph = paragraphs[++paragraphIndex]
                     offset = 0
                 } else {
-                    textBuilder.append(paragraph[offset++])
+                    textBuilder.append(paragraph.text[offset++])
                 }
 
                 i++
@@ -588,85 +519,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             return textBuilder.toString()
         }
 
-        override fun insert(index: Int, textIn: String?, notifyListeners: Boolean) {
-
-            var text = textIn
-            if (index < 0 || index > contentLength) {
-                throw IndexOutOfBoundsException()
-            }
-
-            if (text == null) {
-                throw IllegalArgumentException()
-            }
-            text = filterInput(text, false, false)
-            val length = text.length
-            if (length > 0) {
-                // Split the text into lines
-                val lines = ArrayList<StringBuilder>()
-
-                var line = StringBuilder(DEFAULT_PARAGRAPH_CAPACITY)
-                for (i in 0..length - 1) {
-                    val c = text[i]
-
-                    if (c == '\n') {
-                        lines.add(line)
-                        line = StringBuilder(DEFAULT_PARAGRAPH_CAPACITY)
-                    } else {
-                        line.append(c)
-                    }
-                }
-
-                lines.add(line)
-
-                // Merge the text into the existing content
-                var paragraphIndex = paragraphs.size
-                var offset = contentLength + 1
-
-                var paragraph: StringBuilder
-
-                do {
-                    paragraph = paragraphs[--paragraphIndex]
-                    offset -= paragraph.length + 1
-                } while (index < offset)
-
-                val start = index - offset
-
-                val n = lines.size
-                if (n == 1) {
-                    // The text contains only a single line; insert it into the
-                    // intersecting paragraph
-                    paragraph.insert(start, line)
-                    fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
-                            listOf<CharSequence>(paragraph))
-                } else {
-                    // The text contains multiple line; split the intersecting
-                    // paragraph
-                    val end = paragraph.length
-                    val trailingText = paragraph.subSequence(start, end)
-                    paragraph.delete(start, end)
-
-                    // Append the first line to the intersecting paragraph and
-                    // append the trailing text to the last line
-                    val first = lines[0]
-                    paragraph.insert(start, first)
-                    line.append(trailingText)
-                    fireParagraphListChangeEvent(paragraphIndex, paragraphIndex + 1,
-                            listOf<CharSequence>(paragraph))
-
-                    // Insert the remaining lines into the paragraph list
-                    paragraphs.addAll(paragraphIndex + 1, lines.subList(1, n))
-                    fireParagraphListChangeEvent(paragraphIndex + 1, paragraphIndex + n, emptyList())
-                }
-
-                // Update content length
-                contentLength += length
-                if (notifyListeners) {
-                    ExpressionHelper.fireValueChangedEvent(helper)
-                }
-            }
-        }
-
-        override fun delete(start: Int, end: Int, notifyListeners: Boolean) {
+        fun delete(start: Int, end: Int) {
             if (start > end) {
                 throw IllegalArgumentException()
             }
@@ -679,87 +532,344 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
             if (length > 0) {
                 // Identify the trailing paragraph index
-                var paragraphIndex = paragraphs.size
-                var offset = contentLength + 1
-
-                var paragraph: StringBuilder?
-
-                do {
-                    paragraph = paragraphs[--paragraphIndex]
-                    offset -= paragraph.length + 1
-                } while (end < offset)
-
-                val trailingParagraphIndex = paragraphIndex
-                val trailingOffset = offset
-                val trailingParagraph = paragraph
-
-                // Identify the leading paragraph index
-                paragraphIndex++
-                offset += paragraph!!.length + 1
-
-                do {
-                    paragraph = paragraphs[--paragraphIndex]
-                    offset -= paragraph.length + 1
-                } while (start < offset)
-
-                val leadingParagraphIndex = paragraphIndex
-                val leadingOffset = offset
-                val leadingParagraph = paragraph
+                val leadingLineColumn = lineColumnFor(start)
+                val leadingParagraph = paragraphs[leadingLineColumn.first]
+                val trailingLineColumn = lineColumnFor(end)
+                val trailingParagraph = paragraphs[trailingLineColumn.first]
 
                 // Remove the text
-                if (leadingParagraphIndex == trailingParagraphIndex) {
+                if (leadingParagraph === trailingParagraph) {
                     // The removal affects only a single paragraph
-                    leadingParagraph!!.delete(start - leadingOffset,
-                            end - leadingOffset)
+                    invalidateLineStartPosition(leadingLineColumn.first + 1)
+                    leadingParagraph.delete(leadingLineColumn.second, trailingLineColumn.second)
+                    fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first + 1, listOf(leadingParagraph))
 
-                    fireParagraphListChangeEvent(leadingParagraphIndex, leadingParagraphIndex + 1,
-                            listOf<CharSequence>(leadingParagraph))
                 } else {
                     // The removal spans paragraphs; remove any intervening paragraphs and
                     // merge the leading and trailing segments
-                    val leadingSegment = leadingParagraph!!.subSequence(0,
-                            start - leadingOffset)
-                    val trailingSegmentLength = start + length - trailingOffset
+                    val leadingSegment = leadingParagraph.text.subSequence(0, leadingLineColumn.second)
 
-                    trailingParagraph!!.delete(0, trailingSegmentLength)
-                    fireParagraphListChangeEvent(trailingParagraphIndex, trailingParagraphIndex + 1,
-                            listOf<CharSequence>(trailingParagraph))
+                    trailingParagraph.delete(0, trailingLineColumn.second)
+                    fireParagraphListChangeEvent(trailingLineColumn.first, trailingLineColumn.first + 1, listOf(trailingParagraph))
 
-                    if (trailingParagraphIndex - leadingParagraphIndex > 0) {
-                        val removed = ArrayList<CharSequence>(paragraphs.subList(leadingParagraphIndex,
-                                trailingParagraphIndex))
-                        paragraphs.subList(leadingParagraphIndex,
-                                trailingParagraphIndex).clear()
-                        fireParagraphListChangeEvent(leadingParagraphIndex, leadingParagraphIndex,
-                                removed)
+                    if (trailingLineColumn.first - leadingLineColumn.first > 0) {
+                        // Remove whole paragraphs
+                        val removed = paragraphs.subList(leadingLineColumn.first, trailingLineColumn.first)
+                        invalidateLineStartPosition(leadingLineColumn.first + 1)
+                        paragraphs.subList(leadingLineColumn.first, trailingLineColumn.first).clear()
+                        fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first, removed)
                     }
 
                     // Trailing paragraph is now at the former leading paragraph's index
+                    invalidateLineStartPosition(leadingLineColumn.first)
                     trailingParagraph.insert(0, leadingSegment)
-                    fireParagraphListChangeEvent(leadingParagraphIndex, leadingParagraphIndex + 1,
-                            listOf<CharSequence>(leadingParagraph))
+                    fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first + 1, listOf(leadingParagraph))
+
                 }
 
                 // Update content length
                 contentLength -= length
+            }
+            /*
+            if (!check()) {
+                println("delete($start, $end) failed")
+            }
+            */
+        }
+
+        fun insert(position: Int, insertText: String) {
+
+            var text = insertText
+            if (position < 0 || position > contentLength) {
+                throw IndexOutOfBoundsException()
+            }
+
+            text = filterInput(text, false, false)
+            val length = text.length
+            if (length > 0) {
+                val lines = text.split("\n")
+                val n = lines.size
+
+                val startLineColumn = lineColumnFor(position)
+                val startParagraph = paragraphs[startLineColumn.first]
+
+                if (n == 1) {
+                    // The text contains only a single line; insert it into the intersecting paragraph
+                    startParagraph.insert(startLineColumn.second, text)
+                    fireParagraphListChangeEvent(startLineColumn.first, startLineColumn.first + 1, listOf(startParagraph))
+
+                } else {
+                    // The text contains multiple lines; split the intersecting paragraph
+                    val trailingText = startParagraph.text.subSequence(startLineColumn.second, startParagraph.length)
+                    startParagraph.delete(startLineColumn.second, startParagraph.length)
+                    invalidateLineStartPosition(startLineColumn.first + 1)
+
+                    // Append the first line to the intersecting paragraph
+                    startParagraph.insert(startLineColumn.second, lines[0])
+                    invalidateLineStartPosition(startLineColumn.first + 1)
+                    fireParagraphListChangeEvent(startLineColumn.first, startLineColumn.first + 1, listOf(startParagraph))
+
+                    // Insert the remaining lines into the paragraph list
+                    paragraphs.addAll(startLineColumn.first + 1, lines.subList(1, n).map { Paragraph(it) })
+                    invalidateLineStartPosition(startLineColumn.first + 1)
+                    fireParagraphListChangeEvent(startLineColumn.first + 1, startLineColumn.first + n, emptyList())
+
+                    // Add the trailing part which used to be in startParagraph.
+                    if (trailingText.isNotEmpty()) {
+                        val lastIndex = startLineColumn.first + n - 1
+                        paragraphs[lastIndex].insert(paragraphs[lastIndex].length, trailingText)
+                        invalidateLineStartPosition(lastIndex + 1)
+                        fireParagraphListChangeEvent(lastIndex, lastIndex + 1, emptyList())
+                    }
+                }
+
+                // Update content length
+                contentLength += length
+            }
+            /*
+            if (!check()) {
+                println("insert($position, '$insertText') failed")
+            }
+            */
+        }
+
+        private fun fireParagraphListChangeEvent(from: Int, to: Int, removed: List<Paragraph>) {
+            val change = ParagraphListChange(this, from, to, removed)
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, change)
+        }
+
+        /**
+         * Returns the position within [text] of the start of the nth line.
+         * [line] and the returned result are zero based.
+         */
+        fun lineStartPosition(line: Int): Int {
+            if (lineStartValidIndex < line) {
+
+                if (lineStartValidIndex < 0) {
+                    lineStartValidIndex = 0
+                    paragraphs[0].lineStartPosition = 0
+                }
+
+                var total = paragraphs[lineStartValidIndex].lineStartPosition + paragraphs[lineStartValidIndex].length + 1
+                val requiredValidIndex = Math.min(line, paragraphs.size - 1)
+                for (i in lineStartValidIndex + 1..requiredValidIndex) {
+                    val p = paragraphs[i]
+                    p.lineStartPosition = total
+                    total += p.length + 1
+                }
+                lineStartValidIndex = requiredValidIndex
+            }
+
+            return paragraphs[line].lineStartPosition
+        }
+
+        /**
+         * Used during debugging to check that the cached lineStartPositions are correct.
+         */
+        fun check(): Boolean {
+            println("Checking cached data")
+            var count = 0
+            for (i in 0..lineStartValidIndex) {
+                if (count != paragraphs[i].lineStartPosition) {
+                    println("Line $i actual=$count cached=${paragraphs[i].lineStartPosition}\n")
+
+                    for (p in 0..lineStartValidIndex) {
+                        print(paragraphs[p])
+                    }
+                    return false
+                }
+                count += paragraphs[i].length + 1
+            }
+            return true
+        }
+
+        /**
+         * Returns the position within [text] of the end of the nth line.
+         * [line] and the returned result are zero based.
+         */
+        fun lineEndPosition(line: Int) = lineStartPosition(line) + paragraphs[line].length
+
+        /**
+         * Returns the position within [text] of the given line number and column.
+         * Everything is zero based (so positionFor(0,0) will return 0).
+         */
+        fun positionFor(line: Int, column: Int): Int {
+            val lineStart = lineStartPosition(line)
+            if (line >= 0 && line < paragraphs.size) {
+                return lineStart + clamp(0, paragraphs[line].length, column)
+            } else {
+                return lineStart
+            }
+        }
+
+        fun lineFor(position: Int): Int {
+            var count = 0
+            var i = 0
+            for (p in paragraphs) {
+                if (count + p.length >= position) {
+                    return i
+                }
+                count += p.length + 1 // 1 for the new line character
+                i++
+            }
+            return i
+        }
+
+        /**
+         * Returns the line/column as a [Pair] for the given position within the [text].
+         * Everything is zero-based. So Pair(0,0) relates to position 0 (the start of the text.
+         *
+         * If the position is less than 0, or >= text.length then the result is undefined.
+         */
+        fun lineColumnFor(position: Int): Pair<Int, Int> {
+            var count = 0
+            var i = 0
+            for (p in paragraphs) {
+                if (count + p.length >= position) {
+                    return Pair(i, position - count)
+                }
+                count += p.length + 1 // 1 for the new line character
+                i++
+            }
+            return Pair(i, position - count)
+        }
+
+        /**
+         * Internally a paragraph is stored as a StringBuffer, however, never cast [text] to StringBuffer,
+         * because if you make changes to [text], then bad things will happen!
+         *
+         * In addition to the StringBuffer, a Paragraph stores [lineStartPosition], its position within the document.
+         * So for if we have two paragraphs "Hello" and "World", then Hello will store a 0, and World will
+         * store a 6 (5 plus 1 for the new-line character).
+         * These numbers are lazily evaluated after changes to the document. For example, if we create a new
+         * paragraph 3, then it (and all later Paragraphs) will have invalid [lineStartPosition]s.
+         *
+         * [ParagraphList] keeps track of which [lineStartPosition]s can be trusted via [lineStartValidIndex].
+         * [lineStartValidIndex] is used to optimise conversion between line/column numbers and positions.
+         */
+        inner class Paragraph(private val line: StringBuffer) {
+
+            constructor(text: CharSequence) : this(StringBuffer(text))
+
+            val length
+                get() = line.length
+
+            val text: CharSequence = line
+
+            /**
+             * The position of the start of this paragraph.
+             * NOTE. This data becomes invalid, and must only be read via [ParagraphList.lineStartPosition]
+             */
+            internal var lineStartPosition: Int = 0
+
+            fun insert(start: Int, str: CharSequence) {
+                line.insert(start, str)
+            }
+
+            fun delete(start: Int, end: Int) {
+                line.delete(start, end)
+            }
+
+            override fun toString() = "($lineStartPosition) : $text\n"
+
+        }
+
+    }
+    // End ParagraphList
+
+    /***************************************************************************
+     *                                                                         *
+     * ParagraphListChange class                                               *
+     *                                                                         *
+     **************************************************************************/
+    /**
+     */
+    protected class ParagraphListChange(
+            list: ObservableList<Paragraph>,
+            from: Int,
+            to: Int,
+            private val removed: List<Paragraph>)
+
+        : NonIterableChange<Paragraph>(from, to, list) {
+
+        override fun getRemoved(): List<Paragraph> {
+            return removed
+        }
+
+        override fun getPermutation(): IntArray {
+            return IntArray(0)
+        }
+    }
+    // End ParagraphListChange
+
+    /***************************************************************************
+     *                                                                         *
+     * TediAreaContent class                                                   *
+     *                                                                         *
+     **************************************************************************/
+
+    /**
+     * You can think of this as a "Document", or "Model" in an MVC pattern
+     * with [TediAreaSkin] as the View, and [TediAreaBehaviour] as the Controller.
+     *
+     * All changes to the document are made through this class (never using [ParagraphList] directly).
+     * It extends the Content defined in TextInputControl.
+     *
+     * This is a thin wrapper around [ParagraphList], which does most of the hard work.
+     */
+    protected class TediAreaContent : TextInputControl.Content {
+
+        private val paragraphList = ParagraphList()
+
+        private var helper: ExpressionHelper<String>? = null
+
+        fun paragraphsProperty() = ReadOnlyListWrapper(paragraphList)
+
+        override fun insert(index: Int, insertText: String?, notifyListeners: Boolean) {
+            insertText ?: throw IllegalArgumentException("insertText cannot be null")
+
+            paragraphList.insert(index, insertText)
+            if (notifyListeners && insertText.isNotEmpty()) {
+                ExpressionHelper.fireValueChangedEvent(helper)
+            }
+        }
+
+        override fun delete(start: Int, end: Int, notifyListeners: Boolean) {
+            if (start != end) {
+                paragraphList.delete(start, end)
                 if (notifyListeners) {
                     ExpressionHelper.fireValueChangedEvent(helper)
                 }
             }
-
         }
 
         override fun length(): Int {
-            return contentLength
+            return paragraphList.contentLength
+        }
+
+        override fun getValue(): String {
+            return get()
         }
 
         override fun get(): String {
             return get(0, length())
         }
 
-        override fun getValue(): String {
-            return get()
+        override fun get(start: Int, end: Int): String {
+            return paragraphList.get(start, end)
         }
+
+        fun getLine(line: Int) = paragraphList[line].text
+
+
+        fun lineStartPosition(line: Int) = paragraphList.lineStartPosition(line)
+
+        fun lineEndPosition(line: Int) = paragraphList.lineEndPosition(line)
+
+        fun lineColumnFor(position: Int) = paragraphList.lineColumnFor(position)
+
+        fun positionFor(line: Int, column: Int) = paragraphList.positionFor(line, column)
+
 
         override fun addListener(changeListener: ChangeListener<in String>) {
             helper = ExpressionHelper.addListener(helper, this, changeListener)
@@ -777,10 +887,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             helper = ExpressionHelper.removeListener(helper, listener)
         }
 
-        private fun fireParagraphListChangeEvent(from: Int, to: Int, removed: List<CharSequence>) {
-            val change = ParagraphListChange(paragraphList, from, to, removed)
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, change)
-        }
     }
     // End of class TediAreaContent
 

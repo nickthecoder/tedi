@@ -1,6 +1,8 @@
 .tedi-area {
-    /*-fx-font-family: 'monospace';*/
-    /*-fx-font-size: 30;*/
+}
+
+.tedi-area.code {
+    -fx-font-family: 'monospace';
 }
 
 .tedi-area .gutter {
