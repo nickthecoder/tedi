@@ -300,6 +300,7 @@ The "line numbers" button (ctrl+L) won't work here.
             }
 
             if (code) {
+                // This will use a monospaced font, and display line numbers.
                 textInput.styleClass.add("code")
             }
         }

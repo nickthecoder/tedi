@@ -3,6 +3,7 @@
 
 .tedi-area.code {
     -fx-font-family: 'monospace';
+    -fx-display-line-numbers: true;
 }
 
 .tedi-area .gutter {
