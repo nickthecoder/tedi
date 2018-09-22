@@ -23,6 +23,8 @@ abstract class UndoRedo {
     open fun beginCompound() {}
     open fun endCompound() {}
 
+    abstract fun clear()
+
     abstract fun undo()
 
     abstract fun redo()
@@ -57,6 +59,10 @@ class StandardUndoRedo(val tediArea: TediArea) : UndoRedo() {
 
     override fun redo() {
         tediArea.redo()
+    }
+
+    override fun clear() {
+        TODO("not implemented")
     }
 }
 
@@ -99,6 +105,12 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
 
     init {
         destroyStandardUndoList()
+    }
+
+    override fun clear() {
+        index = -1
+        changes.clear()
+        updateState()
     }
 
     fun add(change: Change) {

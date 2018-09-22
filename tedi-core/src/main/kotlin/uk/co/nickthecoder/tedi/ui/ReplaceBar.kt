@@ -3,7 +3,10 @@ package uk.co.nickthecoder.tedi.ui
 import com.sun.javafx.collections.ObservableListWrapper
 import javafx.event.EventHandler
 import javafx.scene.control.Button
+import javafx.scene.control.ToggleButton
 import javafx.scene.control.ToolBar
+import javafx.scene.control.Tooltip
+import uk.co.nickthecoder.tedi.loadGraphic
 import uk.co.nickthecoder.tedi.onSceneAvailable
 import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
@@ -58,8 +61,6 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
      * This is a work-around for a bug in ComboBox.
      * I want to focus on [search], but doing search.requestFocus causes the caret to be hidden.
      * See https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
-     *
-     * Note, I really wanted search.requestFocusOnSceneAvailable()
      */
     fun requestFocus() {
         replacement.onSceneAvailable {
@@ -67,6 +68,15 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
         }
     }
 
+    fun createToggleButton(): ToggleButton {
+        val button = ToggleButton()
+        with(button) {
+            loadGraphic(FindBar::class.java, "replace.png")
+            selectedProperty().bindBidirectional(toolBar.visibleProperty())
+            tooltip = Tooltip("Find and Replace")
+        }
+        return button
+    }
 
     companion object {
         val replacementHistory = ObservableListWrapper(mutableListOf<String>())

@@ -9,7 +9,7 @@ import uk.co.nickthecoder.tedi.TediArea
 import java.util.regex.Pattern
 
 /**
- * Performs search and replace operations on a TextInputControl.
+ * Performs find and replace operations on a TextInputControl.
  * The [textInputControl] can be a TextField, a TextArea or a TediArea.
  *
  * When highlighting of matches is implemented in TediArea, then a sub-class or TextInputControl will be created
@@ -24,11 +24,11 @@ open class TextInputControlMatcher(tediArea: TediArea) {
             textInputControlProperty.set(v)
         }
 
-    val searchProperty = SimpleStringProperty("")
-    var search: String?
-        get() = searchProperty.get()
+    val findProperty = SimpleStringProperty("")
+    var find: String?
+        get() = findProperty.get()
         set(v) {
-            searchProperty.set(v)
+            findProperty.set(v)
         }
 
     val matchCaseProperty = SimpleBooleanProperty(false)
@@ -82,8 +82,8 @@ open class TextInputControlMatcher(tediArea: TediArea) {
         }
 
     /**
-     * When the search bar is hidden, set this to false.
-     * When [inUse] == true, then searches will be restarted whenever the text changes, so
+     * When the find bar is hidden, set this to false.
+     * When [inUse] == true, then matches will be restarted whenever the text changes, so
      * it will be needless inefficient to keep inUse = true for longer than needed.
      */
     val inUseProperty = SimpleBooleanProperty(true)
@@ -109,11 +109,11 @@ open class TextInputControlMatcher(tediArea: TediArea) {
 
     init {
         textInputControlProperty.addListener { _, oldValue, newValue -> textInputControlChanged(oldValue, newValue) }
-        searchProperty.addListener { _, _, _ -> startSearch() }
-        matchCaseProperty.addListener { _, _, _ -> startSearch() }
-        matchRegexProperty.addListener { _, _, _ -> startSearch() }
-        matchWordsProperty.addListener { _, _, _ -> startSearch() }
-        inUseProperty.addListener { _, _, _ -> startSearch() }
+        findProperty.addListener { _, _, _ -> startFind() }
+        matchCaseProperty.addListener { _, _, _ -> startFind() }
+        matchRegexProperty.addListener { _, _, _ -> startFind() }
+        matchWordsProperty.addListener { _, _, _ -> startFind() }
+        inUseProperty.addListener { _, _, _ -> startFind() }
 
         tediArea.caretPositionProperty().addListener(selectionChangedListener)
         tediArea.anchorProperty().addListener(selectionChangedListener)
@@ -136,26 +136,26 @@ open class TextInputControlMatcher(tediArea: TediArea) {
 
     open fun textChanged() {
         if (state == State.NOTHING) {
-            startSearch()
+            startFind()
         }
     }
 
-    open fun startSearch(changeSelection: Boolean = true) {
+    open fun startFind(changeSelection: Boolean = true) {
         matches.clear()
         currentMatchIndex = -1
 
-        if (inUse && search?.isNotEmpty() ?: false) {
+        if (inUse && find?.isNotEmpty() ?: false) {
 
             val caseFlag = if (matchCase) 0 else Pattern.CASE_INSENSITIVE
             val literalFlag = if (matchRegex) 0 else Pattern.LITERAL
             if (matchWords) {
                 if (matchRegex) {
-                    pattern = Pattern.compile("\\b${search}\\b", caseFlag + literalFlag)
+                    pattern = Pattern.compile("\\b${find}\\b", caseFlag + literalFlag)
                 } else {
-                    pattern = Pattern.compile("\\b${Pattern.quote(search)}\\b", caseFlag)
+                    pattern = Pattern.compile("\\b${Pattern.quote(find)}\\b", caseFlag)
                 }
             } else {
-                pattern = Pattern.compile(search, caseFlag + literalFlag + Pattern.MULTILINE)
+                pattern = Pattern.compile(find, caseFlag + literalFlag + Pattern.MULTILINE)
             }
             matcher = pattern.matcher(textInputControl.text)
             val caret = textInputControl.caretPosition
@@ -180,7 +180,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
     protected fun updatePrevNext() {
         hasPrev = currentMatchIndex > 0
         hasNext = currentMatchIndex < matches.size - 1
-        status = if (search?.isEmpty() ?: true) {
+        status = if (find?.isEmpty() ?: true) {
             ""
         } else if (inUse) {
             if (matches.isEmpty()) {
@@ -234,7 +234,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
             state = State.REPLACE
             textInputControl.replaceSelection(replacement)
             state = State.NOTHING
-            startSearch() // Will select the next match
+            startFind() // Will select the next match
         }
     }
 
@@ -254,7 +254,7 @@ open class TextInputControlMatcher(tediArea: TediArea) {
             control.undoRedo.endCompound()
         }
         state = State.NOTHING
-        startSearch(false)
+        startFind(false)
     }
 
     open fun findMatchIndex(match: Match): Int {

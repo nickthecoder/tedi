@@ -16,13 +16,11 @@
 /*
  * This is copied from modena.css.
  * I don't know why I need this, but if I leave it out,
- * then the dark blue outline does not appear around TediAreas OR TextAreas. Weird.
+ * then the dark blue outline does not appear around TediArea.
  * Only the faint blue outline of the .content appears.
- *
- * It isn't a bug in this css file though, because if I don't style the scene with this file, the dark blue
- * outline still doesn't appear on TextAreas. Is it a bug in the version of JavaFX that I'm using???
+ * Maybe the theme that I'm using doesn't have that, as TextArea doesn't seem to show it either. Hmm.
  */
-.text-input:focused {
+.tedi-area:focused {
     -fx-highlight-fill: -fx-accent;
     -fx-highlight-text-fill: white;
     -fx-background-color:
@@ -34,7 +32,7 @@
     -fx-background-radius: 3, 2, 4, 0;
 }
 
-/***** For the ui package (go to line dialog, and search/replace toolbars) *****/
+/***** For the ui package (go to line dialog, and find/replace toolbars) *****/
 
 .tedi-form {
     -fx-padding: 20px;

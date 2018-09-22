@@ -17,7 +17,7 @@ class DemoWindow(stage: Stage = Stage()) {
     val dummyArea = TediArea("dummy")
 
     /**
-     * The root of the scene. top=toolbar, center = tabPane, bottom = searchAndReplace
+     * The root of the scene. top=toolbar, center = tabPane, bottom = findAndReplace
      */
     val borderPane = BorderPane()
 
@@ -32,37 +32,37 @@ class DemoWindow(stage: Stage = Stage()) {
     val tabPane = TabPane()
 
     /**
-     * The non-gui part of search and replace.
+     * The non-gui part of find and replace.
      */
     val matcher = TextInputControlMatcher(dummyArea)
 
     /**
-     * A tool bar, which appears below the tabPane (inside searchAndReplaceToolBars)
+     * A tool bar, which appears below the tabPane (inside findAndReplaceToolBars)
      */
-    val searchBar = SearchBar(matcher)
+    val findBar = FindBar(matcher)
 
     /**
-     * A tool bar, which appears below the searchBar (inside searchAndReplaceToolBars)
+     * A tool bar, which appears below the findBar (inside findAndReplaceToolBars)
      */
     val replaceBar = ReplaceBar(matcher)
 
     /**
-     * At the bottom of the scene. Contains searchBar and replaceBar.
+     * At the bottom of the scene. Contains findBar and replaceBar.
      */
-    val searchAndReplaceToolBars = VBox()
+    val findAndReplaceToolBars = VBox()
 
     // Buttons within the toolBar
     val undo = Button()
     val redo = Button()
     val toggleLineNumbers = ToggleButton()
-    val toggleSearch = ToggleButton()
-    val toggleSearchAndReplace = ToggleButton()
+    val toggleFind = findBar.createToggleButton()
+    val toggleFindAndReplace = replaceBar.createToggleButton()
     val goto = GotoDialog.createGotoButton { currentArea }.apply { tooltip = Tooltip("Go to Line (ctrl+G)") }
 
     val scene = Scene(borderPane, 700.0, 500.0)
 
     /**
-     * Keep track of the "current" TextArea/TediArea, so that search and replace, and the line-number toggle button
+     * Keep track of the "current" TextArea/TediArea, so that find and replace, and the line-number toggle button
      * affect the correct Control.
      * This is set from within EditorTab (when a the TextInputControl gains focus).
      *
@@ -101,9 +101,9 @@ class DemoWindow(stage: Stage = Stage()) {
         /*
          * Automatically removes children when they are made invisible.
          * Then replaces them if they are made visible again.
-         * Without this, the searchAndReplaceToolBars VBox would take up space even when its children were hidden.
+         * Without this, the findAndReplaceToolBars VBox would take up space even when its children were hidden.
          */
-        RemoveHiddenChildren(searchAndReplaceToolBars.children)
+        RemoveHiddenChildren(findAndReplaceToolBars.children)
 
         // Applies tedi.css found in tedi-core's jar file.
         TediArea.style(scene)
@@ -112,7 +112,7 @@ class DemoWindow(stage: Stage = Stage()) {
             styleClass.add("example")
             center = tabPane
             top = toolBar
-            bottom = searchAndReplaceToolBars
+            bottom = findAndReplaceToolBars
         }
 
         // Create some tabs, whose contents are taken from resources within the jar files.
@@ -151,24 +151,20 @@ The "line numbers" button (ctrl+L) won't work here.
         }
 
         with(toggleLineNumbers) {
-            loadGraphic(SearchBar::class.java, "line-numbers.png")
+            loadGraphic(FindBar::class.java, "line-numbers.png")
             tooltip = Tooltip("Show/Hide Line Numbers (ctrl+L)")
         }
 
-        with(toggleSearch) {
-            loadGraphic(SearchBar::class.java, "search.png")
+        with(toggleFind) {
             tooltip = Tooltip("Find (ctrl+F)")
-            selectedProperty().bindBidirectional(searchBar.toolBar.visibleProperty())
         }
 
-        with(toggleSearchAndReplace) {
-            loadGraphic(ReplaceBar::class.java, "replace.png")
+        with(toggleFindAndReplace) {
             tooltip = Tooltip("Find & Replace (ctrl+R)")
-            selectedProperty().bindBidirectional(replaceBar.toolBar.visibleProperty())
         }
 
         // Without this, the highlights on the tool bars are wrong.
-        with(searchBar) {
+        with(findBar) {
             toolBar.styleClass.add("bottom")
         }
         with(replaceBar) {
@@ -176,14 +172,14 @@ The "line numbers" button (ctrl+L) won't work here.
         }
 
         with(toolBar) {
-            items.addAll(undo, redo, toggleLineNumbers, toggleSearch, toggleSearchAndReplace, goto)
+            items.addAll(undo, redo, toggleLineNumbers, toggleFind, toggleFindAndReplace, goto)
         }
 
-        with(searchAndReplaceToolBars) {
-            children.addAll(searchBar.toolBar, replaceBar.toolBar)
+        with(findAndReplaceToolBars) {
+            children.addAll(findBar.toolBar, replaceBar.toolBar)
         }
 
-        // Hides the search and replace toolbars.
+        // Hides the find and replace toolbars.
         matcher.inUse = false
 
         stage.scene = scene
@@ -228,7 +224,7 @@ The "line numbers" button (ctrl+L) won't work here.
             when (event.code) {
                 KeyCode.F -> {
                     matcher.inUse = true
-                    searchBar.requestFocus()
+                    findBar.requestFocus()
                 }
                 KeyCode.Z -> if (event.isShiftDown) redo() else undo()
                 KeyCode.Y -> redo()

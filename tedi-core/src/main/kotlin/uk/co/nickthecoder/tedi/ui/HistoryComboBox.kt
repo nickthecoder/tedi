@@ -25,7 +25,7 @@ import java.util.prefs.Preferences
  *
  * No limit is placed on the number of items in the list.
  *
- * This was created for use by [SearchBar] and [ReplaceBar].
+ * This was created for use by [FindBar] and [ReplaceBar].
  */
 class HistoryComboBox(history: ObservableList<String>)
     : ComboBox<String>() {

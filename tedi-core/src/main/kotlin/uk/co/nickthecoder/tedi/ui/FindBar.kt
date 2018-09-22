@@ -7,7 +7,6 @@ import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
 import uk.co.nickthecoder.tedi.loadGraphic
 import uk.co.nickthecoder.tedi.onSceneAvailable
-import uk.co.nickthecoder.tedi.requestFocusOnSceneAvailable
 import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
 /**
@@ -17,17 +16,17 @@ import uk.co.nickthecoder.tedi.requestFocusWithCaret
  * Making the [toolBar] hidden (toolbar.isVisible = false) will disable the [TextInputControlMatcher].
  *
  * If your application has multiple TediAreas (for example inside a TabPane), then you can either :
- * 1. Create a single matcher, and a single SearchBar for uses
- * 2. Create a matcher and a SearchBar for each TediArea.
+ * 1. Create a single matcher, and a single [FindBar] for uses
+ * 2. Create a matcher and a [FindBar] for each TediArea.
  *
  * If doing the former, then you need to set the TextInputControlMatcher.textInputControl appropriately
  * (for example, whenever you select a new tab, or whenever a TediArea gains focus).
  */
-open class SearchBar(val matcher: TextInputControlMatcher) {
+open class FindBar(val matcher: TextInputControlMatcher) {
 
     val toolBar = ToolBar()
 
-    val search = HistoryComboBox(searchHistory)
+    val find = HistoryComboBox(findHistory)
 
     val prev = Button()
 
@@ -43,11 +42,11 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
     init {
 
-        search.isEditable = true
+        find.isEditable = true
 
         toolBar.visibleProperty().addListener { _, _, newValue ->
             if (newValue == true) {
-                search.requestFocusOnSceneAvailable()
+                requestFocus()
             }
         }
 
@@ -56,21 +55,21 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         toolBar.setVisible(true)
 
         with(toolBar) {
-            styleClass.add("tedi-search-bar")
-            items.addAll(search, prev, next, Separator(), matchCase, matchRegex, matchWords, Separator(), status)
+            styleClass.add("tedi-find-bar")
+            items.addAll(find, prev, next, Separator(), matchCase, matchRegex, matchWords, Separator(), status)
         }
 
-        with(search) {
-            promptText = "search"
-            styleClass.add("search")
-            valueProperty().bindBidirectional(matcher.searchProperty)
-            addEventHandler(KeyEvent.KEY_PRESSED) { keyPressedInSearchField(it) }
+        with(find) {
+            promptText = "find"
+            styleClass.add("find")
+            valueProperty().bindBidirectional(matcher.findProperty)
+            addEventHandler(KeyEvent.KEY_PRESSED) { keyPressedInFindField(it) }
         }
 
         with(prev) {
             styleClass.add("prev")
             disableProperty().bind(matcher.hasPrevProperty.not())
-            loadGraphic(SearchBar::class.java, "prev.png")
+            loadGraphic(FindBar::class.java, "prev.png")
             tooltip = Tooltip("Previous match (Up)")
             onAction = EventHandler { matcher.previousMatch() }
         }
@@ -78,7 +77,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         with(next) {
             styleClass.add("next")
             disableProperty().bind(matcher.hasNextProperty.not())
-            loadGraphic(SearchBar::class.java, "next.png")
+            loadGraphic(FindBar::class.java, "next.png")
             tooltip = Tooltip("Next match (Down)")
             onAction = EventHandler { matcher.nextMatch() }
         }
@@ -109,16 +108,16 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
     /**
      * This is a work-around for a bug in ComboBox.
-     * I want to focus on [search], but doing search.requestFocus causes the caret to be hidden.
+     * I want to focus on [find], but doing find.requestFocus causes the caret to be hidden.
      * See https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
      */
     fun requestFocus() {
-        search.onSceneAvailable {
-            search.requestFocusWithCaret()
+        find.onSceneAvailable {
+            find.requestFocusWithCaret()
         }
     }
 
-    fun keyPressedInSearchField(event: KeyEvent) {
+    fun keyPressedInFindField(event: KeyEvent) {
         var consume = true
         if (event.isControlDown) {
 
@@ -131,7 +130,7 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
 
         } else {
             when (event.code) {
-                KeyCode.ENTER -> matcher.startSearch()
+                KeyCode.ENTER -> matcher.startFind()
                 KeyCode.UP -> matcher.previousMatch()
                 KeyCode.DOWN -> matcher.nextMatch()
                 else -> consume = false
@@ -141,7 +140,19 @@ open class SearchBar(val matcher: TextInputControlMatcher) {
         if (consume) event.consume()
     }
 
+    fun createToggleButton(): ToggleButton {
+        val button = ToggleButton()
+        with(button) {
+            tooltip = Tooltip("Find")
+            loadGraphic(FindBar::class.java, "find.png")
+            selectedProperty().bindBidirectional(toolBar.visibleProperty())
+        }
+
+        return button
+    }
+
+
     companion object {
-        val searchHistory = ObservableListWrapper(mutableListOf<String>())
+        val findHistory = ObservableListWrapper(mutableListOf<String>())
     }
 }
