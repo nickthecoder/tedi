@@ -335,8 +335,16 @@ class TediAreaSkin(val control: TediArea)
         scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
     }
 
+    fun positionForPoint(x: Double, y: Double): Int {
+        val point = Point2D(0.0, 0.0)
+        val contentViewBounds = contentView.localToScene(point)
+        val controlBounds = control.localToScene(point)
+        return positionForContentPoint(
+                x + controlBounds.x - contentViewBounds.x,
+                y + controlBounds.y - contentViewBounds.y)
+    }
 
-    fun getCaretPosition(x: Double, y: Double): Int {
+    fun positionForContentPoint(x: Double, y: Double): Int {
         return paragraphNode.hitTestChar(x, y).getInsertionIndex()
     }
 

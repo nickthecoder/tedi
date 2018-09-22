@@ -1,0 +1,20 @@
+This is a regular TextArea.
+
+Here's some differences between this TextArea, and TediAreas :
+
+    The word selection is worse (for source code at least!).
+        Try double clicking inside : "GotoDialog.createGotoButton" and
+        compare it by double clicking the text in DemoWindow.
+
+    Tab and shift+Tab in a TextArea are useless when a block is selected.
+
+    The "line numbers" button (ctrl+L) won't work here or course!
+
+Both TextArea and TediArea extend TextInputControl, so they can be
+used somewhat interchangeably.
+There are exceptions though. Most notably undo/redo is different when
+using BetterUndoRedo.
+The demo uses BetterUndoRedo, and therefore the code is a little
+cumbersome to switch behaviours for TediArea and TextArea.
+However, if BetterUndoRedo wasn't being used, then the demo could use
+the same undo/redo code for TediArea and TextArea.

@@ -200,7 +200,7 @@ class TediAreaBehavior(val control: TediArea)
 
             // if the primary button was pressed
             if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
-                val mousePosition = skin.getCaretPosition(e.x, e.y)
+                val mousePosition = skin.positionForContentPoint(e.x, e.y)
 
                 val anchor = control.anchor
                 val caretPosition = control.caretPosition
@@ -244,7 +244,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled && !e!!.isSynthesized) {
             if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown ||
                     e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown)) {
-                skin.positionCaret(skin.getCaretPosition(e.x, e.y), true, false)
+                skin.positionCaret(skin.positionForContentPoint(e.x, e.y), true, false)
             }
         }
         deferClick = false
@@ -258,7 +258,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled) {
             if (deferClick) {
                 deferClick = false
-                skin.positionCaret(skin.getCaretPosition(e!!.x, e.y), shiftDown, false)
+                skin.positionCaret(skin.positionForPoint(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
         }

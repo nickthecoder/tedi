@@ -219,6 +219,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun lineColumnFor(position: Int) = content.lineColumnFor(position)
 
+    fun positionForPoint(x: Double, y: Double): Int {
+        return (skin as TediAreaSkin).positionForPoint(x, y)
+    }
+
+
     /***************************************************************************
      *                                                                         *
      * TextInputControl has a rather limited (and crap) undo/redo facility.    *

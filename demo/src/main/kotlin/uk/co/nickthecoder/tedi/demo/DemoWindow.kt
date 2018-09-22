@@ -6,11 +6,13 @@ import javafx.scene.Scene
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
+import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
 import uk.co.nickthecoder.tedi.ui.*
+import java.util.regex.Pattern
 
 class DemoWindow(stage: Stage = Stage()) {
 
@@ -123,19 +125,7 @@ class DemoWindow(stage: Stage = Stage()) {
             tabs.add(TediTab().apply { load(DemoWindow::class.java, "DemoWindow", true) })
             tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css", true) })
 
-            tabs.add(TextAreaTab("""This is a regular TextArea.
-Notice how TediArea and TextArea can be used seamlessly, because they both extend from TextInputControl.
-
-Some differences between this TextArea, and the other TediAreas :
-
-The word selection is worse (for source code at least!).
-Try double clicking inside : uk.co.nickthecoder.tedi, and compare it with the package statement in DemoWindow.
-
-Tab and shift+Tab in a TextArea are useless for source code.
-
-The "line numbers" button (ctrl+L) won't work here.
-
-"""))
+            tabs.add(TextAreaTab().apply { load(DemoWindow::class.java, "TextArea", false) })
         }
 
         with(undo) {
@@ -320,10 +310,56 @@ The "line numbers" button (ctrl+L) won't work here.
                 // Note, when using this, we cannot use TediArea.undo() etc, and instead use TediArea.undoRedo.undo().
                 undoRedo = BetterUndoRedo(tediArea)
             }
+            tediArea.addEventFilter(MouseEvent.MOUSE_PRESSED) { contextMenuHandler(it) }
+            tediArea.addEventFilter(MouseEvent.MOUSE_RELEASED) { contextMenuHandler(it) }
+        }
 
+        /**
+         * A silly example, showing how to get the line, column and character position
+         * from a mouse event.
+         */
+        fun contextMenuHandler(event: MouseEvent) {
+            if (event.isPopupTrigger) {
+                val pos = tediArea.positionForPoint(event.x, event.y)
+                val (line, column) = tediArea.lineColumnFor(pos)
+                val lineText = tediArea.getLine(line)
+
+                tediArea.contextMenu = ContextMenu(
+                        MenuItem("Mouse : (${event.x.toInt()},${event.y.toInt()})"),
+                        MenuItem("Line ${line + 1} Column ${column + 1}"),
+                        MenuItem("Character Position $pos"))
+                tediArea.contextMenu.items.forEach { it.isDisable = true }
+
+                // Find the word at the given point
+                val pattern = Pattern.compile("\\b\\w+?\\b")
+                val matcher = pattern.matcher(lineText)
+                var word: String? = null
+                var wordStart: Int? = null
+                var wordEnd: Int? = null
+                while (matcher.find()) {
+                    if (matcher.start() <= column && matcher.end() >= column) {
+                        wordStart = matcher.start()
+                        wordEnd = matcher.end()
+                        word = lineText.substring(matcher.start(), matcher.end())
+                        break
+                    }
+                }
+                if (word != null) {
+                    val selectWord = MenuItem("Select word : '$word'")
+                    selectWord.setOnAction {
+                        tediArea.selectRange(
+                                pos - column + wordStart!!,
+                                pos - column + wordEnd!!)
+                    }
+                    tediArea.contextMenu.items.add(selectWord)
+                }
+
+                tediArea.contextMenu.show(tediArea, event.screenX, event.screenY)
+                event.consume()
+            }
         }
     }
 
-    inner class TextAreaTab(content: String) : EditorTab(TextArea(content), "TextArea")
+    inner class TextAreaTab : EditorTab(TextArea(), "TextArea")
 
 }
