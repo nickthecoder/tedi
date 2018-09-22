@@ -314,9 +314,15 @@ class TediAreaSkin(val control: TediArea)
 
         control.textProperty().addListener { _ ->
             paragraphNode.text = control.textProperty().valueSafe
-            targetCaretX = -1.0
             contentView.requestLayout()
         }
+
+        /**
+         * Reset the caretPosition whenever the selection changes.
+         * Note. in [changeLine], the selection is changed, but targetCaretX is set again after property
+         * change event is fired.
+         */
+        caretPosition.addListener { _, _, _ -> targetCaretX = -1.0 }
     }
 
     /***************************************************************************
@@ -425,7 +431,8 @@ class TediAreaSkin(val control: TediArea)
     private val tmpText = Text()
 
     /**
-     *
+     * Move the caret up (or down if n < 1) n lines, keeping the caret in roughly the same X coordinate.
+     * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
@@ -450,6 +457,7 @@ class TediAreaSkin(val control: TediArea)
             control.selectRange(newPosition, newPosition)
         }
 
+        // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
     }
 

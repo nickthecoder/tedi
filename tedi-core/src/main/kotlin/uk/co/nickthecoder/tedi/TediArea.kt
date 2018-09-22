@@ -406,10 +406,10 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         internal var contentLength = 0
 
         /**
-         * The highest index into the [paragraphs] list with a valid [Paragraph.lineStartPosition].
+         * The highest index into the [paragraphs] list with a valid [Paragraph.cachedPosition].
          * If < 0, then none are valid.
          */
-        internal var lineStartValidIndex = 0
+        internal var validCacheIndex = 0
 
         override fun get(index: Int): Paragraph {
             return paragraphs[index]
@@ -473,8 +473,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
 
         private fun invalidateLineStartPosition(line: Int) {
-            //println("Invalidating line $line (was $lineStartValidIndex now ${Math.min(lineStartValidIndex, line - 1)})")
-            lineStartValidIndex = Math.min(lineStartValidIndex, line - 1)
+            //println("Invalidating line $line (was $validCacheIndex now ${Math.min(validCacheIndex, line - 1)})")
+            validCacheIndex = Math.min(validCacheIndex, line - 1)
         }
 
         fun get(start: Int, end: Int): String {
@@ -643,24 +643,24 @@ open class TediArea private constructor(protected val content: TediAreaContent)
          * [line] and the returned result are zero based.
          */
         fun lineStartPosition(line: Int): Int {
-            if (lineStartValidIndex < line) {
+            if (validCacheIndex < line) {
 
-                if (lineStartValidIndex < 0) {
-                    lineStartValidIndex = 0
-                    paragraphs[0].lineStartPosition = 0
+                if (validCacheIndex < 0) {
+                    validCacheIndex = 0
+                    paragraphs[0].cachedPosition = 0
                 }
 
-                var total = paragraphs[lineStartValidIndex].lineStartPosition + paragraphs[lineStartValidIndex].length + 1
+                var total = paragraphs[validCacheIndex].cachedPosition + paragraphs[validCacheIndex].length + 1
                 val requiredValidIndex = Math.min(line, paragraphs.size - 1)
-                for (i in lineStartValidIndex + 1..requiredValidIndex) {
+                for (i in validCacheIndex + 1..requiredValidIndex) {
                     val p = paragraphs[i]
-                    p.lineStartPosition = total
+                    p.cachedPosition = total
                     total += p.length + 1
                 }
-                lineStartValidIndex = requiredValidIndex
+                validCacheIndex = requiredValidIndex
             }
 
-            return paragraphs[line].lineStartPosition
+            return paragraphs[line].cachedPosition
         }
 
         /**
@@ -669,11 +669,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         fun check(): Boolean {
             println("Checking cached data")
             var count = 0
-            for (i in 0..lineStartValidIndex) {
-                if (count != paragraphs[i].lineStartPosition) {
-                    println("Line $i actual=$count cached=${paragraphs[i].lineStartPosition}\n")
+            for (i in 0..validCacheIndex) {
+                if (count != paragraphs[i].cachedPosition) {
+                    println("Line $i actual=$count cached=${paragraphs[i].cachedPosition}\n")
 
-                    for (p in 0..lineStartValidIndex) {
+                    for (p in 0..validCacheIndex) {
                         print(paragraphs[p])
                     }
                     return false
@@ -738,14 +738,14 @@ open class TediArea private constructor(protected val content: TediAreaContent)
          * Internally a paragraph is stored as a StringBuffer, however, never cast [text] to StringBuffer,
          * because if you make changes to [text], then bad things will happen!
          *
-         * In addition to the StringBuffer, a Paragraph stores [lineStartPosition], its position within the document.
+         * In addition to the StringBuffer, a Paragraph stores [cachedPosition], its position within the document.
          * So for if we have two paragraphs "Hello" and "World", then Hello will store a 0, and World will
          * store a 6 (5 plus 1 for the new-line character).
          * These numbers are lazily evaluated after changes to the document. For example, if we create a new
-         * paragraph 3, then it (and all later Paragraphs) will have invalid [lineStartPosition]s.
+         * paragraph 3, then it (and all later Paragraphs) will have invalid [cachedPosition]s.
          *
-         * [ParagraphList] keeps track of which [lineStartPosition]s can be trusted via [lineStartValidIndex].
-         * [lineStartValidIndex] is used to optimise conversion between line/column numbers and positions.
+         * [ParagraphList] keeps track of which [cachedPosition]s can be trusted via [validCacheIndex].
+         * [validCacheIndex] is used to optimise conversion between line/column numbers and positions.
          */
         inner class Paragraph(private val line: StringBuffer) {
 
@@ -760,7 +760,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
              * The position of the start of this paragraph.
              * NOTE. This data becomes invalid, and must only be read via [ParagraphList.lineStartPosition]
              */
-            internal var lineStartPosition: Int = 0
+            internal var cachedPosition: Int = 0
 
             fun insert(start: Int, str: CharSequence) {
                 line.insert(start, str)
@@ -770,7 +770,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                 line.delete(start, end)
             }
 
-            override fun toString() = "($lineStartPosition) : $text\n"
+            override fun toString() = "($cachedPosition) : $text\n"
 
         }
 
