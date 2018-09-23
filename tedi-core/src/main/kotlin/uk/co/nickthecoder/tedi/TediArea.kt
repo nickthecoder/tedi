@@ -40,6 +40,7 @@ import javafx.css.*
 import javafx.scene.AccessibleRole
 import javafx.scene.Scene
 import javafx.scene.control.Skin
+import javafx.scene.control.TextArea
 import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
@@ -49,6 +50,71 @@ import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.text.BreakIterator
 import java.util.*
 
+/**
+ * A control, similar to a [TextArea], which also extends [TextInputControl].
+ *
+ * TediArea is a simple text editor, which can be embedded in any JavaFX application,
+ * and is particularly well suited as a source code editor.
+ *
+ * ## Improvements over TextArea :
+ *
+ * - Supports tabs and spaces as indentation.
+ *   Blocks of code can be indented/un-indented using Tab and shift+Tab. See [tabInsertsSpaces].
+ * - Better "word" selection for source code. See [wordIterator] and [CodeWordBreakIterator].
+ * - Better undo/redo (see below).
+ * - Can display line numbers. See [displayLineNumbers].
+ * - More methods to navigate around the document, such as [lineColumnFor], [positionFor] and [paragraphs].
+ * - Locate the character position for a 2D point. See [positionFor].
+ * - Better word selection for source code, see [CodeWordBreakIterator].
+ *
+ * ## Limitations of TediArea
+ *
+ * - Accessibility features found in TextArea are missing from TediArea
+ * - Right-to-left text may not work well, if at all! (I haven't tried it).
+ * - Support for mobile devices, such as virtual keyboard are absent in TediArea (which are present in TextArea).
+ * - Line wrapping is not currently supported
+ * - Currently not optimised for large documents (neither is TextArea in JavaFX 8)
+ *
+ * ## Undo / Redo
+ *
+ * TediArea supports two undo/redo mechanisms, the default one uses [TextInputControl]
+ * using methods [undo], [redo] etc.
+ * IMHO, this is rather horrible to use, and is particularly bad for a combination of
+ * edits, such as Find & Replace's "Replace All" (it creates many individual undos).
+ *
+ * For a better experience, use :
+ *
+ *     undoRedo = BetterUndoRedo()
+ *
+ * Alas, due to limitations imposed by [TextInputControl], TediArea cannot override the
+ * usual [undo], [redo] methods. So instead, use :
+ *
+ *     myTediArea.undoRedo.undo()
+ *
+ * If you have set [undoRedo] to a [BetterUndoRedo], then the normal [undo], [redo]
+ * methods will do nothing.
+ * Because this can be confusing, the default behaviour uses [TextInputControl]'s
+ * naff undo/redo implementation.
+ *
+ * ## Styling
+ *
+ * The control has style classes "text-input", "text-area" and "tedi-area".
+ * "text-area" is added, even though it isn't a TextArea, so that a TediArea
+ * will appear the same as a TextArea.
+ *
+ * There is a css file uk.co.nickthecoder.tedi/tedi.css, which can be added to
+ * the scene using : TediArea.style(scene)
+ *
+ * tedi.css includes a style ".tedi-area.code", which uses a fixed width font, and
+ * turns on line numbering.
+ *
+ * You can style the line number gutter using ".tedi-area .gutter".
+ *
+ * ## Notes
+ *
+ * - Avoid frequent use of [text], and instead use [getSequence] where possible,
+ *   as [text] converts the whole document to a String, which is expensive for large documents.
+ */
 open class TediArea private constructor(protected val content: TediAreaContent)
 
     : TextInputControl(content) {
@@ -195,6 +261,10 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * n space characters, where n is taken from [indentSize].
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
+
+    fun getSequence(start: Int, end: Int) = content.getSequence(start, end)
+
+    fun getSequence() = content.getSequence(0, length)
 
     fun getLine(line: Int) = content.getLine(line)
 
@@ -430,7 +500,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         endOfNextWord(true)
     }
 
-
     /***************************************************************************
      *                                                                         *
      * ParagraphList class                                                     *
@@ -566,6 +635,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
             return textBuilder.toString()
         }
+
+        fun getSequence(start: Int, end: Int): CharSequence = ContentCharSequence(start, end)
 
         fun delete(start: Int, end: Int) {
             if (start > end) {
@@ -857,8 +928,44 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         }
 
+        /***************************************************************************
+         *                                                                         *
+         * ContentCharSequence                                                     *
+         *                                                                         *
+         **************************************************************************/
+        /**
+         * A [CharSequence] for part of the document.
+         *
+         * NOTE. This is backed by the [TediAreaContent], and therefore, if you
+         * change the document, this CharSequence will reflect those changes.
+         *
+         * If you delete content, then [get] can return character 0x00 for
+         * characters beyond the end of the document.
+         */
+        inner class ContentCharSequence(val startPosition: Int, endPosition: Int)
+            : CharSequence {
+
+            override val length = endPosition - startPosition
+
+            override fun get(index: Int): Char {
+                val (line, column) = lineColumnFor(startPosition + index)
+                val paragraph = paragraphs[line]
+                if (column < paragraph.length - 1) {
+                    return paragraph.text.get(column)
+                } else {
+                    if (line < paragraphs.size - 1) {
+                        return '\n'
+                    } else {
+                        return '\u0000'
+                    }
+                }
+            }
+
+            override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
+                return ContentCharSequence(startPosition + startIndex, startPosition + endIndex)
+            }
+        }
     }
-    // End ParagraphList
 
     /***************************************************************************
      *                                                                         *
@@ -941,6 +1048,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         override fun get(start: Int, end: Int): String {
             return paragraphList.get(start, end)
         }
+
+        fun getSequence(start: Int, end: Int) = paragraphList.getSequence(start, end)
 
         fun getLine(line: Int) = paragraphList[line].text
 
