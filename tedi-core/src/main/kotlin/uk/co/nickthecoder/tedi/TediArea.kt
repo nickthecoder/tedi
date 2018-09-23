@@ -41,6 +41,7 @@ import javafx.scene.AccessibleRole
 import javafx.scene.Scene
 import javafx.scene.control.Skin
 import javafx.scene.control.TextInputControl
+import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
 import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
@@ -68,8 +69,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
 
+    // Paragraphs
+    private val paragraphsProperty = content.paragraphsProperty()
 
-    fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = content.paragraphsProperty()
+    fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = paragraphsProperty
+
+    val paragraphs = paragraphsProperty.get()
 
     // Line Count
     private val lineCountProperty = Bindings.size(paragraphsProperty())!!
@@ -212,16 +217,54 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     fun positionFor(line: Int, column: Int) = content.positionFor(line, column)
 
     /**
-     * Returns the line/column as a [Pair] for the given position within the [text].
-     * Everything is zero-based. So Pair(0,0) relates to position 0 (the start of the text.
+     * Returns the line number for the character position. This is "safe", i.e.
      *
-     * If the position is less than 0, or >= text.length then the result is undefined.
+     * If [position] < 0, then 0 is returned.
+     *
+     * if [position] >= [TediArea.text].length, then [TediArea.paragraphs].size -1 is returned.
+     *
+     * Therefore, the following is safe. 'line' is always a valid index into [TediArea.paragraphs] :
+     *
+     *     val line = tediArea.lineFor( position )
+     *     val paragraph = tediArea.paragraphs[line] // Safe
+     *
+     * (Note that [TediArea.paragraphs] is never empty, it always has at least one [Paragraph]).
+     */
+    fun lineFor(position: Int) = content.lineFor(position)
+
+    /**
+     * Returns the line/column as a [Pair] for the given position within the [text].
+     * Everything is zero-based. So Pair(0,0) relates to position 0 (the start of the text).
+     *
+     * If [position] < = 0, then (0,0) is returned.
+     *
+     * If [position] is beyond the end of the document, then
+     * lineColumnFor( position ) == lineColumnFor( position -1 )
+     *
+     * Note that the column can range from 0 to the line's length, so for example :
+     *
+     *     val (line,column) = tediArea.lineColumnFor( position )
+     *     val lineText = tediArea.getLine( line )
+     *     val c1 = (lineText + "\n")[column] // Safe
+     *     val c2 = lineText[column] // Dangerous! Can throw an exception
+     *
+     *  The last line can throw because 'getLine' does NOT include the new-line character, and
+     *  'column' ranges from 0 to lineText.length INCLUSIVE.
+     *  This is especially important for the last line of the document, which does NOT
+     *  have an implied new line after it.
      */
     fun lineColumnFor(position: Int) = content.lineColumnFor(position)
 
+    /**
+     * Returns the character position for a give point, relative to TediArea's bounds.
+     * You will usually get [x],[y] from a mouse event for a TediArea,
+     * in which case [positionFor] may be easier to use!
+     */
     fun positionForPoint(x: Double, y: Double): Int {
         return (skin as TediAreaSkin).positionForPoint(x, y)
     }
+
+    fun positionFor(event: MouseEvent) = positionForPoint(event.x, event.y)
 
 
     /***************************************************************************
@@ -644,8 +687,10 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         }
 
         /**
-         * Returns the position within [text] of the start of the nth line.
-         * [line] and the returned result are zero based.
+         * See [TediArea.lineStartPosition]
+         *
+         * This is optimised from O(n) to O(1) (where n line number requested).
+         * However, if you edit near the start of the document, then the next call will be O(n).
          */
         fun lineStartPosition(line: Int): Int {
             if (validCacheIndex < line) {
@@ -669,6 +714,85 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         }
 
         /**
+         * See [TediArea.lineEndPosition]
+         */
+        fun lineEndPosition(line: Int) = lineStartPosition(line) + paragraphs[line].length
+
+        fun positionFor(line: Int, column: Int): Int {
+            val lineStart = lineStartPosition(line)
+            if (line >= 0 && line < paragraphs.size) {
+                return lineStart + clamp(0, paragraphs[line].length, column)
+            } else {
+                return lineStart
+            }
+        }
+
+        /**
+         * Used with the [lineFor] heuristic to guess a line number for a given position, in order to minimise
+         * the number of [Paragraph]s that need to be checked before homing in on the correct line number.
+         *
+         * The must never be <= 0
+         */
+        private var guessCharsPerLine = 40
+
+        /**
+         * See [TediArea.lineFor]
+         *
+         * This is optimised from O(n) to O(1) (where n line number returned).
+         * However, if you edit near the start of the document, then the next call will be O(n).
+         *
+         */
+        fun lineFor(position: Int): Int {
+
+            val guessedLine = clamp(0, position / guessCharsPerLine, paragraphs.size - 1)
+            var count = lineStartPosition(guessedLine)
+            if (count == position) return guessedLine
+
+            if (count < position) {
+                // Our guess was too low (and therefore guessCharsPerLine is too high)
+                if (guessCharsPerLine > 1) {
+                    guessCharsPerLine--
+                }
+                // Move forwards
+                for (i in guessedLine..paragraphs.size - 1) {
+                    val p = paragraphs[i]
+                    if (count + p.length >= position) {
+                        return i
+                    }
+                    count += p.length + 1 // 1 for the new line character
+                }
+                return paragraphs.size - 1
+            } else {
+
+                // Our guess was too high (and therefore guessCharsPerLine is too low)
+                if (position > 0) {
+                    guessCharsPerLine++
+                }
+
+                // Move backwards
+                for (i in guessedLine - 1 downTo 0) {
+                    val p = paragraphs[i]
+                    count -= p.length
+                    if (position >= count) {
+                        println("Backwards Out by ${guessedLine - i}")
+                        return i
+                    }
+                }
+                return 0
+            }
+        }
+
+        /**
+         * See [TediArea.lineColumnFor]
+         */
+        fun lineColumnFor(position: Int): Pair<Int, Int> {
+            val line = lineFor(position)
+            val linePos = lineStartPosition(line)
+
+            return Pair(line, clamp(0, position - linePos, paragraphs[line].length))
+        }
+
+        /**
          * Used during debugging to check that the cached lineStartPositions are correct.
          */
         fun check(): Boolean {
@@ -688,57 +812,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             return true
         }
 
-        /**
-         * Returns the position within [text] of the end of the nth line.
-         * [line] and the returned result are zero based.
-         */
-        fun lineEndPosition(line: Int) = lineStartPosition(line) + paragraphs[line].length
-
-        /**
-         * Returns the position within [text] of the given line number and column.
-         * Everything is zero based (so positionFor(0,0) will return 0).
-         */
-        fun positionFor(line: Int, column: Int): Int {
-            val lineStart = lineStartPosition(line)
-            if (line >= 0 && line < paragraphs.size) {
-                return lineStart + clamp(0, paragraphs[line].length, column)
-            } else {
-                return lineStart
-            }
-        }
-
-        fun lineFor(position: Int): Int {
-            var count = 0
-            var i = 0
-            for (p in paragraphs) {
-                if (count + p.length >= position) {
-                    return i
-                }
-                count += p.length + 1 // 1 for the new line character
-                i++
-            }
-            return i
-        }
-
-        /**
-         * Returns the line/column as a [Pair] for the given position within the [text].
-         * Everything is zero-based. So Pair(0,0) relates to position 0 (the start of the text.
-         *
-         * If the position is less than 0, or >= text.length then the result is undefined.
-         */
-        fun lineColumnFor(position: Int): Pair<Int, Int> {
-            var count = 0
-            var i = 0
-            for (p in paragraphs) {
-                if (count + p.length >= position) {
-                    return Pair(i, position - count)
-                }
-                count += p.length + 1 // 1 for the new line character
-                i++
-            }
-            return Pair(i, position - count)
-        }
-
+        /***************************************************************************
+         *                                                                         *
+         * Paragraph class                                                         *
+         *                                                                         *
+         **************************************************************************/
         /**
          * Internally a paragraph is stored as a StringBuffer, however, never cast [text] to StringBuffer,
          * because if you make changes to [text], then bad things will happen!
@@ -870,6 +948,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         fun lineStartPosition(line: Int) = paragraphList.lineStartPosition(line)
 
         fun lineEndPosition(line: Int) = paragraphList.lineEndPosition(line)
+
+        fun lineFor(position: Int) = paragraphList.lineFor(position)
 
         fun lineColumnFor(position: Int) = paragraphList.lineColumnFor(position)
 
