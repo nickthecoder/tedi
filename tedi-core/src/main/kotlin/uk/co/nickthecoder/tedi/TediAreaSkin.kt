@@ -609,7 +609,10 @@ class TediAreaSkin(val control: TediArea)
      * is bound to [blinkProperty]. We use the opacity, rather than visible
      * for efficiency (no additional layout pass).
      */
-    private class CaretAnimation(val caretVisible: ObservableBooleanValue, caretNode: Node, caretPosition: ObservableIntegerValue) {
+    private class CaretAnimation(
+            val caretVisible: ObservableBooleanValue,
+            caretNode: Node,
+            caretPosition: ObservableIntegerValue) {
 
         private val animation = Timeline()
 
@@ -646,7 +649,7 @@ class TediAreaSkin(val control: TediArea)
                 }
             })
             caretPosition.addListener { _, _, _ ->
-                animation.play()
+                blinkOn = true
             }
         }
     }
