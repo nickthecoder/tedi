@@ -215,7 +215,7 @@ class TediAreaSkin(val control: TediArea)
         }
     }
 
-    private val caretAnimation = CaretAnimation(caretVisible, caretPath)
+    private val caretAnimation = CaretAnimation(caretVisible, caretPath, caretPosition)
 
     /***************************************************************************
      *                                                                         *
@@ -609,7 +609,7 @@ class TediAreaSkin(val control: TediArea)
      * is bound to [blinkProperty]. We use the opacity, rather than visible
      * for efficiency (no additional layout pass).
      */
-    private class CaretAnimation(val caretVisible: ObservableBooleanValue, val caretNode: Node) {
+    private class CaretAnimation(val caretVisible: ObservableBooleanValue, caretNode: Node, caretPosition: ObservableIntegerValue) {
 
         private val animation = Timeline()
 
@@ -624,8 +624,8 @@ class TediAreaSkin(val control: TediArea)
         init {
             animation.cycleCount = Timeline.INDEFINITE
             animation.keyFrames.addAll(
-                    KeyFrame(Duration.ZERO, EventHandler<ActionEvent> { blinkOn = false }),
-                    KeyFrame(Duration.seconds(.5), EventHandler<ActionEvent> { blinkOn = true }),
+                    KeyFrame(Duration.ZERO, EventHandler<ActionEvent> { blinkOn = true }),
+                    KeyFrame(Duration.seconds(0.5), EventHandler<ActionEvent> { blinkOn = false }),
                     KeyFrame(Duration.seconds(1.0)))
             caretVisible.addListener { _, _, newValue ->
                 if (newValue == true) {
@@ -645,6 +645,9 @@ class TediAreaSkin(val control: TediArea)
                     return if (blinkProperty.get()) 1.0 else 0.0
                 }
             })
+            caretPosition.addListener { _, _, _ ->
+                animation.play()
+            }
         }
     }
 
