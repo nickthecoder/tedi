@@ -48,7 +48,7 @@ project(':demo') {
     dependencies {
         compile project(':tedi-core')
 
-        testCompile 'junit:junit:4.11'
+        testCompile 'junit:junit:4.9'
         testCompile 'org.jetbrains.kotlin:kotlin-test'
     }
 }

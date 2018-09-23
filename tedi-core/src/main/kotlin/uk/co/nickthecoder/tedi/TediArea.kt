@@ -670,38 +670,40 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
             if (length > 0) {
                 // Identify the trailing paragraph index
-                val leadingLineColumn = lineColumnFor(start)
-                val leadingParagraph = paragraphs[leadingLineColumn.first]
-                val trailingLineColumn = lineColumnFor(end)
-                val trailingParagraph = paragraphs[trailingLineColumn.first]
+                val (leadingLine, leadingColumn) = lineColumnFor(start)
+                val (trailingLine, trailingColumn) = lineColumnFor(end)
+
+                val leadingParagraph = paragraphs[leadingLine]
+                val trailingParagraph = paragraphs[trailingLine]
 
                 // Remove the text
-                if (leadingParagraph === trailingParagraph) {
+                if (leadingLine == trailingLine) {
                     // The removal affects only a single paragraph
-                    invalidateLineStartPosition(leadingLineColumn.first + 1)
-                    leadingParagraph.delete(leadingLineColumn.second, trailingLineColumn.second)
-                    fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first + 1, listOf(leadingParagraph))
+                    invalidateLineStartPosition(leadingLine + 1)
+                    leadingParagraph.delete(leadingColumn, trailingColumn)
+                    fireParagraphDeleteEvent(leadingLine, listOf(leadingParagraph))
 
                 } else {
                     // The removal spans paragraphs; remove any intervening paragraphs and
                     // merge the leading and trailing segments
-                    val leadingSegment = leadingParagraph.text.subSequence(0, leadingLineColumn.second)
+                    val leadingSegment = leadingParagraph.text.subSequence(0, leadingColumn)
 
-                    trailingParagraph.delete(0, trailingLineColumn.second)
-                    fireParagraphListChangeEvent(trailingLineColumn.first, trailingLineColumn.first + 1, listOf(trailingParagraph))
+                    invalidateLineStartPosition(trailingLine + 1)
+                    trailingParagraph.delete(0, trailingColumn)
+                    fireParagraphDeleteEvent(trailingLine, listOf(trailingParagraph))
 
-                    if (trailingLineColumn.first - leadingLineColumn.first > 0) {
+                    if (trailingLine - leadingLine > 0) {
                         // Remove whole paragraphs
-                        val removed = paragraphs.subList(leadingLineColumn.first, trailingLineColumn.first)
-                        invalidateLineStartPosition(leadingLineColumn.first + 1)
-                        paragraphs.subList(leadingLineColumn.first, trailingLineColumn.first).clear()
-                        fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first, removed)
+                        val removed = paragraphs.subList(leadingLine, trailingLine)
+                        invalidateLineStartPosition(leadingLine + 1)
+                        paragraphs.subList(leadingLine, trailingLine).clear()
+                        fireParagraphDeleteEvent(leadingLine, removed)
                     }
 
                     // Trailing paragraph is now at the former leading paragraph's index
-                    invalidateLineStartPosition(leadingLineColumn.first)
+                    invalidateLineStartPosition(leadingLine)
                     trailingParagraph.insert(0, leadingSegment)
-                    fireParagraphListChangeEvent(leadingLineColumn.first, leadingLineColumn.first + 1, listOf(leadingParagraph))
+                    fireParagraphAddEvent(leadingLine)
 
                 }
 
@@ -728,52 +730,64 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                 val lines = text.split("\n")
                 val n = lines.size
 
-                val startLineColumn = lineColumnFor(position)
-                val startParagraph = paragraphs[startLineColumn.first]
+                val (startLine, startColumn) = lineColumnFor(position)
+                val startParagraph = paragraphs[startLine]
 
                 if (n == 1) {
                     // The text contains only a single line; insert it into the intersecting paragraph
-                    startParagraph.insert(startLineColumn.second, text)
-                    fireParagraphListChangeEvent(startLineColumn.first, startLineColumn.first + 1, listOf(startParagraph))
+                    startParagraph.insert(startColumn, text)
+                    invalidateLineStartPosition(startLine + 1)
+                    fireParagraphChangeEvent(startLine)
 
                 } else {
                     // The text contains multiple lines; split the intersecting paragraph
-                    val trailingText = startParagraph.text.subSequence(startLineColumn.second, startParagraph.length)
-                    startParagraph.delete(startLineColumn.second, startParagraph.length)
-                    invalidateLineStartPosition(startLineColumn.first + 1)
+                    val trailingText = startParagraph.text.subSequence(startColumn, startParagraph.length)
+
+                    // Remove the trailing part
+                    invalidateLineStartPosition(startLine + 1)
+                    startParagraph.delete(startColumn, startParagraph.length)
 
                     // Append the first line to the intersecting paragraph
-                    startParagraph.insert(startLineColumn.second, lines[0])
-                    invalidateLineStartPosition(startLineColumn.first + 1)
-                    fireParagraphListChangeEvent(startLineColumn.first, startLineColumn.first + 1, listOf(startParagraph))
+                    invalidateLineStartPosition(startLine + 1)
+                    startParagraph.insert(startColumn, lines[0])
+                    fireParagraphChangeEvent(startLine)
 
                     // Insert the remaining lines into the paragraph list
-                    paragraphs.addAll(startLineColumn.first + 1, lines.subList(1, n).map { Paragraph(it) })
-                    invalidateLineStartPosition(startLineColumn.first + 1)
-                    fireParagraphListChangeEvent(startLineColumn.first + 1, startLineColumn.first + n, emptyList())
+                    invalidateLineStartPosition(startLine + 1)
+                    paragraphs.addAll(startLine + 1, lines.subList(1, n).map { Paragraph(it) })
+                    fireParagraphAddEvent(startLine + 1, startLine + n)
 
                     // Add the trailing part which used to be in startParagraph.
                     if (trailingText.isNotEmpty()) {
-                        val lastIndex = startLineColumn.first + n - 1
-                        paragraphs[lastIndex].insert(paragraphs[lastIndex].length, trailingText)
+                        val lastIndex = startLine + n - 1
                         invalidateLineStartPosition(lastIndex + 1)
-                        fireParagraphListChangeEvent(lastIndex, lastIndex + 1, emptyList())
+                        paragraphs[lastIndex].insert(paragraphs[lastIndex].length, trailingText)
+                        fireParagraphChangeEvent(lastIndex)
                     }
                 }
 
                 // Update content length
                 contentLength += length
             }
+
             /*
             if (!check()) {
                 println("insert($position, '$insertText') failed")
             }
             */
+
         }
 
-        private fun fireParagraphListChangeEvent(from: Int, to: Int, removed: List<Paragraph>) {
-            val change = ParagraphListChange(this, from, to, removed)
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, change)
+        private fun fireParagraphChangeEvent(from: Int, to: Int = from + 1) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, to, true, emptyList()))
+        }
+
+        private fun fireParagraphAddEvent(from: Int, to: Int = from + 1) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, to, false, emptyList()))
+        }
+
+        private fun fireParagraphDeleteEvent(from: Int, removed: List<Paragraph>) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, from + removed.size, false, removed))
         }
 
         /**
@@ -797,6 +811,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     p.cachedPosition = total
                     total += p.length + 1
                 }
+                //println("Valided to ${validCacheIndex}")
                 validCacheIndex = requiredValidIndex
             }
 
@@ -1004,16 +1019,17 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             list: ObservableList<Paragraph>,
             from: Int,
             to: Int,
+            private val updated: Boolean,
             private val removed: List<Paragraph>)
 
         : NonIterableChange<Paragraph>(from, to, list) {
 
-        override fun getRemoved(): List<Paragraph> {
-            return removed
+        override fun wasUpdated(): Boolean {
+            return updated
         }
 
-        override fun getPermutation(): IntArray {
-            return IntArray(0)
+        override fun getRemoved(): List<Paragraph> {
+            return removed
         }
     }
     // End ParagraphListChange

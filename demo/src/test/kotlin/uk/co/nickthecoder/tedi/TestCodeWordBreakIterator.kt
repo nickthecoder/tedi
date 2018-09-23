@@ -1,11 +1,11 @@
-import junit.framework.TestCase
+import org.junit.Assert.assertEquals
+import org.junit.Assert.fail
 import org.junit.Test
 import uk.co.nickthecoder.tedi.SourceCodeWordIterator
 import java.text.BreakIterator
 import java.text.StringCharacterIterator
 
-
-class TestCodeWordBreakIterator : TestCase() {
+class TestCodeWordBreakIterator {
 
     /**
      * This tests the "default" word break iterator.
