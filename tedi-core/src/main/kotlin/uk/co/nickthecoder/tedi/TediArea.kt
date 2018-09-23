@@ -60,12 +60,12 @@ import java.util.*
  *
  * - Supports tabs and spaces as indentation.
  *   Blocks of code can be indented/un-indented using Tab and shift+Tab. See [tabInsertsSpaces].
- * - Better "word" selection for source code. See [wordIterator] and [CodeWordBreakIterator].
+ * - Better "word" selection for source code. See [wordIterator] and [SourceCodeWordIterator].
  * - Better undo/redo (see below).
  * - Can display line numbers. See [displayLineNumbers].
  * - More methods to navigate around the document, such as [lineColumnFor], [positionFor] and [paragraphs].
  * - Locate the character position for a 2D point. See [positionFor].
- * - Better word selection for source code, see [CodeWordBreakIterator].
+ * - Better word selection for source code, see [SourceCodeWordIterator].
  *
  * ## Limitations of TediArea
  *
@@ -230,7 +230,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * The default value is :
      *     BreakIterator.getWordInstance()
      * which means that TediArea will behave in the same manner as TextArea.
-     * However, for coding, set it to a [CodeWordBreakIterator].
+     * However, for coding, set it to a [SourceCodeWordIterator].
      */
     var wordIterator: BreakIterator = BreakIterator.getWordInstance()
 
@@ -374,56 +374,69 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     /***************************************************************************
      *                                                                         *
-     * Word Selection. These are basically an EXACT copy of those from         *
-     * TextInputControl, except that I need to access the private              *
-     * wordIterator. And therefore, I've had to duplicate the lot. Grr.        *
+     * Word Selection.                                                         *
      *                                                                         *
      **************************************************************************/
 
     protected fun previousWord(select: Boolean) {
-        val textLength = length
-        val text = text
-        if (textLength <= 0) {
+
+        // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
+        // large documents. Let's do better, by using a CharSequence.
+        // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
+        // look for the start of the previous non-blank line.
+        val end = caretPosition
+        val start = Math.max(end - 100, 0)
+        if (end <= start) {
             return
         }
+        val cs = getSequence(start, end)
 
-        wordIterator.setText(text)
+        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
+        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
+        val txt = cs.toString()
+        wordIterator.setText(txt)
 
-        var pos = wordIterator.preceding(clamp(0, caretPosition, textLength))
+        var pos = wordIterator.preceding(end - start)
 
         // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE && !Character.isLetterOrDigit(text[clamp(0, pos, textLength - 1)])) {
-            pos = wordIterator.preceding(clamp(0, pos, textLength))
+        while (pos != BreakIterator.DONE && !Character.isLetterOrDigit(txt[clamp(0, pos, txt.length - 1)])) {
+            pos = wordIterator.preceding(clamp(0, pos, txt.length))
         }
 
         // move/select
-        selectRange(if (select) anchor else pos, pos)
+        selectRange(if (select) anchor else start + pos, start + pos)
     }
 
     protected fun nextWord(select: Boolean) {
-        val textLength = length
-        val text = text
-        if (textLength <= 0) {
-            return
-        }
 
-        wordIterator.setText(text)
+        // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
+        // large documents. Let's do better, by using a CharSequence starting at the caret position.
+        // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
+        // look for the end of the next non-blank line.
+        val start = caretPosition
+        val end = Math.max(start + 100, length)
+        val cs = getSequence(start, end)
 
-        var last = wordIterator.following(clamp(0, caretPosition, textLength - 1))
+        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
+        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
+        val txt = cs.toString()
+        wordIterator.setText(txt)
+
+        var last = wordIterator.following(0)
         var current = wordIterator.next()
 
         // Skip whitespace characters to the beginning of next word, but
         // stop at newline. Then move the caret or select a range.
         while (current != BreakIterator.DONE) {
             for (p in last..current) {
-                val ch = text[clamp(0, p, textLength - 1)]
+                val ch = txt[clamp(0, p, txt.length - 1)]
                 // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
                 // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
                 if (ch != ' ' && ch != '\t') {
                     if (select) {
-                        selectRange(anchor, p)
+                        selectRange(anchor, p + start)
                     } else {
-                        selectRange(p, p)
+                        selectRange(p + start, p + start)
                     }
                     return
                 }
@@ -434,32 +447,38 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         // move/select to the end
         if (select) {
-            selectRange(anchor, textLength)
+            selectRange(anchor, length)
         } else {
             end()
         }
     }
 
     protected fun endOfNextWord(select: Boolean) {
-        val textLength = length
-        val text = text
-        if (textLength <= 0) {
-            return
-        }
 
-        wordIterator.setText(text)
+        // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
+        // large documents. Let's do better, by using a CharSequence starting at the caret position.
+        // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
+        // look for the end of the next non-blank line.
+        val start = caretPosition
+        val end = Math.max(start + 100, length)
+        val cs = getSequence(start, end)
 
-        var last = wordIterator.following(clamp(0, caretPosition, textLength))
+        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
+        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
+        val txt = cs.toString()
+        wordIterator.setText(txt)
+
+        var last = wordIterator.following(0)
         var current = wordIterator.next()
 
         // skip the non-word region, then move/select to the end of the word.
         while (current != BreakIterator.DONE) {
             for (p in last..current) {
-                if (!Character.isLetterOrDigit(text[clamp(0, p, textLength - 1)])) {
+                if (!Character.isLetterOrDigit(txt[clamp(0, p, txt.length - 1)])) {
                     if (select) {
-                        selectRange(anchor, p)
+                        selectRange(anchor, p + start)
                     } else {
-                        selectRange(p, p)
+                        selectRange(p + start, p + start)
                     }
                     return
                 }
@@ -470,7 +489,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         // move/select to the end
         if (select) {
-            selectRange(anchor, textLength)
+            selectRange(anchor, length)
         } else {
             end()
         }
@@ -845,7 +864,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     val p = paragraphs[i]
                     count -= p.length
                     if (position >= count) {
-                        println("Backwards Out by ${guessedLine - i}")
                         return i
                     }
                 }
@@ -963,6 +981,14 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
             override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
                 return ContentCharSequence(startPosition + startIndex, startPosition + endIndex)
+            }
+
+            override fun toString(): String {
+                val buffer = StringBuffer()
+                for (i in 0..length - 1) {
+                    buffer.append(get(i))
+                }
+                return buffer.toString()
             }
         }
     }

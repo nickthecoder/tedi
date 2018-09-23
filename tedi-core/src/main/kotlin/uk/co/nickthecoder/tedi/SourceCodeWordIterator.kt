@@ -36,6 +36,9 @@ import java.text.StringCharacterIterator
 import java.util.*
 
 /**
+ * This is better than the default word break iterator when used with source code, because
+ * the default considers text such as : "foo.bar.baz" ONE word!
+ *
  * Splits the text into three types : whitespace, words and everything else.
  * A word is considered to be made up of letters, numbers and underscores.
  * However, you can change this definition by using the constructor which takes a lambda.
@@ -44,11 +47,11 @@ import java.util.*
  * Also "a += 2", the breaks will be 1, 2, 4, 5, 6. (i.e. "+=" is considered a word).
  *
  * This class was loosely based off of WhiteSpaceBasedBreakIterator.
- * This is horribly inefficient, because it parses the WHOLE text (just as WhiteSpaceBasedBreakIterator does).
+ * This is horribly inefficient for large text, therefore do NOT use it large text.
  *
  * Note, if you need to change the definition of whitespace, create a sub-class and override [isWhiteSpace].
  */
-open class CodeWordBreakIterator(val wordPartTest: (Char) -> Boolean)
+open class SourceCodeWordIterator(val wordPartTest: (Char) -> Boolean)
 
     : BreakIterator() {
 

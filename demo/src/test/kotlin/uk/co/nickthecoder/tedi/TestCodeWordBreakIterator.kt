@@ -1,6 +1,6 @@
 import junit.framework.TestCase
 import org.junit.Test
-import uk.co.nickthecoder.tedi.CodeWordBreakIterator
+import uk.co.nickthecoder.tedi.SourceCodeWordIterator
 import java.text.BreakIterator
 import java.text.StringCharacterIterator
 
@@ -45,7 +45,7 @@ class TestCodeWordBreakIterator : TestCase() {
     }
 
     fun check(sentence: String, vararg breaks: Int) {
-        check(CodeWordBreakIterator(), sentence, * breaks)
+        check(SourceCodeWordIterator(), sentence, * breaks)
     }
 
     fun check(bi: BreakIterator, sentence: String, vararg breaks: Int) {

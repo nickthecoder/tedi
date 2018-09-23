@@ -304,7 +304,7 @@ class DemoWindow(stage: Stage = Stage()) {
         init {
             with(tediArea) {
                 // When selecting "words", this is much better that the default when editing source code.
-                wordIterator = CodeWordBreakIterator()
+                wordIterator = SourceCodeWordIterator()
 
                 // Replace the standard undo/redo feature in TextInputControl with a better one.
                 // Note, when using this, we cannot use TediArea.undo() etc, and instead use TediArea.undoRedo.undo().

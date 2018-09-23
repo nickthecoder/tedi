@@ -1,6 +1,8 @@
 Bugs
 ----
 
+Pasting 0123456789 many times shows a bug in insert.
+
 Caret blinking needs to be started whenever the caret position moves.
 
 Next
