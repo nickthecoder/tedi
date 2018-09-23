@@ -34,18 +34,17 @@ class TestInsert : ListChangeListener<Paragraph> {
 
 
     override fun onChanged(change: Change<out Paragraph>) {
-        while (change.next()) {
-            changes.add(change)
-        }
+        changes.add(change)
     }
 
     @Test
     fun doNothing() {
-        assertEquals(0, changes.size, "No Changes")
         assertEquals("", tediArea.text, "Text")
+
+        assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
         assertEquals("", tediArea.paragraphs[0].text.toString(), "Paragraph")
 
-        assertEquals(0, changes.size, "Changes")
+        assertEquals(0, changes.size, "# Changes")
     }
 
     @Test
@@ -53,12 +52,15 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(0, "Hello")
 
         assertEquals("Hello", tediArea.text, "Text")
+
+        assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
         assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
 
-        assertEquals(1, changes.size, "Changes")
+        assertEquals(1, changes.size, "# Changes")
 
         assertEquals(0, changes[0].from, "From")
         assertEquals(1, changes[0].to, "To")
+        assertEquals(false, changes[0].wasRemoved(), "Not Removed")
         assertEquals(false, changes[0].wasAdded(), "Not Added")
         assertEquals(true, changes[0].wasUpdated(), "Updated")
     }
@@ -70,9 +72,11 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(2, "ll")
 
         assertEquals("Hello", tediArea.text, "Text")
+
+        assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
         assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
 
-        assertEquals(1, changes.size, "Changes")
+        assertEquals(1, changes.size, "# Changes")
 
         assertEquals(0, changes[0].from, "From")
         assertEquals(1, changes[0].to, "To")
@@ -88,10 +92,12 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(0, "Hello\nWorld")
 
         assertEquals("Hello\nWorld", tediArea.text, "Text")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph0")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph1")
 
-        assertEquals(2, changes.size, "Changes")
+        assertEquals(2, tediArea.paragraphs.size, "# Paragraphs")
+        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+
+        assertEquals(2, changes.size, "# Changes")
 
         assertEquals(true, changes[0].wasUpdated(), "Updated")
         assertEquals(0, changes[0].from, "From")
@@ -112,10 +118,12 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(2, "llo\nWor")
 
         assertEquals("Hello\nWorld", tediArea.text, "Text")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph0")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph1")
 
-        assertEquals(3, changes.size, "Changes")
+        assertEquals(2, tediArea.paragraphs.size, "# Paragraphs")
+        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+
+        assertEquals(3, changes.size, "# Changes")
 
         assertEquals(true, changes[0].wasUpdated(), "Updated")
         assertEquals(0, changes[0].from, "From")
@@ -138,11 +146,13 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(0, "Hello\nWorld\nBye")
 
         assertEquals("Hello\nWorld\nBye", tediArea.text, "Text")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph0")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph1")
-        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph2")
 
-        assertEquals(2, changes.size, "Changes")
+        assertEquals(3, tediArea.paragraphs.size, "# Paragraphs")
+        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph")
+
+        assertEquals(2, changes.size, "# Changes")
 
         assertEquals(true, changes[0].wasUpdated(), "Updated")
         assertEquals(0, changes[0].from, "From")
@@ -163,11 +173,13 @@ class TestInsert : ListChangeListener<Paragraph> {
         tediArea.insertText(2, "llo\nWorld\nBy")
 
         assertEquals("Hello\nWorld\nBye", tediArea.text, "Text")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph0")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph1")
-        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph2")
 
-        assertEquals(3, changes.size, "Changes")
+        assertEquals(3, tediArea.paragraphs.size, "# Paragraphs")
+        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph")
+
+        assertEquals(3, changes.size, "# Changes")
 
         assertEquals(true, changes[0].wasUpdated(), "Updated")
         assertEquals(0, changes[0].from, "From")

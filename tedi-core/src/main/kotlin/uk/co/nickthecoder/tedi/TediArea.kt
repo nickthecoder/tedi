@@ -46,7 +46,6 @@ import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
 import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
-import uk.co.nickthecoder.tedi.javafx.NonIterableChange
 import java.text.BreakIterator
 import java.util.*
 
@@ -681,30 +680,27 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     // The removal affects only a single paragraph
                     invalidateLineStartPosition(leadingLine + 1)
                     leadingParagraph.delete(leadingColumn, trailingColumn)
-                    fireParagraphDeleteEvent(leadingLine, listOf(leadingParagraph))
+                    fireParagraphUpdate(leadingLine)
 
                 } else {
-                    // The removal spans paragraphs; remove any intervening paragraphs and
-                    // merge the leading and trailing segments
-                    val leadingSegment = leadingParagraph.text.subSequence(0, leadingColumn)
 
-                    invalidateLineStartPosition(trailingLine + 1)
-                    trailingParagraph.delete(0, trailingColumn)
-                    fireParagraphDeleteEvent(trailingLine, listOf(trailingParagraph))
-
-                    if (trailingLine - leadingLine > 0) {
-                        // Remove whole paragraphs
-                        val removed = paragraphs.subList(leadingLine, trailingLine)
+                    if (leadingColumn != paragraphs[leadingLine].length || trailingColumn != paragraphs[trailingLine].length) {
+                        // Remove the end part of the leadingParagraph, and add the trailing segment
+                        val trailingSegment = trailingParagraph.text.subSequence(trailingColumn, trailingParagraph.length)
                         invalidateLineStartPosition(leadingLine + 1)
-                        paragraphs.subList(leadingLine, trailingLine).clear()
-                        fireParagraphDeleteEvent(leadingLine, removed)
+                        leadingParagraph.delete(leadingColumn, leadingParagraph.length)
+                        leadingParagraph.insert(leadingColumn, trailingSegment)
+                        fireParagraphUpdate(leadingLine)
                     }
 
-                    // Trailing paragraph is now at the former leading paragraph's index
-                    invalidateLineStartPosition(leadingLine)
-                    trailingParagraph.insert(0, leadingSegment)
-                    fireParagraphAddEvent(leadingLine)
-
+                    // Remove paragraphs
+                    //if (leadingLine + 1 - trailingLine > 0) {
+                    val toRemove = paragraphs.subList(leadingLine + 1, trailingLine + 1)
+                    val removed = toRemove.toList()
+                    invalidateLineStartPosition(leadingLine + 1)
+                    toRemove.clear()
+                    fireParagraphRemove(leadingLine + 1, removed)
+                    //}
                 }
 
                 // Update content length
@@ -737,7 +733,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     // The text contains only a single line; insert it into the intersecting paragraph
                     startParagraph.insert(startColumn, text)
                     invalidateLineStartPosition(startLine + 1)
-                    fireParagraphChangeEvent(startLine)
+                    fireParagraphUpdate(startLine)
 
                 } else {
                     // The text contains multiple lines; split the intersecting paragraph
@@ -750,19 +746,19 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                     // Append the first line to the intersecting paragraph
                     invalidateLineStartPosition(startLine + 1)
                     startParagraph.insert(startColumn, lines[0])
-                    fireParagraphChangeEvent(startLine)
+                    fireParagraphUpdate(startLine)
 
                     // Insert the remaining lines into the paragraph list
                     invalidateLineStartPosition(startLine + 1)
                     paragraphs.addAll(startLine + 1, lines.subList(1, n).map { Paragraph(it) })
-                    fireParagraphAddEvent(startLine + 1, startLine + n)
+                    fireParagraphAdd(startLine + 1, startLine + n)
 
                     // Add the trailing part which used to be in startParagraph.
                     if (trailingText.isNotEmpty()) {
                         val lastIndex = startLine + n - 1
                         invalidateLineStartPosition(lastIndex + 1)
                         paragraphs[lastIndex].insert(paragraphs[lastIndex].length, trailingText)
-                        fireParagraphChangeEvent(lastIndex)
+                        fireParagraphUpdate(lastIndex)
                     }
                 }
 
@@ -778,16 +774,16 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         }
 
-        private fun fireParagraphChangeEvent(from: Int, to: Int = from + 1) {
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, to, true, emptyList()))
+        private fun fireParagraphUpdate(from: Int, to: Int = from + 1) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, SimpleUpdateChange(this, from, to))
         }
 
-        private fun fireParagraphAddEvent(from: Int, to: Int = from + 1) {
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, to, false, emptyList()))
+        private fun fireParagraphAdd(from: Int, to: Int = from + 1) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, SimpleAddChange(this, from, to))
         }
 
-        private fun fireParagraphDeleteEvent(from: Int, removed: List<Paragraph>) {
-            ListListenerHelper.fireValueChangedEvent(listenerHelper, ParagraphListChange(this, from, from + removed.size, false, removed))
+        private fun fireParagraphRemove(from: Int, removed: List<Paragraph>) {
+            ListListenerHelper.fireValueChangedEvent(listenerHelper, SimpleRemoveChange(this, from, removed))
         }
 
         /**
@@ -1007,32 +1003,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             }
         }
     }
-
-    /***************************************************************************
-     *                                                                         *
-     * ParagraphListChange class                                               *
-     *                                                                         *
-     **************************************************************************/
-    /**
-     */
-    protected class ParagraphListChange(
-            list: ObservableList<Paragraph>,
-            from: Int,
-            to: Int,
-            private val updated: Boolean,
-            private val removed: List<Paragraph>)
-
-        : NonIterableChange<Paragraph>(from, to, list) {
-
-        override fun wasUpdated(): Boolean {
-            return updated
-        }
-
-        override fun getRemoved(): List<Paragraph> {
-            return removed
-        }
-    }
-    // End ParagraphListChange
 
     /***************************************************************************
      *                                                                         *
