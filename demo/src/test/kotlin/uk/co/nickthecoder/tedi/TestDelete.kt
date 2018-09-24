@@ -35,7 +35,9 @@ class TestDelete() : ListChangeListener<Paragraph> {
     }
 
     override fun onChanged(change: Change<out Paragraph>) {
+        assertEquals(true, change.next(), "Change has Next")
         changes.add(change)
+        assertEquals(false, change.next(), "Change has only one item")
     }
 
     @Test

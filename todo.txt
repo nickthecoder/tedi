@@ -1,17 +1,15 @@
 Bugs
 ----
 
-Caret blinking needs to be started whenever the caret position moves.
-
 Next
 ----
 
-Consider adding a Location class, which holds a position:Int, and also a line:Int and column:Int
-Listens to something new??? so that its values update when the document changes.
-caret and anchor could use these??? Make them internally mutable???
-    I need to think this through.
-
 Implement Skin using a list of paragraphsNodes
+    Create a Group, initially with one Text, then add/change via a paragraph listener.
+        While in developing, keep the old paragraphNode
+    Update font in a listener
+        Add font +/- buttons in the Demo.
+
 
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style
@@ -22,6 +20,8 @@ Make ParagraphNode clever enough to handle a set of styles
 
 Remove remaining deprecation warnings
 
+Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
+
 Later
 -----
 
@@ -29,6 +29,10 @@ Consider adding a gutter to the right, which shows where the match results are.
     Kate puts it IN the scroll bar, whereas IntelliJ puts it the left of the scroll bar, floating above the text.
     Copy IntelliJ - don't make it a "gutter", float it over the content.
 
-Consider adding back line-wrapping, but set display-line-numbers=false whenever it is set.
+Consider adding back line-wrapping
+    Set set display-line-numbers=false whenever it is set.
     Likewise setting displayLineNumbers forces line-wrap = false.
 
+    OR, build the line numbers as a set of Text objects, and line them up with the main Text nodes.
+
+    This would prevent some optimisations later though (allowing only *visible* nodes to be created/updated).

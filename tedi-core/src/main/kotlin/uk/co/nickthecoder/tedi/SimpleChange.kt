@@ -20,8 +20,9 @@ abstract class SimpleChange<E>(list: ObservableList<E>, private val from: Int, p
     override fun getRemoved(): List<E> = emptyList<E>()
 
     override fun next(): Boolean {
+        val result = hasNext
         hasNext = false
-        return false
+        return result
     }
 
     override fun reset() {

@@ -41,6 +41,7 @@ import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
+import javafx.collections.ListChangeListener.Change
 import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.event.ActionEvent
@@ -58,12 +59,18 @@ import javafx.scene.paint.Paint
 import javafx.scene.shape.Path
 import javafx.scene.text.Text
 import javafx.util.Duration
+import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 import java.util.*
 
 class TediAreaSkin(val control: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
+
+    /**
+     * Contains the Text nodes, which display the document's content.
+     */
+    private val textGroup = Group()
 
     /**
      * Currently, visible text is one HUGE Text object, which is inefficient, and should be
@@ -82,7 +89,7 @@ class TediAreaSkin(val control: TediArea)
     private val guttersAndContentView = BorderPane()
 
     /**
-     * The main content responsible for displaying the [paragraphNode], the caret and the selection.
+     * The main content responsible for displaying the text, the caret and the selection.
      *
      * Internal, as Gutter uses this to sync its top margin with the contentView's top margin to
      * ensure the line numbers line up with the main text.
@@ -248,6 +255,15 @@ class TediAreaSkin(val control: TediArea)
         }
         children.add(scrollPane)
 
+        // Create nodes for each paragraph.
+
+        with(textGroup) {
+            skinnable.paragraphs.forEach { p ->
+                children.add(createTextNode(p.text.toString()))
+            }
+            isManaged = false
+        }
+
         // paragraphNode
         with(paragraphNode) {
             text = control.text
@@ -288,7 +304,7 @@ class TediAreaSkin(val control: TediArea)
         }
 
         // contentView
-        contentView.children.addAll(selectionHighlightGroup, paragraphNode, caretPath)
+        contentView.children.addAll(selectionHighlightGroup, textGroup, paragraphNode, caretPath)
 
         // control
 
@@ -312,9 +328,13 @@ class TediAreaSkin(val control: TediArea)
             }
         }
 
+
+        skinnable.paragraphs.addListener { change: Change<out Paragraph> ->
+            onParagraphsChange(change)
+        }
+
         control.textProperty().addListener { _ ->
             paragraphNode.text = control.textProperty().valueSafe
-            contentView.requestLayout()
         }
 
         /**
@@ -331,6 +351,51 @@ class TediAreaSkin(val control: TediArea)
      *                                                                         *
      **************************************************************************/
 
+    private fun createTextNode(str: String): Text {
+        val node = Text(str)
+        with(node) {
+            textOrigin = VPos.TOP
+            wrappingWidth = 0.0
+            isManaged = false
+            styleClass.add("text")
+
+            fontProperty().bind(control.fontProperty())
+            fillProperty().bind(textFill)
+        }
+        return node
+    }
+
+    private fun destroyTextNode(text: Text) {
+        with(text) {
+            fontProperty().unbind()
+            fillProperty().unbind()
+        }
+    }
+
+    fun onParagraphsChange(change: Change<out Paragraph>) {
+        while (change.next()) {
+            if (change.wasAdded()) {
+                for (i in change.from..change.to - 1) {
+                    val text = createTextNode(change.list[i].text.toString())
+                    textGroup.children.add(i, text)
+                }
+            }
+            if (change.wasRemoved()) {
+                val from = change.from
+                for (n in 1..change.removedSize) {
+                    destroyTextNode(textGroup.children.removeAt(from) as Text)
+                }
+            }
+            if (change.wasUpdated()) {
+                for (i in change.from..change.to - 1) {
+                    (textGroup.children[i] as Text).text = change.list[i].text.toString()
+                }
+            }
+            println("Paragraph change $change")
+            contentView.requestLayout()
+        }
+    }
+
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
         scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
     }
@@ -345,7 +410,17 @@ class TediAreaSkin(val control: TediArea)
     }
 
     fun positionForContentPoint(x: Double, y: Double): Int {
-        return paragraphNode.hitTestChar(x, y).getInsertionIndex()
+        val normX = x - textGroup.layoutX
+        val normY = y - textGroup.layoutY
+        if (normY < 0) return 0 // Beyond the top
+        val line = (normY / lineHeight()).toInt()
+
+        if (line >= textGroup.children.size) {
+            return skinnable.length // Beyond the bottom. End of document.
+        }
+
+        val text = textGroup.children[line] as Text
+        return skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
@@ -452,8 +527,7 @@ class TediAreaSkin(val control: TediArea)
         val lineText = skinnable.getLine(requiredLine).toString()
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
-        tmpText.font = paragraphNode.font
-        tmpText.layoutX = 0.0// paragraphNode.layoutX
+        tmpText.font = control.font
         val hit = tmpText.hitTestChar(requiredX, 1.0)
         val columnIndex = hit.getInsertionIndex()
 
@@ -477,21 +551,15 @@ class TediAreaSkin(val control: TediArea)
         changeLine(1, select)
     }
 
-    /**
-     * Returns a rough calculation of the line height
-     */
     private fun lineHeight(): Double {
-        return paragraphNode.prefHeight(0.0) / control.lineCount
+        return textGroup.children[0].boundsInLocal.height
     }
 
     /**
      * Returns the number of lines to scroll up/down by.
-     * This is a rough calculation, based on the size of content, and the number of lines it contains.
-     * When there are fewer lines than can fit within the visible viewport, then the returned value is wrong,
-     * but as it is only used for scrolling, it doesn't matter!
      */
     private fun pageSizeInLines(): Int {
-        val result = scrollPane.height / (paragraphNode.prefHeight(0.0) / control.lineCount)
+        val result = scrollPane.viewportBounds.height / lineHeight()
         return result.toInt() - 1
     }
 
@@ -690,11 +758,19 @@ class TediAreaSkin(val control: TediArea)
         }
 
         override fun computePrefWidth(height: Double): Double {
-            return paragraphNode.prefWidth(height) + snappedLeftInset() + snappedRightInset()
+            var maxWidth = 0.0
+            textGroup.children.forEach { text ->
+                maxWidth = Math.max(maxWidth, text.prefWidth(height))
+            }
+            return maxWidth + snappedLeftInset() + snappedRightInset()
         }
 
         override fun computePrefHeight(width: Double): Double {
-            return paragraphNode.prefHeight(width) + snappedTopInset() + snappedBottomInset()
+            var total = 0.0
+            textGroup.children.forEach { text ->
+                total += text.prefHeight(width)
+            }
+            return total + snappedTopInset() + snappedBottomInset()
         }
 
 
@@ -703,8 +779,18 @@ class TediAreaSkin(val control: TediArea)
             val width = width
 
             // Lay out paragraph
-            paragraphNode.layoutX = snappedLeftInset()
+            paragraphNode.opacity = 0.01
+            paragraphNode.layoutX = snappedLeftInset()//  + 2.0 // Move it a little, so we can see both!
             paragraphNode.layoutY = snappedTopInset()
+
+            // Group
+            textGroup.layoutX = snappedLeftInset()
+            textGroup.layoutY = snappedTopInset()
+            var textY = 0.0
+            textGroup.children.forEach { text ->
+                text.layoutY = textY
+                textY += text.prefHeight(width)
+            }
 
             // Update the selection
             val selection = tediArea.selection
