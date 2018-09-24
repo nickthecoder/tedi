@@ -39,7 +39,6 @@ import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.scene.AccessibleRole
 import javafx.scene.Scene
-import javafx.scene.control.Skin
 import javafx.scene.control.TextArea
 import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
@@ -151,14 +150,13 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
 
     // Display Line Numbers
-    private val displayLineNumbersProperty = object : StyleableBooleanProperty(false) {
-
+    private val displayLineNumbersProperty: StyleableBooleanProperty = object : StyleableBooleanProperty(false) {
         override fun getBean() = this@TediArea
         override fun getName() = "displayLineNumbers"
-        override fun getCssMetaData() = StyleableProperties.DISPLAY_LINE_NUMBERS
+        override fun getCssMetaData() = DISPLAY_LINE_NUMBERS
     }
 
-    fun displayLineNumbersProperty(): BooleanProperty = displayLineNumbersProperty
+    fun displayLineNumbersProperty() = displayLineNumbersProperty
 
     /**
      * Determines if line numbers are displayed.
@@ -253,7 +251,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
 
-    override fun createDefaultSkin(): Skin<*> = TediAreaSkin(this)
+    override fun createDefaultSkin() = TediAreaSkin(this)
 
     /**
      * Returns a tab character (when [tabInsertsSpaces] == true), otherwise
@@ -1096,49 +1094,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     }
     // End of class TediAreaContent
 
-    /***************************************************************************
-     *                                                                         *
-     * StyleableProperties object                                              *
-     *                                                                         *
-     **************************************************************************/
-    private object StyleableProperties {
-
-        val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
-                StyleConverter.getBooleanConverter(), false) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                return !n.displayLineNumbersProperty().isBound()
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
-                @Suppress("UNCHECKED_CAST")
-                return n.displayLineNumbersProperty() as StyleableProperty<Boolean>
-            }
-        }
-
-        val STYLEABLES: List<CssMetaData<out Styleable, *>>
-
-        init {
-            val styleables = ArrayList(TextInputControl.getClassCssMetaData())
-            styleables.add(DISPLAY_LINE_NUMBERS)
-            STYLEABLES = Collections.unmodifiableList(styleables)
-        }
-
-
-        /**
-         * @return The CssMetaData associated with this class, which may include the
-         * CssMetaData of its super classes.
-         */
-        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> {
-            return StyleableProperties.STYLEABLES
-        }
-
-    }
-    // End StyleableProperties
-
-    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> {
-        return StyleableProperties.getClassCssMetaData()
-    }
+    override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> = getClassCssMetaData()
 
     /***************************************************************************
      *                                                                         *
@@ -1147,54 +1103,17 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      **************************************************************************/
     companion object {
 
-        /**
-         * A little utility method for stripping out unwanted characters.
-
-         * @param text
-         * *
-         * @param stripNewlines
-         * *
-         * @param stripTabs
-         * *
-         * @return The string after having the unwanted characters stripped out.
-         */
-        internal fun filterInput(text: String, stripNewlines: Boolean, stripTabs: Boolean): String {
-
-            var result = text
-
-            // Most of the time, when text is inserted, there are no illegal
-            // characters. So we'll do a "cheap" check for illegal characters.
-            // If we find one, we'll do a longer replace algorithm. In the
-            // case of illegal characters, this may at worst be an O(2n) solution.
-            // Strip out any characters that are outside the printed range
-            if (containsInvalidCharacters(result, stripNewlines, stripTabs)) {
-                val s = StringBuilder(result.length)
-                for (i in 0..result.length - 1) {
-                    val c = result[i]
-                    if (!isInvalidCharacter(c, stripNewlines, stripTabs)) {
-                        s.append(c)
-                    }
-                }
-                result = s.toString()
-            }
-            return result
+        private val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
+                StyleConverter.getBooleanConverter(), false) {
+            override fun isSettable(n: TediArea) = !n.displayLineNumbersProperty().isBound()
+            override fun getStyleableProperty(n: TediArea) = n.displayLineNumbersProperty()
         }
 
-        internal fun containsInvalidCharacters(text: String, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
-            for (i in 0..text.length - 1) {
-                val c = text[i]
-                if (isInvalidCharacter(c, newlineIllegal, tabIllegal)) return true
-            }
-            return false
-        }
+        private val STYLEABLES: List<CssMetaData<out Styleable, *>> = extendList(TextInputControl.getClassCssMetaData(),
+                DISPLAY_LINE_NUMBERS)
 
-        private fun isInvalidCharacter(c: Char, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
-            if (c.toInt() == 0x7F) return true
-            if (c.toInt() == 0xA) return newlineIllegal
-            if (c.toInt() == 0x9) return tabIllegal
-            if (c.toInt() < 0x20) return true
-            return false
-        }
+        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
+
 
         @JvmStatic fun style(scene: Scene) {
             val url = TediArea::class.java.getResource("tedi.css")

@@ -23,22 +23,22 @@ class Gutter(val tediArea: TediArea) : Region() {
 
     private var maxNumberWidth = 0.0
 
-    val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+    private val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
         override fun getBean() = this@Gutter
         override fun getName() = "textFill"
         override fun getCssMetaData(): CssMetaData<Gutter, Paint> = TEXT_FILL
     }
 
-    val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+    private val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
         override fun getBean() = this@Gutter
         override fun getName() = "highlightTextFill"
         override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_TEXT_FILL
     }
 
-    val highlightBackground: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+    private val highlightFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
         override fun getBean() = this@Gutter
-        override fun getName() = "highlightBackground"
-        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_BACKGROUND
+        override fun getName() = "highlightFill"
+        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_FILL
     }
 
     init {
@@ -47,7 +47,7 @@ class Gutter(val tediArea: TediArea) : Region() {
 
         with(rectangle) {
             isManaged = false
-            fillProperty().bind(highlightBackground)
+            fillProperty().bind(highlightFill)
         }
 
         children.addAll(rectangle, group)
@@ -89,7 +89,7 @@ class Gutter(val tediArea: TediArea) : Region() {
         }
     }
 
-    fun updateCaretPosition(oldValue: Int, newValue: Int) {
+    private fun updateCaretPosition(oldValue: Int, newValue: Int) {
         val oldLine = tediArea.lineFor(oldValue)
         val newLine = tediArea.lineFor(newValue)
 
@@ -137,50 +137,32 @@ class Gutter(val tediArea: TediArea) : Region() {
 
     companion object {
 
-        val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-text-fill",
+        private val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-text-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
-
-            override fun isSettable(gutter: Gutter): Boolean {
-                return !gutter.textFill.isBound
-            }
-
-            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
-                return gutter.textFill
-            }
+            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
+            override fun getStyleableProperty(gutter: Gutter) = gutter.textFill
         }
 
         /**
          * The color for the line number where the caret is positioned.
          */
-        val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-text-fill",
+        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-text-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
-
-            override fun isSettable(gutter: Gutter): Boolean {
-                return !gutter.textFill.isBound
-            }
-
-            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
-                return gutter.highlightTextFill
-            }
+            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
+            override fun getStyleableProperty(gutter: Gutter) = gutter.highlightTextFill
         }
 
         /**
          * The background color behind the line number where the caret is positioned.
          */
-        val HIGHLIGHT_BACKGROUND = object : CssMetaData<Gutter, Paint>("-fx-highlight-background",
+        private val HIGHLIGHT_FILL= object : CssMetaData<Gutter, Paint>("-fx-highlight-fill",
                 StyleConverter.getPaintConverter(), Color.WHITE) {
-
-            override fun isSettable(gutter: Gutter): Boolean {
-                return !gutter.textFill.isBound
-            }
-
-            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
-                return gutter.highlightBackground
-            }
+            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
+            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> = gutter.highlightFill
         }
 
         private val STYLEABLES = extendList(Region.getClassCssMetaData(),
-                TEXT_FILL, HIGHLIGHT_TEXT_FILL, HIGHLIGHT_BACKGROUND)
+                TEXT_FILL, HIGHLIGHT_TEXT_FILL, HIGHLIGHT_FILL)
 
         fun getClassCssMetaData() = STYLEABLES
 

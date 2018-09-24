@@ -225,3 +225,52 @@ fun <E> extendList(parent: List<E>, vararg extra: E): List<E> {
     result.addAll(listOf(*extra))
     return result
 }
+
+/**
+ * A little utility method for stripping out unwanted characters.
+
+ * @param text
+ * *
+ * @param stripNewlines
+ * *
+ * @param stripTabs
+ * *
+ * @return The string after having the unwanted characters stripped out.
+ */
+internal fun filterInput(text: String, stripNewlines: Boolean, stripTabs: Boolean): String {
+
+    var result = text
+
+    // Most of the time, when text is inserted, there are no illegal
+    // characters. So we'll do a "cheap" check for illegal characters.
+    // If we find one, we'll do a longer replace algorithm. In the
+    // case of illegal characters, this may at worst be an O(2n) solution.
+    // Strip out any characters that are outside the printed range
+    if (containsInvalidCharacters(result, stripNewlines, stripTabs)) {
+        val s = StringBuilder(result.length)
+        for (i in 0..result.length - 1) {
+            val c = result[i]
+            if (!isInvalidCharacter(c, stripNewlines, stripTabs)) {
+                s.append(c)
+            }
+        }
+        result = s.toString()
+    }
+    return result
+}
+
+internal fun containsInvalidCharacters(text: String, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
+    for (i in 0..text.length - 1) {
+        val c = text[i]
+        if (isInvalidCharacter(c, newlineIllegal, tabIllegal)) return true
+    }
+    return false
+}
+
+private fun isInvalidCharacter(c: Char, newlineIllegal: Boolean, tabIllegal: Boolean): Boolean {
+    if (c.toInt() == 0x7F) return true
+    if (c.toInt() == 0xA) return newlineIllegal
+    if (c.toInt() == 0x9) return tabIllegal
+    if (c.toInt() < 0x20) return true
+    return false
+}

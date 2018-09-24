@@ -36,8 +36,6 @@ import javafx.application.Platform
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.binding.IntegerBinding
-import javafx.beans.property.BooleanProperty
-import javafx.beans.property.ObjectProperty
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
@@ -50,7 +48,6 @@ import javafx.geometry.*
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.control.ScrollPane
-import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Region
@@ -64,7 +61,6 @@ import javafx.scene.text.Text
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
-import java.util.*
 
 class TediAreaSkin(val control: TediArea)
 
@@ -126,72 +122,34 @@ class TediAreaSkin(val control: TediArea)
     /**
      * The fill to use for the text under normal conditions
      */
-    private val textFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
-
-        override fun getBean(): Any {
-            return this@TediAreaSkin
-        }
-
-        override fun getName(): String {
-            return "textFill"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Paint> {
-            return StyleableProperties.TEXT_FILL
-        }
+    private val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
+        override fun getBean() = this@TediAreaSkin
+        override fun getName() = "textFill"
+        override fun getCssMetaData() = TEXT_FILL
     }
 
     /**
-     * The fill to use for the text when highlighted.
+     * The background behind the selected text
      */
-    private val highlightFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
-        override fun invalidated() {
-            // TODO updateHighlightFill()
-        }
-
-        override fun getBean(): Any {
-            return this@TediAreaSkin
-        }
-
-        override fun getName(): String {
-            return "highlightFill"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Paint> {
-            return StyleableProperties.HIGHLIGHT_FILL
-        }
+    private val highlightFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
+        override fun getBean() = this@TediAreaSkin
+        override fun getName() = "highlightFill"
+        override fun getCssMetaData() = HIGHLIGHT_FILL
     }
 
-    private val highlightTextFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
-        override fun invalidated() {
-            // TODO updateHighlightTextFill()
-        }
-
-        override fun getBean(): Any {
-            return this@TediAreaSkin
-        }
-
-        override fun getName(): String {
-            return "highlightTextFill"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Paint> {
-            return StyleableProperties.HIGHLIGHT_TEXT_FILL
-        }
+    /**
+     * The selected text's color
+     */
+    private val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+        override fun getBean() = this@TediAreaSkin
+        override fun getName() = "highlightTextFill"
+        override fun getCssMetaData() = HIGHLIGHT_TEXT_FILL
     }
 
-    private val displayCaret: BooleanProperty = object : StyleableBooleanProperty(true) {
-        override fun getBean(): Any {
-            return this@TediAreaSkin
-        }
-
-        override fun getName(): String {
-            return "displayCaret"
-        }
-
-        override fun getCssMetaData(): CssMetaData<TediArea, Boolean> {
-            return StyleableProperties.DISPLAY_CARET
-        }
+    private val displayCaret: StyleableBooleanProperty = object : StyleableBooleanProperty(true) {
+        override fun getBean() = this@TediAreaSkin
+        override fun getName() = "displayCaret"
+        override fun getCssMetaData() = DISPLAY_CARET
     }
 
     // TODO What is this here for?
@@ -893,75 +851,6 @@ class TediAreaSkin(val control: TediArea)
         }
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * StyleableProperties object                                              *
-     *                                                                         *
-     **************************************************************************/
-    private object StyleableProperties {
-
-        val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
-                StyleConverter.getPaintConverter(), Color.BLACK) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                val skin = n.skin as TediAreaSkin
-                return !skin.textFill.isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
-                val skin = n.skin as TediAreaSkin
-                @Suppress("UNCHECKED_CAST")
-                return skin.textFill as StyleableProperty<Paint>
-            }
-        }
-
-        val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
-                StyleConverter.getPaintConverter(), Color.DODGERBLUE) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                val skin = n.skin as TediAreaSkin
-                return !skin.highlightFill.isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
-                val skin = n.skin as TediAreaSkin
-                @Suppress("UNCHECKED_CAST")
-                return skin.highlightFill as StyleableProperty<Paint>
-            }
-        }
-
-        val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
-                StyleConverter.getPaintConverter(), Color.WHITE) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                val skin = n.skin as TediAreaSkin
-                return !skin.highlightTextFill.isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Paint> {
-                val skin = n.skin as TediAreaSkin
-                @Suppress("UNCHECKED_CAST")
-                return skin.highlightTextFill as StyleableProperty<Paint>
-            }
-        }
-
-        val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
-                StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
-
-            override fun isSettable(n: TediArea): Boolean {
-                val skin = n.skin as TediAreaSkin
-                return !skin.displayCaret.isBound
-            }
-
-            override fun getStyleableProperty(n: TediArea): StyleableProperty<Boolean> {
-                val skin = n.skin as TediAreaSkin
-                @Suppress("UNCHECKED_CAST")
-                return skin.displayCaret as StyleableProperty<Boolean>
-            }
-        }
-
-    }
-
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
         return getClassCssMetaData()
     }
@@ -973,19 +862,34 @@ class TediAreaSkin(val control: TediArea)
      **************************************************************************/
     companion object {
 
-        private val STYLEABLES: List<CssMetaData<out Styleable, *>>
-
-        init {
-            val styleables = ArrayList(TextInputControl.getClassCssMetaData())
-            styleables.add(StyleableProperties.TEXT_FILL)
-            styleables.add(StyleableProperties.HIGHLIGHT_FILL)
-            styleables.add(StyleableProperties.HIGHLIGHT_TEXT_FILL)
-            styleables.add(StyleableProperties.DISPLAY_CARET)
-
-            STYLEABLES = Collections.unmodifiableList(styleables)
+        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
+                StyleConverter.getPaintConverter(), Color.BLACK) {
+            override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).textFill
         }
 
-        fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
+        private val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
+                StyleConverter.getPaintConverter(), Color.DODGERBLUE) {
+            override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightFill
+        }
+
+        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
+                StyleConverter.getPaintConverter(), Color.WHITE) {
+            override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightTextFill
+        }
+
+        private val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
+                StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
+            override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).displayCaret
+        }
+
+        private val STYLEABLES = listOf(
+                TEXT_FILL, HIGHLIGHT_FILL, HIGHLIGHT_TEXT_FILL, DISPLAY_CARET)
+
+        fun getClassCssMetaData() = STYLEABLES
 
     }
 }
