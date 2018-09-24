@@ -148,17 +148,13 @@ TediArea has similar styleable properties as TextArea, with the addition of :
 
 You can also style **.tedi-area .gutter** (a Region),
 which is where the line numbers appear.
-Note that the top padding and bottom padding of .gutter are ignored
-(it uses the padding of .content, to ensure that the line numbers
-align with the content!)
 
-e.g. Use
+e.g. To change the color of the line numbers :
 
     .tedi-area .gutter { -fx-text-fill: xxx }
 
-to change the color of the line numbers.
-You cannot change the line number's font, as it must be the same as
-the content's font.
+Note, for correct alignment, the top padding of .gutter
+must be the same as .content
 
 I have included a style sheet as a resource in package
 **uk.co.nickthecoder.tedi** called **tedi.css**.

@@ -78,7 +78,7 @@ class TediAreaSkin(val control: TediArea)
     /**
      * A Region containing line numbers, to the left of the main content.
      */
-    private val gutter = Gutter(this)
+    private val gutter = Gutter(control)
 
     /**
      * A simple BorderPane with left=[gutter], center=[contentView]
@@ -351,10 +351,10 @@ class TediAreaSkin(val control: TediArea)
     private fun createTextNode(str: String): Text {
         val node = Text(str)
         with(node) {
+            styleClass.add("text")
             textOrigin = VPos.TOP
             wrappingWidth = 0.0
             isManaged = false
-            styleClass.add("text")
 
             fontProperty().bind(control.fontProperty())
             fillProperty().bind(textFill)
@@ -639,7 +639,7 @@ class TediAreaSkin(val control: TediArea)
 
     fun lineHeight(): Double {
         if (cachedLineHeight == 0.0) {
-            cachedLineHeight = tmpText.boundsInLocal.height
+            cachedLineHeight = Math.ceil(tmpText.boundsInLocal.height)
         }
         return cachedLineHeight
     }

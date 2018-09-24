@@ -213,3 +213,15 @@ fun Class<*>.findField(fieldName: String): Field? {
 
     return null
 }
+
+/**
+ * Creates a new list, and adds a list, and another set of extras.
+ * I use this for CSS meta data, where the super class has a list, and the sub class wants to extend that list
+ * with additional items.
+ */
+fun <E> extendList(parent: List<E>, vararg extra: E): List<E> {
+    val result = mutableListOf<E>()
+    result.addAll(parent)
+    result.addAll(listOf(*extra))
+    return result
+}

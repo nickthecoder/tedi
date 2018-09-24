@@ -8,15 +8,8 @@ Current Work
 Next
 ----
 
-get rid of getLine?
-change Paragraph.text to charSequence, and add text, which does a toString.
-rename "line" methods to paragraph?
-
-is lineHeight() correct? Can the text area adjust the line spacing???
-
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style
-    Use this for selection
     Later use this for search matches
         if match count > 1000 stop adding highlights.
     Later use it for syntax highlighting
@@ -28,6 +21,12 @@ why does skin have skinnable and control, which are the same?
 Add font +/- buttons in the Demo.
 
 Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
+
+get rid of getLine?
+change Paragraph.text to charSequence, and add text, which does a toString.
+rename "line" methods to paragraph?
+
+is lineHeight() correct? Can the text area adjust the line spacing???
 
 Later
 -----

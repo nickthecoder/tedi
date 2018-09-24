@@ -1,4 +1,5 @@
-.tedi-area {
+.tedi-area .content {
+    -fx-padding: 4 10;
 }
 
 .tedi-area.code {
@@ -7,11 +8,13 @@
 }
 
 .tedi-area .gutter {
-    -fx-padding: 0 4 0 10; /* Note. top and bottom are ignored */
+    -fx-padding: 4 4 4 10; /* Note the top MUST be the same as .tedi-area .content for correct alignment. */
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
-    -fx-text-fill: #888888;
+    -fx-text-fill: gray;
+    -fx-highlight-text-fill: gray; /* For the current line */
+    -fx-highlight-background: #fff8f8; /* For the current line */
 }
 
 /*

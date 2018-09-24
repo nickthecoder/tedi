@@ -1,14 +1,13 @@
 package uk.co.nickthecoder.tedi
 
-import javafx.beans.property.ObjectProperty
 import javafx.css.*
 import javafx.geometry.VPos
 import javafx.scene.Group
 import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
+import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
-import java.util.*
 
 /**
  * A rectangle to the left of the main content, showing line numbers.
@@ -16,42 +15,65 @@ import java.util.*
  *
  *     .tedi-area .gutter { xxx }
  */
-class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
+class Gutter(val tediArea: TediArea) : Region() {
 
     private val group = Group()
 
+    private val rectangle = Rectangle()
+
     private var maxNumberWidth = 0.0
 
-    val textFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
-        override fun getBean() = this
+    val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+        override fun getBean() = this@Gutter
         override fun getName() = "textFill"
         override fun getCssMetaData(): CssMetaData<Gutter, Paint> = TEXT_FILL
     }
 
+    val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+        override fun getBean() = this@Gutter
+        override fun getName() = "highlightTextFill"
+        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_TEXT_FILL
+    }
+
+    val highlightBackground: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+        override fun getBean() = this@Gutter
+        override fun getName() = "highlightBackground"
+        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_BACKGROUND
+    }
+
     init {
         styleClass.add("gutter")
-        visibleProperty().bind(tediAreaSkin.control.displayLineNumbersProperty())
+        visibleProperty().bind(tediArea.displayLineNumbersProperty())
 
-        children.add(group)
+        with(rectangle) {
+            isManaged = false
+            fillProperty().bind(highlightBackground)
+        }
 
-        tediAreaSkin.control.lineCountProperty().addListener { _, _, _ ->
+        children.addAll(rectangle, group)
+
+        tediArea.lineCountProperty().addListener { _, _, _ ->
             updateLines()
         }
+
+        tediArea.caretPositionProperty().addListener { _, oldValue, newValue ->
+            updateCaretPosition(oldValue.toInt(), newValue.toInt())
+        }
+
     }
 
     fun updateLines() {
 
-        val required = tediAreaSkin.control.lineCount
+        val required = tediArea.lineCount
 
         for (i in group.children.size..required - 1) {
             val text = Text((i + 1).toString())
             with(text) {
                 styleClass.add("text") // Must use the same style as the main content's text.
-                isManaged = false
                 textOrigin = VPos.TOP
                 wrappingWidth = 0.0
-                layoutY = tediAreaSkin.lineHeight() * i
-                fontProperty().bind(tediAreaSkin.control.fontProperty())
+                isManaged = false
+                fontProperty().bind(tediArea.fontProperty())
                 fillProperty().bind(textFill)
             }
             if (text.layoutBounds.width > maxNumberWidth) {
@@ -67,6 +89,21 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
         }
     }
 
+    fun updateCaretPosition(oldValue: Int, newValue: Int) {
+        val oldLine = tediArea.lineFor(oldValue)
+        val newLine = tediArea.lineFor(newValue)
+
+        if (oldLine != newLine) {
+            if (oldLine < group.children.size - 1) {
+                (group.children[oldLine] as Text).fillProperty().bind(textFill)
+            }
+            if (newLine < group.children.size - 1) {
+                (group.children[newLine] as Text).fillProperty().bind(highlightTextFill)
+            }
+        }
+        rectangle.layoutY = snappedTopInset() + newLine * (tediArea.skin as TediAreaSkin).lineHeight()
+    }
+
     override fun computePrefWidth(height: Double): Double {
         var prefWidth = snappedLeftInset() + snappedRightInset()
         prefWidth += maxNumberWidth
@@ -74,11 +111,24 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
     }
 
     override fun layoutChildren() {
+
         group.layoutX = snappedLeftInset()
-        group.layoutY = tediAreaSkin.contentView.snappedTopInset()
+        group.layoutY = snappedTopInset()
+
+        val lineHeight = (tediArea.skin as TediAreaSkin).lineHeight()
+        var y = 0.0
+
         for (t in group.children) {
             t.layoutX = maxNumberWidth - t.boundsInLocal.width
+            t.layoutY = y
+            y += lineHeight
         }
+
+        with(rectangle) {
+            height = lineHeight
+            layoutY = tediArea.lineFor(tediArea.caretPosition) * lineHeight + snappedTopInset()
+        }
+        border?.insets?.let { rectangle.width = width - it.right - it.left }
     }
 
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
@@ -95,20 +145,44 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
             }
 
             override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
-                @Suppress("UNCHECKED_CAST")
-                return gutter.textFill as StyleableProperty<Paint>
+                return gutter.textFill
             }
         }
 
-        val STYLEABLES: List<CssMetaData<out Styleable, *>>
+        /**
+         * The color for the line number where the caret is positioned.
+         */
+        val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-text-fill",
+                StyleConverter.getPaintConverter(), Color.GREY) {
 
-        init {
-            val styleables = ArrayList(Region.getClassCssMetaData())
-            styleables.add(TEXT_FILL)
-            STYLEABLES = Collections.unmodifiableList(styleables)
+            override fun isSettable(gutter: Gutter): Boolean {
+                return !gutter.textFill.isBound
+            }
+
+            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
+                return gutter.highlightTextFill
+            }
         }
 
-        fun getClassCssMetaData() = STYLEABLES
-    }
+        /**
+         * The background color behind the line number where the caret is positioned.
+         */
+        val HIGHLIGHT_BACKGROUND = object : CssMetaData<Gutter, Paint>("-fx-highlight-background",
+                StyleConverter.getPaintConverter(), Color.WHITE) {
 
+            override fun isSettable(gutter: Gutter): Boolean {
+                return !gutter.textFill.isBound
+            }
+
+            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> {
+                return gutter.highlightBackground
+            }
+        }
+
+        private val STYLEABLES = extendList(Region.getClassCssMetaData(),
+                TEXT_FILL, HIGHLIGHT_TEXT_FILL, HIGHLIGHT_BACKGROUND)
+
+        fun getClassCssMetaData() = STYLEABLES
+
+    }
 }
