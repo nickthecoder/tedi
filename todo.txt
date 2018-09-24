@@ -1,26 +1,15 @@
 Bugs
 ----
 
-Click after dragging selection only changes the selection. Must clear it!
-
-Up and down is buggy.
-
 Current Work
 ------------
-Implement Skin using a list of paragraphsNodes
 
-Create the selectionGroup in a new method, using standard APIs
-    Consists of a Group, containing a set of Text
-    The first is cunningly positioned to match the column of the selection.
-    The remainder use 0.0 for X and increasing Ys based on lineHeight()
 
-    cache the value of lineHeight, and update it when font changes.
-    (Will already have a font change listener for caretPath)
-
-    Implement line numbers as a set of Text
-        Listen to the paragraphs list, and add / remove as appropriate.
 Next
 ----
+
+Implement line numbers as a set of Text
+    Listen to the paragraphs list, and add / remove as appropriate.
 
 get rid of getLine?
 change Paragraph.text to charSequence, and add text, which does a toString.

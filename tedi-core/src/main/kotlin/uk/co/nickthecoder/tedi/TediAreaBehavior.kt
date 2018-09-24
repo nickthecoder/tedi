@@ -192,49 +192,53 @@ class TediAreaBehavior(val control: TediArea)
 
     override fun mousePressed(e: MouseEvent?) {
         super.mousePressed(e)
+
+        e ?: return
         // We never respond to events if disabled
-        if (!control.isDisabled) {
-            if (!control.isFocused) {
-                control.requestFocus()
-            }
+        if (control.isDisabled) return
 
-            // if the primary button was pressed
-            if (e!!.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
-                val mousePosition = skin.positionForContentPoint(e.x, e.y)
+        if (!control.isFocused) {
+            control.requestFocus()
+        }
 
-                val anchor = control.anchor
-                val caretPosition = control.caretPosition
-                if (e.clickCount < 2 && (e.isSynthesized || anchor != caretPosition && (mousePosition > anchor && mousePosition < caretPosition || mousePosition < anchor && mousePosition > caretPosition))) {
-                    // if there is a selection, then we will NOT handle the
-                    // press now, but will defer until the release. If you
-                    // select some text and then press down, we change the
-                    // caret and wait to allow you to drag the text.
-                    // When the drag concludes, then we handle the click
+        // if the primary button was pressed
+        if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
+            val mousePosition = skin.positionForContentPoint(e.x, e.y)
 
-                    deferClick = true
-                } else if (!(e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown || e.isShortcutDown)) {
-                    when (e.clickCount) {
-                        1 -> skin.positionCaret(mousePosition, false, false)
-                        2 -> mouseDoubleClick()
-                        3 -> mouseTripleClick()
-                    }// no-op
-                } else if (e.isShiftDown && !(e.isControlDown || e.isAltDown || e.isMetaDown || e.isShortcutDown) && e.clickCount == 1) {
-                    // didn't click inside the selection, so select
-                    shiftDown = true
-                    // if we are on mac os, then we will accumulate the
-                    // selection instead of just moving the dot. This happens
-                    // by figuring out past which (dot/mark) are extending the
-                    // selection, and set the mark to be the other side and
-                    // the dot to be the new position.
-                    // everywhere else we just move the dot.
-                    if (isMac) {
-                        control.extendSelection(mousePosition)
-                    } else {
-                        skin.positionCaret(mousePosition, true, false)
-                    }
+            val anchor = control.anchor
+            val caretPosition = control.caretPosition
+            if (e.clickCount < 2 && anchor != caretPosition &&
+                    (mousePosition > anchor && mousePosition < caretPosition || mousePosition < anchor && mousePosition > caretPosition)) {
+                // if there is a selection, then we will NOT handle the
+                // press now, but will defer until the release. If you
+                // select some text and then press down, we change the
+                // caret and wait to allow you to drag the text.
+                // When the drag concludes, then we handle the click
+
+                deferClick = true
+            } else if (!(e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown || e.isShortcutDown)) {
+                when (e.clickCount) {
+                    1 -> skin.positionCaret(mousePosition, false, false)
+                    2 -> mouseDoubleClick()
+                    3 -> mouseTripleClick()
+                }// no-op
+            } else if (e.isShiftDown && !(e.isControlDown || e.isAltDown || e.isMetaDown || e.isShortcutDown) && e.clickCount == 1) {
+                // didn't click inside the selection, so select
+                shiftDown = true
+                // if we are on mac os, then we will accumulate the
+                // selection instead of just moving the dot. This happens
+                // by figuring out past which (dot/mark) are extending the
+                // selection, and set the mark to be the other side and
+                // the dot to be the new position.
+                // everywhere else we just move the dot.
+                if (isMac) {
+                    control.extendSelection(mousePosition)
+                } else {
+                    skin.positionCaret(mousePosition, true, false)
                 }
             }
         }
+
     }
 
     override fun mouseDragged(e: MouseEvent?) {

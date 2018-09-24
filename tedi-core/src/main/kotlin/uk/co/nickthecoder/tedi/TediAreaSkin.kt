@@ -601,8 +601,7 @@ class TediAreaSkin(val control: TediArea)
     private fun changeLine(n: Int, select: Boolean) {
         val lineColumn = control.lineColumnFor(control.caretPosition)
 
-        val caretBounds = caretPath.layoutBounds
-        val requiredX = if (targetCaretX < 0) caretBounds.maxX else targetCaretX
+        val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
         val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
         val lineText = skinnable.getLine(requiredLine).toString()
