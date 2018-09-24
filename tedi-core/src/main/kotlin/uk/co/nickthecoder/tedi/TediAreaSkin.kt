@@ -478,6 +478,10 @@ class TediAreaSkin(val control: TediArea)
         caretPath.layoutY = line * lineHeight()
         tmpText.text = control.paragraphs[line].text.substring(0, column)
         caretPath.layoutX = tmpText.boundsInLocal.width
+
+        if (control.isFocused) {
+            scrollCaretToVisible()
+        }
     }
 
     fun onFontChanged() {
@@ -544,8 +548,8 @@ class TediAreaSkin(val control: TediArea)
     private fun scrollCaretToVisible() {
         val textArea = skinnable
         val bounds = caretPath.layoutBounds
-        val x = bounds.minX - textArea.scrollLeft
-        val y = bounds.minY - textArea.scrollTop
+        val x = bounds.minX - textArea.scrollLeft + caretPath.layoutX
+        val y = bounds.minY - textArea.scrollTop + caretPath.layoutY
         val w = bounds.width
         val h = bounds.height
 
