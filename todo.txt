@@ -1,6 +1,10 @@
 Bugs
 ----
 
+Click after dragging selection only changes the selection. Must clear it!
+
+Up and down is buggy.
+
 Current Work
 ------------
 Implement Skin using a list of paragraphsNodes
@@ -13,16 +17,16 @@ Create the selectionGroup in a new method, using standard APIs
     cache the value of lineHeight, and update it when font changes.
     (Will already have a font change listener for caretPath)
 
-Check when layoutChildren is being called, and try to minimise this.
-
-
+    Implement line numbers as a set of Text
+        Listen to the paragraphs list, and add / remove as appropriate.
 Next
 ----
 
-why does skin have skinnable and control, which are the same?
+get rid of getLine?
+change Paragraph.text to charSequence, and add text, which does a toString.
+rename "line" methods to paragraph?
 
-Add font +/- buttons in the Demo.
-
+is lineHeight() correct? Can the text area adjust the line spacing???
 
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style
@@ -31,7 +35,11 @@ Make ParagraphNode clever enough to handle a set of styles
         if match count > 1000 stop adding highlights.
     Later use it for syntax highlighting
 
-Remove remaining deprecation warnings
+Check when layoutChildren is being called, and try to minimise this.
+
+why does skin have skinnable and control, which are the same?
+
+Add font +/- buttons in the Demo.
 
 Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 

@@ -59,6 +59,7 @@ import javafx.scene.paint.Paint
 import javafx.scene.shape.LineTo
 import javafx.scene.shape.MoveTo
 import javafx.scene.shape.Path
+import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
@@ -73,12 +74,6 @@ class TediAreaSkin(val control: TediArea)
      * Contains the Text nodes, which display the document's content.
      */
     private val textGroup = Group()
-
-    /**
-     * Currently, visible text is one HUGE Text object, which is inefficient, and should be
-     * broken into parts.
-     */
-    private val paragraphNode = Text()
 
     /**
      * A Region containing line numbers, to the left of the main content.
@@ -151,7 +146,7 @@ class TediAreaSkin(val control: TediArea)
      */
     private val highlightFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
         override fun invalidated() {
-            updateHighlightFill()
+            // TODO updateHighlightFill()
         }
 
         override fun getBean(): Any {
@@ -169,7 +164,7 @@ class TediAreaSkin(val control: TediArea)
 
     private val highlightTextFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
         override fun invalidated() {
-            updateHighlightTextFill()
+            // TODO updateHighlightTextFill()
         }
 
         override fun getBean(): Any {
@@ -275,22 +270,9 @@ class TediAreaSkin(val control: TediArea)
             isManaged = false
         }
 
-        // paragraphNode
-        with(paragraphNode) {
-            text = control.text
-            textOrigin = VPos.TOP
-            wrappingWidth = 0.0
-            isManaged = false
-            styleClass.add("text")
-
-            fontProperty().bind(control.fontProperty())
-            fillProperty().bind(textFill)
-        }
-
         // selection
         with(selectionHighlightGroup) {
             isManaged = false
-            isVisible = false
         }
 
         // gutter
@@ -317,7 +299,10 @@ class TediAreaSkin(val control: TediArea)
         tmpText.fontProperty().bind(control.fontProperty())
 
         // insideGroup
-        insideGroup.children.addAll(selectionHighlightGroup, textGroup, paragraphNode, caretPath)
+        with(insideGroup) {
+            isManaged = false
+            children.addAll(textGroup, selectionHighlightGroup, caretPath)
+        }
 
         // contentView
         contentView.children.add(insideGroup)
@@ -344,12 +329,8 @@ class TediAreaSkin(val control: TediArea)
             onParagraphsChange(change)
         }
 
-        control.textProperty().addListener { _ ->
-            paragraphNode.text = control.textProperty().valueSafe
-        }
-
         control.selectionProperty().addListener { _, _, _ ->
-            contentView.requestLayout()
+            onSelectionChanged()
         }
 
         caretPosition.addListener { _, _, _ -> onCaretMoved() }
@@ -358,6 +339,7 @@ class TediAreaSkin(val control: TediArea)
         control.fontProperty().addListener { _, _, _ -> onFontChanged() }
         onFontChanged()
     }
+
 
     /***************************************************************************
      *                                                                         *
@@ -384,6 +366,86 @@ class TediAreaSkin(val control: TediArea)
             fontProperty().unbind()
             fillProperty().unbind()
         }
+    }
+
+    /**
+     * Builds a selection, by creating Text objects (one per line) of the selection,
+     * as well as a Rectangle for each of them.
+     * This isn't efficient, as it clears the selection and rebuilds it every time.
+     * This is expensive, when the selection is large.
+     * Such as Select All, then ctrl+shift+Right lots of times!
+     */
+    private fun onSelectionChanged() {
+
+        fun createText(str: String, x: Double, y: Double): Pair<Text, Rectangle> {
+            val text = Text(str).apply {
+                textOrigin = VPos.TOP
+                wrappingWidth = 0.0
+                styleClass.add("text")
+                isManaged = false
+                layoutX = x
+                layoutY = y
+                fontProperty().bind(control.fontProperty())
+                fillProperty().bind(highlightTextFill)
+            }
+
+            val bounds = text.boundsInLocal
+            val rectangle = Rectangle(bounds.width, bounds.height).apply {
+                layoutX = text.layoutX
+                layoutY = text.layoutY
+                fillProperty().bind(highlightFill)
+            }
+            return Pair(text, rectangle)
+        }
+
+        selectionHighlightGroup.children.forEach { child ->
+            if (child is Text) {
+                child.fontProperty().unbind()
+                child.fillProperty().unbind()
+            }
+            if (child is Rectangle) {
+                child.fillProperty().unbind()
+            }
+        }
+        selectionHighlightGroup.children.clear()
+
+        if (control.selection.length != 0) {
+            val (fromLine, fromColumn) = control.lineColumnFor(control.selection.start)
+            val (toLine, toColumn) = control.lineColumnFor(control.selection.end)
+
+            val firstLineText = control.paragraphs[fromLine].text
+            tmpText.text = firstLineText.substring(0, fromColumn)
+
+            if (fromLine == toLine) {
+
+                val (text, background) = createText(firstLineText.substring(fromColumn, toColumn), tmpText.boundsInLocal.width, fromLine * lineHeight())
+                selectionHighlightGroup.children.addAll(background, text)
+
+            } else {
+
+                // First line
+                val firstLineTrailingText = firstLineText.substring(fromColumn)
+                if (firstLineTrailingText.isNotEmpty()) {
+                    val (text, background) = createText(firstLineTrailingText, tmpText.boundsInLocal.width, fromLine * lineHeight())
+                    selectionHighlightGroup.children.addAll(background, text)
+                }
+
+                // Whole lines
+                for (i in fromLine + 1..toLine - 1) { // Don't include the last line
+                    val (text, background) = createText(control.paragraphs[i].text.toString(), 0.0, i * lineHeight())
+                    selectionHighlightGroup.children.addAll(background, text)
+                }
+
+                // Last line
+                val lastLineLeadingText = control.paragraphs[toLine].text.substring(0, toColumn)
+                if (lastLineLeadingText.isNotEmpty()) {
+                    val (text, background) = createText(lastLineLeadingText, 0.0, toLine * lineHeight())
+                    selectionHighlightGroup.children.addAll(background, text)
+                }
+            }
+
+        }
+        contentView.requestLayout() // TODO Remove this?
     }
 
     fun onParagraphsChange(change: Change<out Paragraph>) {
@@ -460,7 +522,6 @@ class TediAreaSkin(val control: TediArea)
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
-
         if (select) {
             if (extendSelection) {
                 skinnable.extendSelection(pos)
@@ -530,20 +591,6 @@ class TediAreaSkin(val control: TediArea)
                 x = getScrollLeftMax()
             }
             textArea.scrollLeft = x
-        }
-    }
-
-    private fun updateHighlightTextFill() {
-        for (node in selectionHighlightGroup.children) {
-            val selectionHighlightPath = node as Path
-            selectionHighlightPath.fill = highlightFill.get()
-        }
-    }
-
-    private fun updateHighlightFill() {
-        for (node in selectionHighlightGroup.children) {
-            val selectionHighlightPath = node as Path
-            selectionHighlightPath.fill = highlightFill.get()
         }
     }
 
@@ -811,10 +858,7 @@ class TediAreaSkin(val control: TediArea)
         }
 
         public override fun layoutChildren() {
-            val tediArea = skinnable
             val width = width
-
-            paragraphNode.opacity = 0.01
 
             // insideGroup
             insideGroup.layoutX = snappedLeftInset()
@@ -825,36 +869,6 @@ class TediAreaSkin(val control: TediArea)
             textGroup.children.forEach { text ->
                 text.layoutY = textY
                 textY += lineHeight
-            }
-
-            // Update the selection
-            val selection = tediArea.selection
-            selectionHighlightGroup.children.clear()
-
-            // Update selection fg and bg
-            val start = selection.start
-            val end = selection.end
-
-            val paragraphLength = paragraphNode.text.length + 1
-            if (end > start && start < paragraphLength) {
-                paragraphNode.impl_selectionStart = start
-                paragraphNode.impl_selectionEnd = Math.min(end, paragraphLength)
-
-                val selectionHighlightPath = Path()
-                selectionHighlightPath.isManaged = false
-                selectionHighlightPath.stroke = null
-                paragraphNode.impl_selectionShape?.let {
-                    selectionHighlightPath.elements.addAll(*it)
-                }
-                selectionHighlightGroup.children.add(selectionHighlightPath)
-                selectionHighlightGroup.isVisible = true
-                selectionHighlightPath.layoutX = paragraphNode.layoutX
-                selectionHighlightPath.layoutY = paragraphNode.layoutY
-                updateHighlightFill()
-            } else {
-                paragraphNode.impl_selectionStart = -1
-                paragraphNode.impl_selectionEnd = -1
-                selectionHighlightGroup.isVisible = false
             }
 
             // Fit to width/height only if smaller than viewport.
