@@ -3,11 +3,11 @@ package uk.co.nickthecoder.tedi
 import javafx.beans.property.ObjectProperty
 import javafx.css.*
 import javafx.geometry.VPos
+import javafx.scene.Group
 import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.text.Text
-import javafx.scene.text.TextAlignment
 import java.util.*
 
 /**
@@ -18,7 +18,9 @@ import java.util.*
  */
 class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
 
-    private val lineNumbers = Text("")
+    private val group = Group()
+
+    private var maxNumberWidth = 0.0
 
     val textFill: ObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
         override fun getBean() = this
@@ -30,42 +32,53 @@ class Gutter(val tediAreaSkin: TediAreaSkin) : Region() {
         styleClass.add("gutter")
         visibleProperty().bind(tediAreaSkin.control.displayLineNumbersProperty())
 
-        children.add(lineNumbers)
+        children.add(group)
 
-        with(lineNumbers) {
-            styleClass.add("text") // Must use the same style as the main content's text.
-            isManaged = false
-            textOrigin = VPos.TOP
-            textAlignment = TextAlignment.RIGHT
-            wrappingWidth = 0.0
-            fontProperty().bind(tediAreaSkin.control.fontProperty())
-            fillProperty().bind(textFill)
-        }
-
-        updateLineNumbers()
         tediAreaSkin.control.lineCountProperty().addListener { _, _, _ ->
-            updateLineNumbers()
+            updateLines()
         }
     }
 
-    private fun updateLineNumbers() {
-        val lines = tediAreaSkin.control.lineCount
-        val buffer = StringBuffer(lines * 3)
-        for (i in 1..lines) {
-            buffer.append(i.toString()).append("\n")
+    fun updateLines() {
+
+        val required = tediAreaSkin.control.lineCount
+
+        for (i in group.children.size..required - 1) {
+            val text = Text((i + 1).toString())
+            with(text) {
+                styleClass.add("text") // Must use the same style as the main content's text.
+                isManaged = false
+                textOrigin = VPos.TOP
+                wrappingWidth = 0.0
+                layoutY = tediAreaSkin.lineHeight() * i
+                fontProperty().bind(tediAreaSkin.control.fontProperty())
+                fillProperty().bind(textFill)
+            }
+            if (text.layoutBounds.width > maxNumberWidth) {
+                maxNumberWidth = text.layoutBounds.width
+                requestLayout()
+            }
+            group.children.add(text)
         }
-        lineNumbers.text = buffer.toString()
+
+
+        while (required < group.children.size) {
+            group.children.removeAt(group.children.size - 1)
+        }
     }
 
     override fun computePrefWidth(height: Double): Double {
         var prefWidth = snappedLeftInset() + snappedRightInset()
-        prefWidth += lineNumbers.prefWidth(height)
+        prefWidth += maxNumberWidth
         return prefWidth
     }
 
     override fun layoutChildren() {
-        lineNumbers.layoutX = snappedLeftInset()
-        lineNumbers.layoutY = tediAreaSkin.contentView.snappedTopInset()
+        group.layoutX = snappedLeftInset()
+        group.layoutY = tediAreaSkin.contentView.snappedTopInset()
+        for (t in group.children) {
+            t.layoutX = maxNumberWidth - t.boundsInLocal.width
+        }
     }
 
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {

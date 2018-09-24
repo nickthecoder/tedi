@@ -276,6 +276,7 @@ class TediAreaSkin(val control: TediArea)
         }
 
         // gutter
+        gutter.updateLines()
         with(guttersAndContentView) {
             left = if (gutter.isVisible) gutter else null
             center = contentView
@@ -636,7 +637,7 @@ class TediAreaSkin(val control: TediArea)
 
     private var cachedLineHeight = 0.0
 
-    private fun lineHeight(): Double {
+    fun lineHeight(): Double {
         if (cachedLineHeight == 0.0) {
             cachedLineHeight = tmpText.boundsInLocal.height
         }

@@ -8,9 +8,6 @@ Current Work
 Next
 ----
 
-Implement line numbers as a set of Text
-    Listen to the paragraphs list, and add / remove as appropriate.
-
 get rid of getLine?
 change Paragraph.text to charSequence, and add text, which does a toString.
 rename "line" methods to paragraph?
