@@ -62,7 +62,7 @@ import javafx.util.Duration
 import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 
-class TediAreaSkin(val control: TediArea)
+class TediAreaSkin(control: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
 
@@ -314,7 +314,7 @@ class TediAreaSkin(val control: TediArea)
             wrappingWidth = 0.0
             isManaged = false
 
-            fontProperty().bind(control.fontProperty())
+            fontProperty().bind(skinnable.fontProperty())
             fillProperty().bind(textFill)
         }
         return node
@@ -344,7 +344,7 @@ class TediAreaSkin(val control: TediArea)
                 isManaged = false
                 layoutX = x
                 layoutY = y
-                fontProperty().bind(control.fontProperty())
+                fontProperty().bind(skinnable.fontProperty())
                 fillProperty().bind(highlightTextFill)
             }
 
@@ -368,11 +368,11 @@ class TediAreaSkin(val control: TediArea)
         }
         selectionHighlightGroup.children.clear()
 
-        if (control.selection.length != 0) {
-            val (fromLine, fromColumn) = control.lineColumnFor(control.selection.start)
-            val (toLine, toColumn) = control.lineColumnFor(control.selection.end)
+        if (skinnable.selection.length != 0) {
+            val (fromLine, fromColumn) = skinnable.lineColumnFor(skinnable.selection.start)
+            val (toLine, toColumn) = skinnable.lineColumnFor(skinnable.selection.end)
 
-            val firstLineText = control.paragraphs[fromLine].text
+            val firstLineText = skinnable.paragraphs[fromLine].text
             tmpText.text = firstLineText.substring(0, fromColumn)
 
             if (fromLine == toLine) {
@@ -391,12 +391,12 @@ class TediAreaSkin(val control: TediArea)
 
                 // Whole lines
                 for (i in fromLine + 1..toLine - 1) { // Don't include the last line
-                    val (text, background) = createText(control.paragraphs[i].text.toString(), 0.0, i * lineHeight())
+                    val (text, background) = createText(skinnable.paragraphs[i].text.toString(), 0.0, i * lineHeight())
                     selectionHighlightGroup.children.addAll(background, text)
                 }
 
                 // Last line
-                val lastLineLeadingText = control.paragraphs[toLine].text.substring(0, toColumn)
+                val lastLineLeadingText = skinnable.paragraphs[toLine].text.substring(0, toColumn)
                 if (lastLineLeadingText.isNotEmpty()) {
                     val (text, background) = createText(lastLineLeadingText, 0.0, toLine * lineHeight())
                     selectionHighlightGroup.children.addAll(background, text)
@@ -433,12 +433,12 @@ class TediAreaSkin(val control: TediArea)
     fun onCaretMoved() {
         targetCaretX = -1.0
 
-        val (line, column) = control.lineColumnFor(control.caretPosition)
+        val (line, column) = skinnable.lineColumnFor(skinnable.caretPosition)
         caretPath.layoutY = line * lineHeight()
-        tmpText.text = control.paragraphs[line].text.substring(0, column)
+        tmpText.text = skinnable.paragraphs[line].text.substring(0, column)
         caretPath.layoutX = tmpText.boundsInLocal.width
 
-        if (control.isFocused) {
+        if (skinnable.isFocused) {
             scrollCaretToVisible()
         }
     }
@@ -460,7 +460,7 @@ class TediAreaSkin(val control: TediArea)
     fun positionForPoint(x: Double, y: Double): Int {
         val point = Point2D(0.0, 0.0)
         val contentViewBounds = contentView.localToScene(point)
-        val controlBounds = control.localToScene(point)
+        val controlBounds = skinnable.localToScene(point)
         return positionForContentPoint(
                 x + controlBounds.x - contentViewBounds.x,
                 y + controlBounds.y - contentViewBounds.y)
@@ -562,7 +562,7 @@ class TediAreaSkin(val control: TediArea)
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
-        val lineColumn = control.lineColumnFor(control.caretPosition)
+        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
 
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
@@ -573,12 +573,12 @@ class TediAreaSkin(val control: TediArea)
         val hit = tmpText.hitTestChar(requiredX - insideGroup.layoutX, -insideGroup.layoutY)
         val columnIndex = hit.getInsertionIndex()
 
-        val newPosition = control.positionFor(requiredLine, 0) + columnIndex
+        val newPosition = skinnable.positionFor(requiredLine, 0) + columnIndex
 
         if (select) {
-            control.selectRange(control.anchor, newPosition)
+            skinnable.selectRange(skinnable.anchor, newPosition)
         } else {
-            control.selectRange(newPosition, newPosition)
+            skinnable.selectRange(newPosition, newPosition)
         }
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
@@ -625,22 +625,22 @@ class TediAreaSkin(val control: TediArea)
     }
 
     fun lineStart(select: Boolean) {
-        val lineColumn = control.lineColumnFor(control.caretPosition)
-        val newPosition = control.positionFor(lineColumn.first, 0)
+        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
+        val newPosition = skinnable.positionFor(lineColumn.first, 0)
         if (select) {
-            control.selectRange(control.anchor, newPosition)
+            skinnable.selectRange(skinnable.anchor, newPosition)
         } else {
-            control.selectRange(newPosition, newPosition)
+            skinnable.selectRange(newPosition, newPosition)
         }
     }
 
     fun lineEnd(select: Boolean) {
-        val lineColumn = control.lineColumnFor(control.caretPosition)
-        val newPosition = control.positionFor(lineColumn.first, Int.MAX_VALUE)
+        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
+        val newPosition = skinnable.positionFor(lineColumn.first, Int.MAX_VALUE)
         if (select) {
-            control.selectRange(control.anchor, newPosition)
+            skinnable.selectRange(skinnable.anchor, newPosition)
         } else {
-            control.selectRange(newPosition, newPosition)
+            skinnable.selectRange(newPosition, newPosition)
         }
     }
 
