@@ -1,14 +1,27 @@
 Bugs
 ----
 
+Current Work
+------------
+Implement Skin using a list of paragraphsNodes
+
+Create the selectionGroup in a new method, using standard APIs
+    Consists of a Group, containing a set of Text
+    The first is cunningly positioned to match the column of the selection.
+    The remainder use 0.0 for X and increasing Ys based on lineHeight()
+
+    cache the value of lineHeight, and update it when font changes.
+    (Will already have a font change listener for caretPath)
+
+Check when layoutChildren is being called, and try to minimise this.
+
+
 Next
 ----
 
-Implement Skin using a list of paragraphsNodes
-    Create a Group, initially with one Text, then add/change via a paragraph listener.
-        While in developing, keep the old paragraphNode
-    Update font in a listener
-        Add font +/- buttons in the Demo.
+why does skin have skinnable and control, which are the same?
+
+Add font +/- buttons in the Demo.
 
 
 Make ParagraphNode clever enough to handle a set of styles

@@ -56,6 +56,8 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
+import javafx.scene.shape.LineTo
+import javafx.scene.shape.MoveTo
 import javafx.scene.shape.Path
 import javafx.scene.text.Text
 import javafx.util.Duration
@@ -95,6 +97,12 @@ class TediAreaSkin(val control: TediArea)
      * ensure the line numbers line up with the main text.
      */
     internal val contentView = ContentView()
+    // TODO Why internal?
+
+    /**
+     * Takes care of the contentView's borders, so that all ancestors don't need to bother.
+     */
+    private val insideGroup = Group()
 
     /**
      * A path, used to display the caret.
@@ -111,6 +119,8 @@ class TediAreaSkin(val control: TediArea)
      * Remembers horizontal position when traversing up / down.
      */
     private var targetCaretX = -1.0
+
+    private val tmpText = Text()
 
     /***************************************************************************
      *                                                                         *
@@ -189,6 +199,7 @@ class TediAreaSkin(val control: TediArea)
         }
     }
 
+    // TODO What is this here for?
     private var caretPosition: ObservableIntegerValue = object : IntegerBinding() {
         init {
             bind(control.caretPositionProperty())
@@ -298,19 +309,20 @@ class TediAreaSkin(val control: TediArea)
         // caretPath
         with(caretPath) {
             isManaged = false
-            strokeWidth = 1.0
             fillProperty().bind(textFill)
             strokeProperty().bind(textFill)
         }
 
+        // tmpText
+        tmpText.fontProperty().bind(control.fontProperty())
+
+        // insideGroup
+        insideGroup.children.addAll(selectionHighlightGroup, textGroup, paragraphNode, caretPath)
+
         // contentView
-        contentView.children.addAll(selectionHighlightGroup, textGroup, paragraphNode, caretPath)
+        contentView.children.add(insideGroup)
 
         // control
-
-        control.selectionProperty().addListener { _, _, _ ->
-            contentView.requestLayout()
-        }
 
         control.scrollTopProperty().addListener { _, _, newValue ->
             scrollPane.vvalue = if (newValue.toDouble() < getScrollTopMax()) {
@@ -328,8 +340,7 @@ class TediAreaSkin(val control: TediArea)
             }
         }
 
-
-        skinnable.paragraphs.addListener { change: Change<out Paragraph> ->
+        control.paragraphs.addListener { change: Change<out Paragraph> ->
             onParagraphsChange(change)
         }
 
@@ -337,12 +348,15 @@ class TediAreaSkin(val control: TediArea)
             paragraphNode.text = control.textProperty().valueSafe
         }
 
-        /**
-         * Reset the caretPosition whenever the selection changes.
-         * Note. in [changeLine], the selection is changed, but targetCaretX is set again after property
-         * change event is fired.
-         */
-        caretPosition.addListener { _, _, _ -> targetCaretX = -1.0 }
+        control.selectionProperty().addListener { _, _, _ ->
+            contentView.requestLayout()
+        }
+
+        caretPosition.addListener { _, _, _ -> onCaretMoved() }
+        onCaretMoved()
+
+        control.fontProperty().addListener { _, _, _ -> onFontChanged() }
+        onFontChanged()
     }
 
     /***************************************************************************
@@ -391,9 +405,27 @@ class TediAreaSkin(val control: TediArea)
                     (textGroup.children[i] as Text).text = change.list[i].text.toString()
                 }
             }
-            println("Paragraph change $change")
             contentView.requestLayout()
         }
+    }
+
+    fun onCaretMoved() {
+        targetCaretX = -1.0
+
+        val (line, column) = control.lineColumnFor(control.caretPosition)
+        caretPath.layoutY = line * lineHeight()
+        tmpText.text = control.paragraphs[line].text.substring(0, column)
+        caretPath.layoutX = tmpText.boundsInLocal.width
+    }
+
+    fun onFontChanged() {
+        cachedLineHeight = 0.0
+        caretPath.elements.clear()
+        caretPath.elements.add(MoveTo(0.0, 0.0))
+        caretPath.elements.add(LineTo(0.0, lineHeight()))
+        caretPath.fillProperty().bind(textFill)
+        caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
+        contentView.requestLayout()
     }
 
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
@@ -410,8 +442,8 @@ class TediAreaSkin(val control: TediArea)
     }
 
     fun positionForContentPoint(x: Double, y: Double): Int {
-        val normX = x - textGroup.layoutX
-        val normY = y - textGroup.layoutY
+        val normX = x - insideGroup.layoutX
+        val normY = y - insideGroup.layoutY
         if (normY < 0) return 0 // Beyond the top
         val line = (normY / lineHeight()).toInt()
 
@@ -420,6 +452,10 @@ class TediAreaSkin(val control: TediArea)
         }
 
         val text = textGroup.children[line] as Text
+
+        //println("p4cp line=$line text=${text.text} hit=${text.hitTestChar(normX, normY).getInsertionIndex()}")
+        //println("Result = ${skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()}")
+
         return skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()
     }
 
@@ -511,8 +547,6 @@ class TediAreaSkin(val control: TediArea)
         }
     }
 
-    private val tmpText = Text()
-
     /**
      * Move the caret up (or down if n < 1) n lines, keeping the caret in roughly the same X coordinate.
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
@@ -527,8 +561,7 @@ class TediAreaSkin(val control: TediArea)
         val lineText = skinnable.getLine(requiredLine).toString()
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
-        tmpText.font = control.font
-        val hit = tmpText.hitTestChar(requiredX, 1.0)
+        val hit = tmpText.hitTestChar(requiredX - insideGroup.layoutX, -insideGroup.layoutY)
         val columnIndex = hit.getInsertionIndex()
 
         val newPosition = control.positionFor(requiredLine, 0) + columnIndex
@@ -551,8 +584,13 @@ class TediAreaSkin(val control: TediArea)
         changeLine(1, select)
     }
 
+    private var cachedLineHeight = 0.0
+
     private fun lineHeight(): Double {
-        return textGroup.children[0].boundsInLocal.height
+        if (cachedLineHeight == 0.0) {
+            cachedLineHeight = tmpText.boundsInLocal.height
+        }
+        return cachedLineHeight
     }
 
     /**
@@ -749,13 +787,12 @@ class TediAreaSkin(val control: TediArea)
 
         }
 
+        // TODO do we can children to be public?
         public override fun getChildren(): ObservableList<Node> {
             return super.getChildren()
         }
 
-        override fun getContentBias(): Orientation {
-            return Orientation.HORIZONTAL
-        }
+        override fun getContentBias() = Orientation.HORIZONTAL
 
         override fun computePrefWidth(height: Double): Double {
             var maxWidth = 0.0
@@ -773,43 +810,26 @@ class TediAreaSkin(val control: TediArea)
             return total + snappedTopInset() + snappedBottomInset()
         }
 
-
         public override fun layoutChildren() {
             val tediArea = skinnable
             val width = width
 
-            // Lay out paragraph
             paragraphNode.opacity = 0.01
-            paragraphNode.layoutX = snappedLeftInset()//  + 2.0 // Move it a little, so we can see both!
-            paragraphNode.layoutY = snappedTopInset()
 
-            // Group
-            textGroup.layoutX = snappedLeftInset()
-            textGroup.layoutY = snappedTopInset()
+            // insideGroup
+            insideGroup.layoutX = snappedLeftInset()
+            insideGroup.layoutY = snappedTopInset()
+
             var textY = 0.0
+            val lineHeight = lineHeight()
             textGroup.children.forEach { text ->
                 text.layoutY = textY
-                textY += text.prefHeight(width)
+                textY += lineHeight
             }
 
             // Update the selection
             val selection = tediArea.selection
-            val oldCaretBounds = caretPath.boundsInParent
-
             selectionHighlightGroup.children.clear()
-
-            val caretPos = tediArea.caretPosition
-
-            // Position caret
-            paragraphNode.impl_caretPosition = caretPos
-            caretPath.elements.clear()
-            caretPath.elements.addAll(*paragraphNode.impl_caretShape)
-
-            caretPath.layoutX = paragraphNode.layoutX
-            caretPath.layoutY = paragraphNode.layoutY
-            if (oldCaretBounds != caretPath.boundsInParent) {
-                scrollCaretToVisible()
-            }
 
             // Update selection fg and bg
             val start = selection.start

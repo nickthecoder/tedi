@@ -873,7 +873,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
                 // Move backwards
                 for (i in guessedLine - 1 downTo 0) {
                     val p = paragraphs[i]
-                    count -= p.length
+                    count -= p.length + 1
                     if (position >= count) {
                         return i
                     }
@@ -1147,8 +1147,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      **************************************************************************/
     companion object {
 
-        val DEFAULT_PARAGRAPH_CAPACITY = 1000
-
         /**
          * A little utility method for stripping out unwanted characters.
 
@@ -1198,7 +1196,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             return false
         }
 
-        fun style(scene: Scene) {
+        @JvmStatic fun style(scene: Scene) {
             val url = TediArea::class.java.getResource("tedi.css")
             scene.stylesheets.add(url.toExternalForm())
         }
