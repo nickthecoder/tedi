@@ -201,6 +201,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             this.invalidationSize = 2;
         }
 
+        @SuppressWarnings("unchecked")
         private Generic(ObservableValue<T> observable, ChangeListener<? super T> listener0, ChangeListener<? super T> listener1) {
             super(observable);
             this.changeListeners = new ChangeListener[] {listener0, listener1};
@@ -208,6 +209,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
             this.currentValue = observable.getValue();
         }
 
+        @SuppressWarnings("unchecked")
         private Generic(ObservableValue<T> observable, InvalidationListener invalidationListener, ChangeListener<? super T> changeListener) {
             super(observable);
             this.invalidationListeners = new InvalidationListener[] {invalidationListener};
@@ -275,6 +277,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected ExpressionHelper<T> addListener(ChangeListener<? super T> listener) {
             if (changeListeners == null) {
                 changeListeners = new ChangeListener[] {listener};
@@ -300,6 +303,7 @@ public abstract class ExpressionHelper<T> extends ExpressionHelperBase {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected ExpressionHelper<T> removeListener(ChangeListener<? super T> listener) {
             if (changeListeners != null) {
                 for (int index = 0; index < changeSize; index++) {

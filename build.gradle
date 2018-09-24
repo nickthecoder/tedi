@@ -31,6 +31,10 @@ project(':tedi-core') {
     version = '0.1'
     group = 'uk.co.nickthecoder'
 
+    compileJava {
+        options.compilerArgs << '-Xlint:unchecked'
+    }
+
     dependencies {
         compile "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     }

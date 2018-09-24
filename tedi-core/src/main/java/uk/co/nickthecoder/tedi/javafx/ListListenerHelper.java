@@ -181,11 +181,13 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
             this.invalidationSize = 2;
         }
 
+        @SuppressWarnings("unchecked")
         private Generic(ListChangeListener<? super E> listener0, ListChangeListener<? super E> listener1) {
             this.changeListeners = new ListChangeListener[]{listener0, listener1};
             this.changeSize = 2;
         }
 
+        @SuppressWarnings("unchecked")
         private Generic(InvalidationListener invalidationListener, ListChangeListener<? super E> changeListener) {
             this.invalidationListeners = new InvalidationListener[]{invalidationListener};
             this.invalidationSize = 1;
@@ -251,6 +253,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected ListListenerHelper<E> addListener(ListChangeListener<? super E> listener) {
             if (changeListeners == null) {
                 changeListeners = new ListChangeListener[]{listener};
@@ -273,6 +276,7 @@ public abstract class ListListenerHelper<E> extends ExpressionHelperBase {
         }
 
         @Override
+        @SuppressWarnings("unchecked")
         protected ListListenerHelper<E> removeListener(ListChangeListener<? super E> listener) {
             if (changeListeners != null) {
                 for (int index = 0; index < changeSize; index++) {
