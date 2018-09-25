@@ -4,15 +4,47 @@ Bugs
 Current Work
 ------------
 
+When deleting paragraphs, tell them, so that they can move their ParagraphHighlightRanges (and
+    remove themselves from the HighlightRange), and also set their cachedPosition to -1
+
+Implement Skin.destroyParagraphNode
+
+Update ParagraphHighlightRange when editing text.
+    Also update the HighlightRange too, so that its positions remain valid?
+    This will require ALL further highlights to be affected.
+    Big plus... The document can be saved with those highlights.
+
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style
-    Later use this for search matches
-        if match count > 1000 stop adding highlights.
-    Later use it for syntax highlighting
 
+Use this for search matches
+    if match count > 1000 stop adding highlights.
+
+Create a utility class which listens for document changes, and calls a function after a short time,
+but abandons it if another change happens before it is complete.
+    Extend this with highlighting in mind, where the function returns a set of HighlightRanges,
+    and they are applied for you (removing the old ones).
+
+Try to REPLACE an existing highlight.
+    I think it will throw at the moment.
+
+Add a kotlin syntax highlighter to the Demo.
+
+Add a css syntax highlighter to the Demo ???
+    Maybe style colours, such as #ffeeee and gray, so that their background color is the required color.
+         Must then pick black or white for the text.
+    Standard JavaFX styles such as -fx-padding coloured differently to unknown styles.
+
+Add another tab to Demo, where you can add your own highlights to a document.
 
 Next
 ----
+
+Create a SimpleDemo app in a single java file
+    No tabs
+    Better undo/redo.
+    find/replace and go to
+    No syntax highlighting.
 
 Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
     At the very least rename it, as it isn't in Content!!!

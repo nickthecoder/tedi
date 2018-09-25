@@ -47,9 +47,7 @@ import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
-import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 import java.text.BreakIterator
-import java.util.*
 
 /**
  * A control, similar to a [TextArea], which also extends [TextInputControl].
@@ -144,11 +142,9 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     val paragraphs = paragraphsProperty.get()
 
     // Highlight Ranges
-    private val highlightRangesProperty = SimpleListProperty<HighlightRange>()
+    private val highlightRanges = DelegatedObservableList<HighlightRange>()
 
-    fun highlightRangesProperty() = highlightRangesProperty
-
-    val highlightRanges = highlightRangesProperty.get()
+    fun highlightRanges(): ObservableList<HighlightRange> = highlightRanges
 
 
     // Line Count
@@ -254,6 +250,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         styleClass.addAll("text-area", "tedi-area")
 
         accessibleRole = AccessibleRole.TEXT_AREA
+
+        highlightRanges.addListener { change: ListChangeListener.Change<out HighlightRange> ->
+            content.highlightsChanged(change)
+        }
+
     }
 
     /***************************************************************************
@@ -542,6 +543,10 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         private val paragraphList = ParagraphList()
 
         private var helper: ExpressionHelper<String>? = null
+
+        internal fun highlightsChanged(change: ListChangeListener.Change<out HighlightRange>) {
+            paragraphList.highlightsChanged(change)
+        }
 
         fun paragraphsProperty() = ReadOnlyListWrapper(paragraphList)
 

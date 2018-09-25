@@ -119,7 +119,10 @@ class DemoWindow(stage: Stage = Stage()) {
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Welcome", false) })
+            tabs.add(TediTab().apply {
+                load(DemoWindow::class.java, "Welcome", false)
+                welcomeHighlights()
+            })
             tabs.add(TediTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
             tabs.add(TediTab().apply { load(DemoWindow::class.java, "Demo", true) })
             tabs.add(TediTab().apply { load(DemoWindow::class.java, "DemoWindow", true) })
@@ -294,6 +297,7 @@ class DemoWindow(stage: Stage = Stage()) {
                 textInput.styleClass.add("code")
             }
         }
+
     }
 
     inner class TediTab
@@ -357,6 +361,16 @@ class DemoWindow(stage: Stage = Stage()) {
                 tediArea.contextMenu.show(tediArea, event.screenX, event.screenY)
                 event.consume()
             }
+        }
+
+        /**
+         *
+         */
+        fun welcomeHighlights() {
+            val red = StyleHighlight("-fx-text-fill:red;")
+            tediArea.highlightRanges().addAll(
+                    HighlightRange(0, 10, red)
+            )
         }
     }
 

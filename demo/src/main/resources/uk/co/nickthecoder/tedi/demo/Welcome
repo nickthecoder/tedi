@@ -1,3 +1,5 @@
+Welcome to the Tedi Demo
+
 This is a demo application, showing how to use some of the features
 of TediArea, and its helper classes, such as FindBar, ReplaceBar,
 TextInputControlMatcher and GotoDialog.

@@ -10,5 +10,5 @@ package uk.co.nickthecoder.tedi
 class ParagraphHighlightRange(
         var startColumn: Int,
         var endColumn: Int,
-        val causes: HighlightRange) {
+        val cause: HighlightRange) {
 }

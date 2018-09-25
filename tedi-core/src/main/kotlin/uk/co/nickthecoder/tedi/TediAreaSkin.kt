@@ -67,9 +67,15 @@ class TediAreaSkin(control: TediArea)
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
 
     /**
-     * Contains the Text nodes, which display the document's content.
+     * There is a 1:1 mapping between the groups children and [Paragraph]s.
+     * i.e.
+     *
+     *     paragraphGroup.children[n] corresponds to ParagraphsList.paragraphs[n]
+     *
+     * For a paragraph without highlights, this will be a simple Text object.
+     * For those with highlights, it will be a ??Group/TextFlow?? of Text objects.
      */
-    private val textGroup = Group()
+    private val paragraphGroup = Group()
 
     /**
      * A Region containing line numbers, to the left of the main content.
@@ -221,9 +227,9 @@ class TediAreaSkin(control: TediArea)
 
         // Create nodes for each paragraph.
 
-        with(textGroup) {
+        with(paragraphGroup) {
             skinnable.paragraphs.forEach { p ->
-                children.add(createTextNode(p.text.toString()))
+                children.add(createParagraphNode(p))
             }
             isManaged = false
         }
@@ -260,7 +266,7 @@ class TediAreaSkin(control: TediArea)
         // insideGroup
         with(insideGroup) {
             isManaged = false
-            children.addAll(textGroup, selectionHighlightGroup, caretPath)
+            children.addAll(paragraphGroup, selectionHighlightGroup, caretPath)
         }
 
         // contentView
@@ -306,8 +312,15 @@ class TediAreaSkin(control: TediArea)
      *                                                                         *
      **************************************************************************/
 
-    private fun createTextNode(str: String): Text {
-        val node = Text(str)
+    /**
+     * Creates a simple Text object if the paragraph has no highlights,
+     * otherwise it creates a set of Text objects, each with their own styles.
+     */
+    private fun createParagraphNode(paragraph: Paragraph): Text {
+
+        // TODO Implement highlighting
+        //if (paragraph.highlights.isEmpty()) {
+        val node = Text(paragraph.text.toString())
         with(node) {
             styleClass.add("text")
             textOrigin = VPos.TOP
@@ -318,12 +331,19 @@ class TediAreaSkin(control: TediArea)
             fillProperty().bind(textFill)
         }
         return node
+        //} else {
+
+        //}
     }
 
-    private fun destroyTextNode(text: Text) {
-        with(text) {
-            fontProperty().unbind()
-            fillProperty().unbind()
+    private fun destroyParagraphNode(node: Node) {
+        if (node is Text) {
+            with(node) {
+                fontProperty().unbind()
+                fillProperty().unbind()
+            }
+        } else {
+            // TODO Destroy a highlighted set of Text
         }
     }
 
@@ -407,23 +427,33 @@ class TediAreaSkin(control: TediArea)
         contentView.requestLayout() // TODO Remove this?
     }
 
+    /**
+     * Called whenever a [Paragraph] is changed. The change could be an insertion/deletion of text,
+     * or just a highlight change (in which case the Paragraph's text will be the same).
+     */
     fun onParagraphsChange(change: Change<out Paragraph>) {
         while (change.next()) {
             if (change.wasAdded()) {
                 for (i in change.from..change.to - 1) {
-                    val text = createTextNode(change.list[i].text.toString())
-                    textGroup.children.add(i, text)
+                    paragraphGroup.children.add(i, createParagraphNode(change.list[i]))
                 }
             }
             if (change.wasRemoved()) {
                 val from = change.from
                 for (n in 1..change.removedSize) {
-                    destroyTextNode(textGroup.children.removeAt(from) as Text)
+                    destroyParagraphNode(paragraphGroup.children.removeAt(from))
                 }
             }
             if (change.wasUpdated()) {
                 for (i in change.from..change.to - 1) {
-                    (textGroup.children[i] as Text).text = change.list[i].text.toString()
+                    val child = paragraphGroup.children[i]
+                    // A simple text change without highlights before and after?
+                    if (child is Text && change.list[i].highlights.isEmpty()) {
+                        // We can reuse the existing Text object
+                        child.text = change.list[i].text.toString()
+                    } else {
+                        paragraphGroup.children[i] = createParagraphNode(change.list[i])
+                    }
                 }
             }
             contentView.requestLayout()
@@ -472,11 +502,11 @@ class TediAreaSkin(control: TediArea)
         if (normY < 0) return 0 // Beyond the top
         val line = (normY / lineHeight()).toInt()
 
-        if (line >= textGroup.children.size) {
+        if (line >= paragraphGroup.children.size) {
             return skinnable.length // Beyond the bottom. End of document.
         }
 
-        val text = textGroup.children[line] as Text
+        val text = paragraphGroup.children[line] as Text
 
         //println("p4cp line=$line text=${text.text} hit=${text.hitTestChar(normX, normY).getInsertionIndex()}")
         //println("Result = ${skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()}")
@@ -805,7 +835,7 @@ class TediAreaSkin(control: TediArea)
 
         override fun computePrefWidth(height: Double): Double {
             var maxWidth = 0.0
-            textGroup.children.forEach { text ->
+            paragraphGroup.children.forEach { text ->
                 maxWidth = Math.max(maxWidth, text.prefWidth(height))
             }
             return maxWidth + snappedLeftInset() + snappedRightInset()
@@ -813,7 +843,7 @@ class TediAreaSkin(control: TediArea)
 
         override fun computePrefHeight(width: Double): Double {
             var total = 0.0
-            textGroup.children.forEach { text ->
+            paragraphGroup.children.forEach { text ->
                 total += text.prefHeight(width)
             }
             return total + snappedTopInset() + snappedBottomInset()
@@ -828,7 +858,7 @@ class TediAreaSkin(control: TediArea)
 
             var textY = 0.0
             val lineHeight = lineHeight()
-            textGroup.children.forEach { text ->
+            paragraphGroup.children.forEach { text ->
                 text.layoutY = textY
                 textY += lineHeight
             }

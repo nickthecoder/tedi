@@ -379,7 +379,7 @@ class ParagraphList
     /**
      * Used during debugging to check that the cached lineStartPositions are correct.
      */
-    fun check(): Boolean {
+    internal fun check(): Boolean {
         println("Checking cached data")
         var count = 0
         for (i in 0..validCacheIndex) {
@@ -394,6 +394,75 @@ class ParagraphList
             count += paragraphs[i].length + 1
         }
         return true
+    }
+
+    /**
+     * TediArea will inform us whenever its highlights list has changed.
+     */
+    internal fun highlightsChanged(change: ListChangeListener.Change<out HighlightRange>) {
+        // validate all cachedPositions.
+        lineFor(contentLength)
+
+        // We do this in two passes, so that paragraph change events are only
+        // fired ONCE per paragraph. This holds the list of paragraph indices affected.
+        val affectedParagraphs = mutableSetOf<Int>()
+
+        /**
+         * For each added HighlightRange, find which paragraphs it intersects, and
+         * add that HighlightRange to those paragraphs.
+         */
+        fun add(list: List<HighlightRange>, from: Int, to: Int) {
+            for (hrIndex in from..to - 1) {
+                val hr = list[hrIndex]
+                val fromP = lineFor(hr.from)
+                val toP = lineFor(hr.to)
+                for (pIndex in fromP..toP) {
+                    val paragraph = paragraphs[pIndex]
+                    paragraph.addHighlight(hr)
+                    affectedParagraphs.add(pIndex)
+                    hr.affectedParagraphs.add(paragraph)
+                }
+            }
+        }
+
+        /**
+         * For each removed HighlightRange, find which paragraphs it intersects, and
+         * remove it the HighlightRange from those paragraphs.
+         */
+        fun remove(removed: List<HighlightRange>) {
+            removed.forEach { hr ->
+                hr.affectedParagraphs.forEach { paragraph ->
+                    // A deleted paragraph will have a -ve cachedPosition
+                    if (paragraph.cachedPosition >= 0) {
+                        val line = lineFor(paragraph.cachedPosition)
+                        affectedParagraphs.add(line)
+                        paragraph.removeHighlight(hr)
+                    }
+                }
+            }
+        }
+
+        while (change.next()) {
+            if (change.wasAdded()) {
+                add(change.list, change.from, change.to)
+            }
+            if (change.wasRemoved()) {
+                change.removed?.let { remove(it) }
+            }
+            if (change.wasUpdated()) {
+                throw UnsupportedOperationException("Updating highlights is not supported.")
+            }
+            // I don't know what this kind of change is !?!
+            if (change.wasPermutated()) {
+                throw UnsupportedOperationException("Permuting highlights is not supported.")
+            }
+        }
+
+        // The affected Paragraphs have now all been updated, fire changes, so that the Skin
+        // can rebuild the Text objects.
+        affectedParagraphs.forEach { i ->
+            fireParagraphUpdate(i, i)
+        }
     }
 
     /**
@@ -433,10 +502,23 @@ class ParagraphList
 
         internal fun insert(start: Int, str: CharSequence) {
             line.insert(start, str)
+            // TODO change highlights
         }
 
         internal fun delete(start: Int, end: Int) {
             line.delete(start, end)
+            // TODO change highlights
+        }
+
+        internal fun addHighlight(hr: HighlightRange) {
+            // Convert the hr into a ParagraphHighlightRange
+            val fromColumn = clamp(0, hr.from - cachedPosition, line.length)
+            val toColumn = clamp(0, hr.to - cachedPosition, line.length)
+            highlights.add(ParagraphHighlightRange(fromColumn, toColumn, hr))
+        }
+
+        internal fun removeHighlight(hr: HighlightRange) {
+            highlights.removeIf { it.cause === hr }
         }
 
         override fun toString() = "($cachedPosition) : $text\n"
