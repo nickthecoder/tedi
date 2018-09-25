@@ -11,4 +11,6 @@ class ParagraphHighlightRange(
         var startColumn: Int,
         var endColumn: Int,
         val cause: HighlightRange) {
+
+    fun intersects(from: Int, to: Int): Boolean = from >= startColumn && to <= endColumn
 }

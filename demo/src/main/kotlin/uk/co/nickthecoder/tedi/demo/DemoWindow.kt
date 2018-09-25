@@ -364,12 +364,17 @@ class DemoWindow(stage: Stage = Stage()) {
         }
 
         /**
-         *
+         * A silly example of adding highlights to a document.
          */
         fun welcomeHighlights() {
-            val red = StyleHighlight("-fx-text-fill:red;")
+            val welcome = StyleHighlight("-fx-fill: #008800; -fx-underline: true;")
+            // If we had a style sheet containing ".welcome { -fx-text-fill: #004400; }", then we could use:
+            // val welcome = StyleClassHighlight("welcome")
+            val tedi = FillStyleHighlight("-fx-fill: #0000cc;", "-fx-fill: #ffeeee; ")
+
             tediArea.highlightRanges().addAll(
-                    HighlightRange(0, 10, red)
+                    HighlightRange(0, 7, welcome),
+                    HighlightRange(15, 23, tedi)
             )
         }
     }

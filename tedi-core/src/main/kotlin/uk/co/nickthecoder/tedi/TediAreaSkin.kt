@@ -316,35 +316,80 @@ class TediAreaSkin(control: TediArea)
      * Creates a simple Text object if the paragraph has no highlights,
      * otherwise it creates a set of Text objects, each with their own styles.
      */
-    private fun createParagraphNode(paragraph: Paragraph): Text {
+    private fun createParagraphNode(paragraph: Paragraph): Node {
 
-        // TODO Implement highlighting
-        //if (paragraph.highlights.isEmpty()) {
-        val node = Text(paragraph.text.toString())
-        with(node) {
-            styleClass.add("text")
-            textOrigin = VPos.TOP
-            wrappingWidth = 0.0
-            isManaged = false
-
-            fontProperty().bind(skinnable.fontProperty())
-            fillProperty().bind(textFill)
+        fun createText(str: String): Text {
+            return Text(str).apply {
+                styleClass.add("text")
+                textOrigin = VPos.TOP
+                wrappingWidth = 0.0
+                isManaged = false
+                font = skinnable.font
+                fill = textFill.get()
+            }
         }
-        return node
-        //} else {
 
-        //}
+        if (paragraph.highlights.isEmpty()) {
+            return createText(paragraph.text.toString())
+
+        } else {
+            // Find all the boundaries between highlights.
+            // Using a set, because if two highlights start at the same column, we only want that column
+            // in the set once.
+            val splits = mutableSetOf<Int>(0, paragraph.length)
+            for (highlight in paragraph.highlights) {
+                splits.add(highlight.startColumn)
+                splits.add(highlight.endColumn)
+            }
+            val splitsList = splits.sorted()
+            // Now we have a sorted list of column indices where the highlights change.
+
+            // The paragraph will be made up of a Group containing Text and Rectangles (for background colours).
+            val group = Group()
+            group.isManaged = false
+
+            // Create a Text object between each consecutive column indices in the list.
+            var x = 0.0
+            for (i in 0..splitsList.size - 2) {
+                val from = clamp(0, splitsList[i], paragraph.text.length)
+                val to = clamp(0, splitsList[i + 1], paragraph.text.length)
+
+                val text = createText(paragraph.text.substring(from, to))
+                val textBounds = text.boundsInLocal
+                text.layoutX = x
+
+                // We may not need a background color, so don't create a Rectangle yet.
+                var rectangle: Rectangle? = null
+
+                // Find which highlight ranges apply to this part of the paragraph,
+                // and apply them to the Text object. This means that each part could be
+                // styled in more than one way.
+                for (phr in paragraph.highlights) {
+                    val highlight = phr.cause.highlight
+                    if (phr.intersects(from, to)) {
+                        highlight.style(text)
+
+                        if (highlight is FillHighlight) {
+                            if (rectangle == null) {
+                                rectangle = Rectangle(textBounds.width, textBounds.height)
+                                rectangle.layoutX = text.layoutX
+                            }
+                            highlight.style(rectangle)
+                        }
+                    }
+                }
+
+                rectangle?.let { group.children.add(it) }
+                group.children.add(text)
+                x += textBounds.width
+            }
+
+            return group
+        }
     }
 
     private fun destroyParagraphNode(node: Node) {
-        if (node is Text) {
-            with(node) {
-                fontProperty().unbind()
-                fillProperty().unbind()
-            }
-        } else {
-            // TODO Destroy a highlighted set of Text
-        }
+        // TODO Remove?
     }
 
     /**
@@ -506,12 +551,27 @@ class TediAreaSkin(control: TediArea)
             return skinnable.length // Beyond the bottom. End of document.
         }
 
-        val text = paragraphGroup.children[line] as Text
-
-        //println("p4cp line=$line text=${text.text} hit=${text.hitTestChar(normX, normY).getInsertionIndex()}")
-        //println("Result = ${skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()}")
-
-        return skinnable.lineStartPosition(line) + text.hitTestChar(normX, normY).getInsertionIndex()
+        val node = paragraphGroup.children[line]
+        if (node is Text) {
+            return skinnable.lineStartPosition(line) + node.hitTestChar(normX, normY).getInsertionIndex()
+        } else if (node is Group) {
+            var soFar = skinnable.lineStartPosition(line)
+            node.children.forEach { text ->
+                if (text is Text) { // Ignore any Rectangles which may also be in the group.
+                    if (normX < text.layoutX) {
+                        return soFar
+                    }
+                    val hit = text.hitTestChar(normX, normY).getInsertionIndex()
+                    if (hit < text.text.length) {
+                        return soFar + hit
+                    }
+                    soFar += text.text.length
+                }
+            }
+            return soFar
+        } else {
+            throw IllegalStateException("Unexpected Node type : ${node::class.java.simpleName}")
+        }
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {

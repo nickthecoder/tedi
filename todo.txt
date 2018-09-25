@@ -4,6 +4,8 @@ Bugs
 Current Work
 ------------
 
+skin.positionForContentPoint has TODO
+
 When deleting paragraphs, tell them, so that they can move their ParagraphHighlightRanges (and
     remove themselves from the HighlightRange), and also set their cachedPosition to -1
 
@@ -45,6 +47,9 @@ Create a SimpleDemo app in a single java file
     Better undo/redo.
     find/replace and go to
     No syntax highlighting.
+
+HitInfo
+    Move boundsInLocal to a local variable.
 
 Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
     At the very least rename it, as it isn't in Content!!!
