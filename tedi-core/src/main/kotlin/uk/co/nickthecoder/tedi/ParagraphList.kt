@@ -152,6 +152,33 @@ class ParagraphList
             throw IndexOutOfBoundsException()
         }
 
+        // Adjust highlights.
+        if (highlightRanges.isNotEmpty()) {
+            val difference = end - start
+            val i = highlightRanges.iterator()
+            while (i.hasNext()) {
+                val hr = i.next()
+
+                if (hr.end < start) { // BEFORE the deleted segment. Do nothing
+                } else if (hr.start >= end) { // AFTER the deleted segment. Simple adjustment
+                    hr.start -= difference
+                    hr.end -= difference
+                } else if (hr.start < start && hr.end > end) { // A superset of the deletion.
+                    // Shrink the highlight
+                    hr.end -= difference
+                } else if (hr.start < start && hr.end > start) { // Straddling the start of the deletion
+                    // Chop off the end of the highlight
+                    hr.end = start
+                } else if (hr.start < end && hr.end > end) { // Straddling the end of the deletion
+                    // Chop off the start of the highlight
+                    hr.end -= hr.start - start
+                    hr.start = start
+                } else if (hr.start >= start && hr.end <= end) { // within the deletion.
+                    i.remove()
+                }
+            }
+        }
+
         val length = end - start
 
         if (length > 0) {
@@ -162,10 +189,10 @@ class ParagraphList
             val leadingParagraph = paragraphs[leadingLine]
             val trailingParagraph = paragraphs[trailingLine]
 
-            // Remove the text
             if (leadingLine == trailingLine) {
                 // The removal affects only a single paragraph
                 invalidateLineStartPosition(leadingLine + 1)
+                leadingParagraph.adjustHighlights()
                 leadingParagraph.delete(leadingColumn, trailingColumn)
                 fireParagraphUpdate(leadingLine)
 
@@ -177,17 +204,16 @@ class ParagraphList
                     invalidateLineStartPosition(leadingLine + 1)
                     leadingParagraph.delete(leadingColumn, leadingParagraph.length)
                     leadingParagraph.insert(leadingColumn, trailingSegment)
+                    leadingParagraph.adjustHighlights(trailingParagraph.highlights.map { it.cause })
                     fireParagraphUpdate(leadingLine)
                 }
 
                 // Remove paragraphs
-                //if (leadingLine + 1 - trailingLine > 0) {
                 val toRemove = paragraphs.subList(leadingLine + 1, trailingLine + 1)
                 val removed = toRemove.toList()
                 invalidateLineStartPosition(leadingLine + 1)
                 toRemove.clear()
                 fireParagraphRemove(leadingLine + 1, removed)
-                //}
             }
 
             // Update content length
@@ -574,7 +600,7 @@ class ParagraphList
          */
         internal fun adjustHighlights(otherHighlightRanges: List<HighlightRange>) {
             // Add those ranges that we don't already use
-            otherHighlightRanges.filter { ! containsHighlightRange(it) }.forEach { addHighlight(it) }
+            otherHighlightRanges.filter { !containsHighlightRange(it) }.forEach { addHighlight(it) }
 
             // No adjust as normal (which may remove them again!)
             adjustHighlights()
