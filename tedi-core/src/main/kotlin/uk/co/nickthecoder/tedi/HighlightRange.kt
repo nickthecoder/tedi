@@ -10,10 +10,18 @@ package uk.co.nickthecoder.tedi
  * Add [HighlightRange]s to [TediArea.highlightRanges].
  */
 class HighlightRange(
-        val from: Int,
-        val to: Int,
+        internal var start: Int,
+        internal var end: Int,
         val highlight: Highlight) {
 
+    val from
+        get() = start
+
+    val to
+        get() = end
+
     internal val affectedParagraphs = mutableSetOf<ParagraphList.Paragraph>()
+
+    override fun toString() = "$start..$end : $highlight"
 }
 

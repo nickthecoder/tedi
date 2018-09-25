@@ -51,6 +51,7 @@ open class StyleClassHighlight(val textClass: String) : Highlight {
         text.styleClass.add(textClass)
     }
 
+    override fun toString() = "textClass ='$textClass'"
 }
 
 /**
@@ -95,6 +96,8 @@ open class FillStyleClassHighlight(textClass: String, val fillClass: String)
     override fun style(rect: Rectangle) {
         rect.styleClass.add(fillClass)
     }
+
+    override fun toString() = "textClass='$textClass' fillClass='$fillClass'"
 }
 
 /**
@@ -103,13 +106,14 @@ open class FillStyleClassHighlight(textClass: String, val fillClass: String)
  *
  *     StyleClassHighlight( "-fx-fill: red;" )
  */
-open class StyleHighlight(val style: String) : Highlight {
+open class StyleHighlight(val textStyle: String) : Highlight {
 
     override fun style(text: Text) {
         text.getStyle()
-        text.style += style
+        text.style += textStyle
     }
 
+    override fun toString() = "textStyle='$textStyle'"
 }
 
 /**
@@ -124,5 +128,7 @@ open class FillStyleHighlight(textStyle: String, val fillStyle: String)
     override fun style(rect: Rectangle) {
         rect.style += fillStyle
     }
+
+    override fun toString() = "textStyle='$textStyle' fillStyle='$fillStyle'"
 }
 

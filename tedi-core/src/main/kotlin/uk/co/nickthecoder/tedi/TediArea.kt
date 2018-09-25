@@ -142,9 +142,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     val paragraphs = paragraphsProperty.get()
 
     // Highlight Ranges
-    private val highlightRanges = DelegatedObservableList<HighlightRange>()
-
-    fun highlightRanges(): ObservableList<HighlightRange> = highlightRanges
+    fun highlightRanges() = content.highlightRanges()
 
 
     // Line Count
@@ -250,11 +248,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         styleClass.addAll("text-area", "tedi-area")
 
         accessibleRole = AccessibleRole.TEXT_AREA
-
-        highlightRanges.addListener { change: ListChangeListener.Change<out HighlightRange> ->
-            content.highlightsChanged(change)
-        }
-
     }
 
     /***************************************************************************
@@ -542,13 +535,15 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         private val paragraphList = ParagraphList()
 
+        /**
+         * As part of TextIntputControl's API, we need to fire events to listeners when the content changes.
+         * This helps manage those listeners (add, remove, and fire).
+         */
         private var helper: ExpressionHelper<String>? = null
 
-        internal fun highlightsChanged(change: ListChangeListener.Change<out HighlightRange>) {
-            paragraphList.highlightsChanged(change)
-        }
-
         fun paragraphsProperty() = ReadOnlyListWrapper(paragraphList)
+
+        fun highlightRanges() = paragraphList.highlightRanges()
 
         override fun insert(index: Int, insertText: String?, notifyListeners: Boolean) {
             insertText ?: throw IllegalArgumentException("insertText cannot be null")

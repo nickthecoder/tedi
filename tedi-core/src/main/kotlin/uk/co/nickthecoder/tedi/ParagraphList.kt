@@ -22,6 +22,8 @@ class ParagraphList
 
     internal val paragraphs = mutableListOf(Paragraph(""))
 
+    private val highlightRanges = DelegatedObservableList<HighlightRange>()
+
     internal var contentLength = 0
 
     /**
@@ -29,6 +31,12 @@ class ParagraphList
      * If < 0, then none are valid.
      */
     internal var validCacheIndex = 0
+
+    init {
+        highlightRanges.addListener { change: ListChangeListener.Change<out HighlightRange> ->
+            highlightsChanged(change)
+        }
+    }
 
     override fun get(index: Int): Paragraph {
         return paragraphs[index]
@@ -90,11 +98,6 @@ class ParagraphList
         throw UnsupportedOperationException()
     }
 
-
-    private fun invalidateLineStartPosition(line: Int) {
-        //println("Invalidating line $line (was $validCacheIndex now ${Math.min(validCacheIndex, line - 1)})")
-        validCacheIndex = Math.min(validCacheIndex, line - 1)
-    }
 
     fun get(start: Int, end: Int): String {
 
@@ -205,8 +208,21 @@ class ParagraphList
         }
 
         text = filterInput(text, false, false)
+
         val length = text.length
         if (length > 0) {
+
+            for (hr in highlightRanges) {
+                if (hr.from >= position) {
+                    // Update any HighlightRanges after position.
+                    hr.start += length
+                    hr.end += length
+                } else if (hr.start < position && hr.end > position) {
+                    // Update any HighlightRanges that contain the inserted text.
+                    hr.end += length
+                }
+            }
+
             val lines = text.split("\n")
             val n = lines.size
 
@@ -216,6 +232,7 @@ class ParagraphList
             if (n == 1) {
                 // The text contains only a single line; insert it into the intersecting paragraph
                 startParagraph.insert(startColumn, text)
+                startParagraph.adjustHighlights()
                 invalidateLineStartPosition(startLine + 1)
                 fireParagraphUpdate(startLine)
 
@@ -229,6 +246,8 @@ class ParagraphList
 
                 // Append the first line to the intersecting paragraph
                 invalidateLineStartPosition(startLine + 1)
+                val startParagraphsHighlightRanges = startParagraph.highlights.map { it.cause }
+                startParagraph.adjustHighlights()
                 startParagraph.insert(startColumn, lines[0])
                 fireParagraphUpdate(startLine)
 
@@ -240,8 +259,11 @@ class ParagraphList
                 // Add the trailing part which used to be in startParagraph.
                 if (trailingText.isNotEmpty()) {
                     val lastIndex = startLine + n - 1
+                    val lastParagraph = paragraphs[lastIndex]
                     invalidateLineStartPosition(lastIndex + 1)
-                    paragraphs[lastIndex].insert(paragraphs[lastIndex].length, trailingText)
+                    lineStartPosition(lastIndex) // Force the cachedPosition to become valid.
+                    lastParagraph.insert(lastParagraph.length, trailingText)
+                    lastParagraph.adjustHighlights(startParagraphsHighlightRanges)
                     fireParagraphUpdate(lastIndex)
                 }
             }
@@ -268,6 +290,12 @@ class ParagraphList
 
     private fun fireParagraphRemove(from: Int, removed: List<Paragraph>) {
         ListListenerHelper.fireValueChangedEvent(listenerHelper, SimpleRemoveChange(this, from, removed))
+    }
+
+
+    private fun invalidateLineStartPosition(line: Int) {
+        //println("Invalidating line $line (was $validCacheIndex now ${Math.min(validCacheIndex, line - 1)})")
+        validCacheIndex = Math.min(validCacheIndex, line - 1)
     }
 
     /**
@@ -319,6 +347,7 @@ class ParagraphList
      * The must never be <= 0
      */
     private var guessCharsPerLine = 40
+
 
     /**
      * See [TediArea.lineFor]
@@ -396,8 +425,10 @@ class ParagraphList
         return true
     }
 
+    fun highlightRanges(): ObservableList<HighlightRange> = highlightRanges
+
     /**
-     * TediArea will inform us whenever its highlights list has changed.
+     * Called whenever [highlightRanges] are added/removed.
      */
     internal fun highlightsChanged(change: ListChangeListener.Change<out HighlightRange>) {
         // validate all cachedPositions.
@@ -502,12 +533,10 @@ class ParagraphList
 
         internal fun insert(start: Int, str: CharSequence) {
             line.insert(start, str)
-            // TODO change highlights
         }
 
         internal fun delete(start: Int, end: Int) {
             line.delete(start, end)
-            // TODO change highlights
         }
 
         internal fun addHighlight(hr: HighlightRange) {
@@ -519,6 +548,45 @@ class ParagraphList
 
         internal fun removeHighlight(hr: HighlightRange) {
             highlights.removeIf { it.cause === hr }
+        }
+
+        /**
+         * Called when some text has been added/removed from a single paragraph.
+         */
+        internal fun adjustHighlights() {
+            for (phr in highlights) {
+                val newStartColumn = phr.cause.from - cachedPosition
+                val newEndColumn = phr.cause.to - cachedPosition
+
+                // Is this highlight still no longer applicable to this Paragraph?
+                if (newEndColumn < 0 || newStartColumn >= length || newEndColumn <= newStartColumn) {
+                    phr.startColumn = -1
+                } else {
+                    phr.startColumn = clamp(0, newStartColumn, line.length)
+                    phr.endColumn = clamp(0, newEndColumn, line.length)
+                }
+            }
+            highlights.removeIf { it.startColumn < 0 }
+        }
+
+        /**
+         * Called when inserting a multi-line piece of text, and therefore
+         */
+        internal fun adjustHighlights(otherHighlightRanges: List<HighlightRange>) {
+            // Add those ranges that we don't already use
+            otherHighlightRanges.filter { ! containsHighlightRange(it) }.forEach { addHighlight(it) }
+
+            // No adjust as normal (which may remove them again!)
+            adjustHighlights()
+        }
+
+        private fun containsHighlightRange(hr: HighlightRange): Boolean {
+            for (mine in highlights) {
+                if (mine.cause === hr) {
+                    return true
+                }
+            }
+            return false
         }
 
         override fun toString() = "($cachedPosition) : $text\n"
