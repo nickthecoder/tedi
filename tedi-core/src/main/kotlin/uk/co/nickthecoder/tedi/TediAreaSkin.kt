@@ -559,11 +559,12 @@ class TediAreaSkin(control: TediArea)
             node.children.forEach { text ->
                 if (text is Text) { // Ignore any Rectangles which may also be in the group.
                     if (normX < text.layoutX) {
+                        println("Early $soFar")
                         return soFar
                     }
-                    val hit = text.hitTestChar(normX, normY).getInsertionIndex()
-                    if (hit < text.text.length) {
-                        return soFar + hit
+                    val insertion = text.hitTestChar(normX, normY - node.layoutY).getInsertionIndex()
+                    if (insertion < text.text.length) {
+                        return soFar + insertion
                     }
                     soFar += text.text.length
                 }
