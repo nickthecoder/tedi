@@ -11,6 +11,9 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
+import uk.co.nickthecoder.tedi.syntax.javaSyntax
+import uk.co.nickthecoder.tedi.syntax.kotlinSyntax
+import uk.co.nickthecoder.tedi.syntax.propertyChangeDelayedThread
 import uk.co.nickthecoder.tedi.ui.*
 import java.util.regex.Pattern
 
@@ -124,10 +127,29 @@ class DemoWindow(stage: Stage = Stage()) {
                 welcomeHighlights()
             })
             tabs.add(TediTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
-            tabs.add(TediTab().apply { load(DemoWindow::class.java, "Demo", true) })
-            tabs.add(TediTab().apply { load(DemoWindow::class.java, "DemoWindow", true) })
-            tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css", true) })
+            tabs.add(TediTab().apply {
+                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
+                    val ranges = kotlinSyntax(tediArea.text)
+                    Platform.runLater {
+                        tediArea.highlightRanges().clear()
+                        tediArea.highlightRanges().addAll(ranges)
+                    }
+                }
+                load(DemoWindow::class.java, "Demo", true)
+            })
+            tabs.add(TediTab().apply {
+                // Perform syntax highlighting after 100 milliseconds of idleness since the last edit.
+                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
+                    val ranges = javaSyntax(tediArea.text)
+                    Platform.runLater {
+                        tediArea.highlightRanges().clear()
+                        tediArea.highlightRanges().addAll(ranges)
+                    }
+                }
+                load(DemoWindow::class.java, "DemoWindow", true)
+            })
 
+            tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css", true) })
             tabs.add(TextAreaTab().apply { load(DemoWindow::class.java, "TextArea", false) })
         }
 
@@ -377,6 +399,7 @@ class DemoWindow(stage: Stage = Stage()) {
                     HighlightRange(15, 23, tedi)
             )
         }
+
     }
 
     inner class TextAreaTab : EditorTab(TextArea(), "TextArea")

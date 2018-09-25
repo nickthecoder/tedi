@@ -518,7 +518,7 @@ class ParagraphList
         // The affected Paragraphs have now all been updated, fire changes, so that the Skin
         // can rebuild the Text objects.
         affectedParagraphs.forEach { i ->
-            fireParagraphUpdate(i, i)
+            fireParagraphUpdate(i, i + 1)
         }
     }
 

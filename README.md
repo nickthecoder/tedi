@@ -19,11 +19,11 @@ so you'll need to write the glue to join them together.
 I've included a demo application (compiled into a separate jar)
 which demonstrates how to do this.
 
-Tedi is written in Kotlin, but should be fine for you poor folks still
-working with Java ;-)
+Tedi is written in Kotlin, but will work fine with Java or any other
+JVM based language.
 
-There are a few Java classes too, which are copy/pasted from JavaFX's
-com.sun.xxx packages.
+There are a few Java classes too (simple utilities),
+which are copy/pasted from JavaFX's com.sun.xxx packages.
 I had to copy/paste them, so that Tedi doesn't rely on non-standard APIs
 that are likely to change in future versions of JavaFX.
 
