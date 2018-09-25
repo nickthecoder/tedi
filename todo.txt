@@ -4,19 +4,20 @@ Bugs
 Current Work
 ------------
 
-
-Next
-----
-
 Make ParagraphNode clever enough to handle a set of styles
     i.e. break the line into pieces, where each piece can have their own style
     Later use this for search matches
         if match count > 1000 stop adding highlights.
     Later use it for syntax highlighting
 
-Check when layoutChildren is being called, and try to minimise this.
 
-why does skin have skinnable and control, which are the same?
+Next
+----
+
+Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
+    At the very least rename it, as it isn't in Content!!!
+
+Check when layoutChildren is being called, and try to minimise this.
 
 Add font +/- buttons in the Demo.
 
@@ -42,3 +43,39 @@ Consider adding back line-wrapping
     OR, build the line numbers as a set of Text objects, and line them up with the main Text nodes.
 
     This would prevent some optimisations later though (allowing only *visible* nodes to be created/updated).
+
+Syntax Highlighting / Search matches
+------------------------------------
+
+On Adding : HighlightRanges
+
+Iterate over them, working out which Paragraphs that they intersect, and converting their start/ends into
+columnStart and columnEnds for each Paragraph.
+
+Add a ParagraphHighlightRange to each affected Paragraph, and fire a change event.
+
+Skin will hear the change event, and rebuild its Text objects based on the ParagraphHighlightRanges. Like so :
+
+Take all start/ends and shove them in a sorted set, including 0 and the last column.
+Now iterate, creating a Text object for each adjacent pair of ints, style the Text for any ParagraphHighlightRanges
+that intersect this range.
+
+To delete a HighlightRange, while adding, we kept an internal list of Paragraph on HighlightRange.
+Iterate over it calling Paragraph.removeHighlight( HighlightRange ).
+We need to find the Paragraph's index. do lineFor( length ) to validate all Paragraph.cachedPosition.
+Then do lineFor( Paragraph.cachedPosition )
+NOTE. When a paragraph is deleted, we must remove that Paragraph from the HighlightRange OR, set its
+cachedPosition to -1, and if we find a -1, then ignore it. Maybe both!
+
+
+Paragraph insert() and delete() must adjust the ParagraphsHighlightRanges appropriately.
+Inserting into the MIDDLE of a range, will extend it. Inserting before will move to following ranges.
+Deleting inside a range will shrink it. Deleting before a range will move the following ranges.
+
+Edge case : If a highlight spans multiple lines, consider using -1 and length +1 as its range (so that insertions
+always extend the range, even at the start and end of line).
+    The skin can just use clamp when adding into the sorted list.
+
+Note, this is inefficient, as a Paragraph will be converted into Text objects multiple times if it has more than
+one highlight within it. So instead, while adding/removing styles, keep a list of affected Paragraphs, and only
+fire change events at the end.

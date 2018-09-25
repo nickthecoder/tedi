@@ -6,7 +6,7 @@ import org.junit.After
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
-import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
+import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import kotlin.test.assertEquals
 
 class TestInsert : ListChangeListener<Paragraph> {

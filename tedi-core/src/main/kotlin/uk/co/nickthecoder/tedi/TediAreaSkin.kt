@@ -59,7 +59,7 @@ import javafx.scene.shape.Path
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.util.Duration
-import uk.co.nickthecoder.tedi.TediArea.ParagraphList.Paragraph
+import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
 
 class TediAreaSkin(control: TediArea)
