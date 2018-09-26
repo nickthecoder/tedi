@@ -4,40 +4,11 @@ Bugs
 Current Work
 ------------
 
-skin.positionForContentPoint has TODO
-
-When deleting paragraphs, tell them, so that they can move their ParagraphHighlightRanges (and
-    remove themselves from the HighlightRange), and also set their cachedPosition to -1
-
-Implement Skin.destroyParagraphNode
-
-Update ParagraphHighlightRange when editing text.
-    Also update the HighlightRange too, so that its positions remain valid?
-    This will require ALL further highlights to be affected.
-    Big plus... The document can be saved with those highlights.
-
-Make ParagraphNode clever enough to handle a set of styles
-    i.e. break the line into pieces, where each piece can have their own style
-
 Use this for search matches
     if match count > 1000 stop adding highlights.
 
-Create a utility class which listens for document changes, and calls a function after a short time,
-but abandons it if another change happens before it is complete.
-    Extend this with highlighting in mind, where the function returns a set of HighlightRanges,
-    and they are applied for you (removing the old ones).
-
 Try to REPLACE an existing highlight.
     I think it will throw at the moment.
-
-Add a kotlin syntax highlighter to the Demo.
-
-Add a css syntax highlighter to the Demo ???
-    Maybe style colours, such as #ffeeee and gray, so that their background color is the required color.
-         Must then pick black or white for the text.
-    Standard JavaFX styles such as -fx-padding coloured differently to unknown styles.
-
-Add another tab to Demo, where you can add your own highlights to a document.
 
 Next
 ----
@@ -80,16 +51,3 @@ Consider adding back line-wrapping
     OR, build the line numbers as a set of Text objects, and line them up with the main Text nodes.
 
     This would prevent some optimisations later though (allowing only *visible* nodes to be created/updated).
-
-Syntax Highlighting / Search matches
-------------------------------------
-
-On Adding : HighlightRanges
-
-Paragraph insert() and delete() must adjust the ParagraphsHighlightRanges appropriately.
-Inserting into the MIDDLE of a range, will extend it. Inserting before will move to following ranges.
-Deleting inside a range will shrink it. Deleting before a range will move the following ranges.
-
-Edge case : If a highlight spans multiple lines, consider using -1 and length +1 as its range (so that insertions
-always extend the range, even at the start and end of line).
-    The skin can just use clamp when adding into the sorted list.

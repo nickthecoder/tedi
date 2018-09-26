@@ -388,10 +388,6 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    private fun destroyParagraphNode(node: Node) {
-        // TODO Remove?
-    }
-
     /**
      * Builds a selection, by creating Text objects (one per line) of the selection,
      * as well as a Rectangle for each of them.
@@ -486,7 +482,7 @@ class TediAreaSkin(control: TediArea)
             if (change.wasRemoved()) {
                 val from = change.from
                 for (n in 1..change.removedSize) {
-                    destroyParagraphNode(paragraphGroup.children.removeAt(from))
+                    paragraphGroup.children.removeAt(from)
                 }
             }
             if (change.wasUpdated()) {
@@ -559,7 +555,6 @@ class TediAreaSkin(control: TediArea)
             node.children.forEach { text ->
                 if (text is Text) { // Ignore any Rectangles which may also be in the group.
                     if (normX < text.layoutX) {
-                        println("Early $soFar")
                         return soFar
                     }
                     val insertion = text.hitTestChar(normX, normY - node.layoutY).getInsertionIndex()
