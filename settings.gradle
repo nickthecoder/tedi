@@ -1,2 +1,3 @@
 include 'tedi-core'
 include 'demo'
+include 'example'

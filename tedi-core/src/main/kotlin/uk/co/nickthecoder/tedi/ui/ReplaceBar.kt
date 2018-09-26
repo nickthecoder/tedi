@@ -79,6 +79,7 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
     }
 
     companion object {
+        @JvmStatic
         val replacementHistory = ObservableListWrapper(mutableListOf<String>())
     }
 }

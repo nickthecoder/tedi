@@ -56,3 +56,17 @@ project(':demo') {
         testCompile 'org.jetbrains.kotlin:kotlin-test'
     }
 }
+
+project(':example') {
+
+    apply plugin: 'kotlin'
+    apply plugin: 'application'
+    
+    mainClassName = "uk.co.nickthecoder.tedi.example.Example"
+
+    dependencies {
+        compile project(':tedi-core')
+
+        testCompile 'org.jetbrains.kotlin:kotlin-test'
+    }
+}

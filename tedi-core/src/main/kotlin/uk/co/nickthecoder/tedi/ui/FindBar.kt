@@ -153,6 +153,7 @@ open class FindBar(val matcher: TextInputControlMatcher) {
 
 
     companion object {
+        @JvmStatic
         val findHistory = ObservableListWrapper(mutableListOf<String>())
     }
 }

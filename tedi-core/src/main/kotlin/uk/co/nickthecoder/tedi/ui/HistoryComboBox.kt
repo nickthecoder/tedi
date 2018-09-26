@@ -115,6 +115,7 @@ class HistoryComboBox(history: ObservableList<String>)
          *       Preferences.userRoot().node(MyEditorClass::class.java.package.name + "/search)
          *
          */
+        @JvmStatic
         fun saveHistory(list: ObservableList<String>, preferences: Preferences, maxItems: Int) {
             preferences.keys().forEach { preferences.remove(it) }
             list.subList(Math.max(0, list.size - maxItems), list.size).forEachIndexed { i, value ->
@@ -126,6 +127,7 @@ class HistoryComboBox(history: ObservableList<String>)
         /**
          * Use the same [preferences] as in [saveHistory].
          */
+        @JvmStatic
         fun loadHistory(list: ObservableList<String>, preferences: Preferences) {
             val items = mutableListOf<String>()
             preferences.keys().map { it.toIntOrNull() ?: -1 }.sorted().forEach { key ->

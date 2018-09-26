@@ -7,9 +7,6 @@ Current Work
 Use this for search matches
     if match count > 1000 stop adding highlights.
 
-Try to REPLACE an existing highlight.
-    I think it will throw at the moment.
-
 Next
 ----
 

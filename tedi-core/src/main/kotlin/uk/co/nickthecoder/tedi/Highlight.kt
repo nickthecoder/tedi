@@ -104,7 +104,7 @@ open class FillStyleClassHighlight(textClass: String, val fillClass: String)
  * Applies a style to the highlighted Text.
  * For example, red text :
  *
- *     StyleClassHighlight( "-fx-fill: red;" )
+ *     StyleHighlight( "-fx-fill: red;" )
  */
 open class StyleHighlight(val textStyle: String) : Highlight {
 
@@ -120,7 +120,7 @@ open class StyleHighlight(val textStyle: String) : Highlight {
  * Applies a style to the highlighted Text and a Rectangle for the background.
  * For example red text on a black background :
  *
- *     StyleClassHighlight( "-fx-fill: red;", "-fx-fill: black;" )
+ *     FillStyleHighlight( "-fx-fill: red;", "-fx-fill: black;" )
  */
 open class FillStyleHighlight(textStyle: String, val fillStyle: String)
     : StyleHighlight(textStyle), FillHighlight {

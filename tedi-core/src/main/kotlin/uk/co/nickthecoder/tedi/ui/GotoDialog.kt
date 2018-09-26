@@ -11,7 +11,10 @@ import javafx.scene.layout.FlowPane
 import javafx.scene.layout.HBox
 import javafx.stage.Modality
 import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.*
+import uk.co.nickthecoder.tedi.TediArea
+import uk.co.nickthecoder.tedi.lineColumnFor
+import uk.co.nickthecoder.tedi.loadGraphic
+import uk.co.nickthecoder.tedi.positionFor
 
 /**
  * A dialog box, allowing the user to position the caret to a give line.
@@ -116,6 +119,6 @@ class GotoDialog(private var textInputControl: TextInputControl) {
          * Creates a "Goto" button for a single TextInputControl.
          * This is only useful if the button will only be used for a single TextInputControl.
          */
-        @JvmStatic fun createGoButton(textInputControl: TextInputControl) = createGotoButton { textInputControl }
+        @JvmStatic fun createGotoButton(textInputControl: TextInputControl) = createGotoButton { textInputControl }
     }
 }
