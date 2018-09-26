@@ -19,22 +19,28 @@ import uk.co.nickthecoder.tedi.syntax.JavaSyntaxKt;
 import uk.co.nickthecoder.tedi.ui.*;
 
 import java.util.List;
-import java.util.prefs.Preferences;
 
+/**
+ * An example application with a TediArea, with a simple tool bar.
+ * Features include :
+ * <p>
+ * find/replace (
+ * goto line dialog box
+ * java syntax highlighting
+ * use of "BetterUndoRedo"
+ * <p>
+ * You may also like to look at the Kotlin Demo application, which also demonstrates the following :
+ * <p>
+ * Re-use of a single find & replace matcher for multiple TediAreas (in a TabPane).
+ * Load/Save of find/replace via Preferences
+ * Threading of the syntax highlighter
+ * Example of how to get the character position from a mouse event's x, y coordinate
+ */
 public class Example extends Application {
 
     @Override
     public void start(Stage primaryStage) throws Exception {
-        HistoryComboBox.loadHistory(FindBar.getFindHistory(), Preferences.userRoot().node(Example.class.getName() + "/find"));
-        HistoryComboBox.loadHistory(ReplaceBar.getReplacementHistory(), Preferences.userRoot().node(Example.class.getName() + "/replace"));
-
         new ExampleWindow(primaryStage);
-    }
-
-    @Override
-    public void stop() {
-        HistoryComboBox.saveHistory(FindBar.getFindHistory(), Preferences.userRoot().node(Example.class.getName() + "/find"), 30);
-        HistoryComboBox.saveHistory(ReplaceBar.getReplacementHistory(), Preferences.userRoot().node(Example.class.getName() + "/replace"), 30);
     }
 
     public static void main(String[] args) {
@@ -49,7 +55,7 @@ public class Example extends Application {
         TediArea tediArea = new TediArea();
 
         /**
-         * The root of the scene.
+         * The root of the scene top= toolBar, center = tediArea, bottom = findAndReplaceToolBars.
          */
         BorderPane borderPane = new BorderPane();
 
@@ -62,7 +68,6 @@ public class Example extends Application {
          * The non-gui part of find and replace.
          */
         TextInputControlMatcher matcher = new TextInputControlMatcher(tediArea);
-
 
         /**
          * A tool bar, which appears below the tabPane (inside findAndReplaceToolBars)
@@ -83,14 +88,15 @@ public class Example extends Application {
         Button undo = new Button();
         Button redo = new Button();
         ToggleButton toggleLineNumbers = new ToggleButton();
-
         ToggleButton toggleFind = findBar.createToggleButton();
         ToggleButton toggleFindAndReplace = replaceBar.createToggleButton();
-
         Button gotoButton = GotoDialog.createGotoButton(tediArea);
 
         Scene scene = new Scene(borderPane, 700.0, 500.0);
 
+        /**
+         * Constructor called from Example.start
+         */
         ExampleWindow(Stage stage) {
             /*
              * Automatically removes children when they are made invisible.
@@ -102,19 +108,15 @@ public class Example extends Application {
             // Applies tedi.css found in tedi-core's jar file.
             TediArea.style(scene);
 
-            borderPane.getStyleClass().add("example");
             borderPane.setCenter(tediArea);
             borderPane.setTop(toolBar);
             borderPane.setBottom(findAndReplaceToolBars);
 
             TediUtilKt.loadGraphic(undo, Example.class, "undo.png");
-            undo.setOnAction((event) -> tediArea.getUndoRedo().undo());
-
             TediUtilKt.loadGraphic(redo, Example.class, "redo.png");
-            redo.setOnAction((event) -> tediArea.getUndoRedo().redo());
-
             TediUtilKt.loadGraphic(toggleLineNumbers, FindBar.class, "line-numbers.png");
 
+            // Without this, the tool bars look slightly wrong.
             findBar.getToolBar().getStyleClass().add("bottom");
             replaceBar.getToolBar().getStyleClass().add("bottom");
 
@@ -130,8 +132,10 @@ public class Example extends Application {
             // Handle keyboard shortcuts
             borderPane.addEventFilter(KeyEvent.KEY_PRESSED, this::onKeyPressed);
 
+            // Whenever the document is changed, re-apply the java syntax highlighting.
             tediArea.textProperty().addListener((observable, oldValue, newValue) -> applySyntax());
 
+            // Add some example text.
             tediArea.setText("public class Example {\n\n" +
                     "    boolean test = false;\n\n" +
                     "    public void hello( String name ) {\n" +
@@ -140,14 +144,25 @@ public class Example extends Application {
                     "}\n"
             );
 
-            tediArea.setUndoRedo(new BetterUndoRedo(tediArea));
+            // Bind the line number toggle button to tediArea's property.
+            // That's all we have to do to hide/show line numbers.
             toggleLineNumbers.selectedProperty().bindBidirectional(tediArea.displayLineNumbersProperty());
+
+            // Undo redo button states and actions
+            tediArea.setUndoRedo(new BetterUndoRedo(tediArea));
             undo.disableProperty().bind(tediArea.getUndoRedo().getUndoableProperty().not());
             redo.disableProperty().bind(tediArea.getUndoRedo().getRedoableProperty().not());
+            redo.setOnAction((event) -> tediArea.getUndoRedo().redo());
+            undo.setOnAction((event) -> tediArea.getUndoRedo().undo());
+
+            // Or, we could use TextInputControl's undo/redo (which is a little naff)
+            // undo.disableProperty().bind(tediArea.undoableProperty().not());
+            // redo.disableProperty().bind(tediArea.redoableProperty().not());
+            // redo.setOnAction((event) -> tediArea.redo());
+            // undo.setOnAction((event) -> tediArea.undo());
 
             stage.setTitle("Tedi Example Application");
             stage.show();
-
         }
 
         /**
@@ -163,6 +178,10 @@ public class Example extends Application {
             });
         }
 
+        /**
+         * Handles keyboard shortcuts.
+         * Nothing interesting to see here!
+         */
         void onKeyPressed(KeyEvent event) {
             boolean consume = true;
             KeyCode code = event.getCode();
@@ -186,11 +205,13 @@ public class Example extends Application {
                     toggleLineNumbers.setSelected(!toggleLineNumbers.isSelected());
 
                 } else if (code == KeyCode.R) {
+                    // Focus on either the "find", or the "replace", depending on is "find" is already visible.
                     boolean wasInUse = matcher.getInUse();
                     replaceBar.getToolBar().setVisible(true);
                     if (wasInUse) {
                         replaceBar.requestFocus();
                     }
+                    // else, the findBar will automatically focus itself.
 
                 } else {
                     consume = false;
@@ -198,6 +219,8 @@ public class Example extends Application {
             } else {
                 // Not control down
                 if (code == KeyCode.ESCAPE) {
+                    // Hide the find/replace toolbars if they are visible.
+                    // This works because the toolbars' visibility is bound to matcher's inUse property.
                     matcher.setInUse(false);
                 } else {
                     consume = false;
