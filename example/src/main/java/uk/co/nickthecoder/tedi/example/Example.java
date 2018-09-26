@@ -21,10 +21,11 @@ import uk.co.nickthecoder.tedi.ui.*;
 import java.util.List;
 
 /**
- * An example application with a TediArea, with a simple tool bar.
+ * An example application with a TediArea.
+ * <p>
  * Features include :
  * <p>
- * find/replace (
+ * find/replace
  * goto line dialog box
  * java syntax highlighting
  * use of "BetterUndoRedo"
@@ -112,8 +113,13 @@ public class Example extends Application {
             borderPane.setTop(toolBar);
             borderPane.setBottom(findAndReplaceToolBars);
 
+            // Note, the graphics for the find and replace buttons are automatically added,
+            // and are stored within the tedi-core jar file.
+            // You can of course change them to match your applications other buttons.
+            // The undo and redo button graphics are in this Example application's jar file.
             TediUtilKt.loadGraphic(undo, Example.class, "undo.png");
             TediUtilKt.loadGraphic(redo, Example.class, "redo.png");
+            // This button graphic is also in the tedi-core jar file.
             TediUtilKt.loadGraphic(toggleLineNumbers, FindBar.class, "line-numbers.png");
 
             // Without this, the tool bars look slightly wrong.
@@ -179,14 +185,16 @@ public class Example extends Application {
         }
 
         /**
-         * Handles keyboard shortcuts.
+         * Handles keyboard shortcuts. You may like to add tooltips to the buttons, indicating the keys to use.
          * Nothing interesting to see here!
          */
         void onKeyPressed(KeyEvent event) {
+
+            // We'll assume the event is to be consumed, unless we fall into an "else" clause.
             boolean consume = true;
             KeyCode code = event.getCode();
 
-            if (event.isShortcutDown()) {
+            if (event.isShortcutDown()) { // The same as isControlDown unless you are using a mac
 
                 if (code == KeyCode.F) {
                     matcher.setInUse(true);
@@ -205,7 +213,7 @@ public class Example extends Application {
                     toggleLineNumbers.setSelected(!toggleLineNumbers.isSelected());
 
                 } else if (code == KeyCode.R) {
-                    // Focus on either the "find", or the "replace", depending on is "find" is already visible.
+                    // Focus on either the "find", or the "replace", depending on if "find" is already visible.
                     boolean wasInUse = matcher.getInUse();
                     replaceBar.getToolBar().setVisible(true);
                     if (wasInUse) {
@@ -217,7 +225,7 @@ public class Example extends Application {
                     consume = false;
                 }
             } else {
-                // Not control down
+                // Not shortcut down
                 if (code == KeyCode.ESCAPE) {
                     // Hide the find/replace toolbars if they are visible.
                     // This works because the toolbars' visibility is bound to matcher's inUse property.
