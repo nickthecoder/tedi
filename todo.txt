@@ -1,8 +1,6 @@
 Bugs
 ----
 
-Syntax highlighting clears search matches.
-
 replacing text spanning a range doesn't keep the highlight.
     The text is first removed (which deletes the range), and then adds new text.
 
@@ -22,17 +20,12 @@ replacing text spanning a range doesn't keep the highlight.
 Current Work
 ------------
 
-Use this for search matches
-    if match count > 1000 stop adding highlights.
+if search's match count > 1000 stop adding highlights.
 
 Next
 ----
 
-Make syntax highlighter a class, and pass an instance to Editor tab .syntax( xxx ) method.
-    So that there isn't duplicated code.
-
-Consider adding owner : Any? to HighlightRange, so that Syntax highlighter can remove its old values
-without keeping a copy.
+Split pane in Demo, making sure the highlighting is only done ONCE.
 
 Make undo/redo property look more like the standard. See Java Example app.
 

@@ -154,8 +154,8 @@ public class Example extends Application {
 
             // Undo redo button states and actions
             tediArea.setUndoRedo(new BetterUndoRedo(tediArea));
-            undo.disableProperty().bind(tediArea.getUndoRedo().getUndoableProperty().not());
-            redo.disableProperty().bind(tediArea.getUndoRedo().getRedoableProperty().not());
+            undo.disableProperty().bind(tediArea.getUndoRedo().undoableProperty().not());
+            redo.disableProperty().bind(tediArea.getUndoRedo().redoableProperty().not());
             redo.setOnAction((event) -> tediArea.getUndoRedo().redo());
             undo.setOnAction((event) -> tediArea.getUndoRedo().undo());
 

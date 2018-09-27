@@ -6,14 +6,16 @@ import java.util.*
 
 abstract class UndoRedo {
 
-    val undoableProperty = SimpleBooleanProperty(this, "undoable", false)
+    protected val undoableProperty = SimpleBooleanProperty(this, "undoable", false)
+    fun undoableProperty() = undoableProperty
     var undoable
         get() = undoableProperty.get()
         set(v) {
             undoableProperty.set(v)
         }
 
-    val redoableProperty = SimpleBooleanProperty(this, "redoable", false)
+    protected val redoableProperty = SimpleBooleanProperty(this, "redoable", false)
+    fun redoableProperty() = redoableProperty
     var redoable
         get() = redoableProperty.get()
         set(v) {

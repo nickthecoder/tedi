@@ -49,12 +49,14 @@ abstract class Syntax {
 
 
     companion object {
-        val KEYWORD_STYLE = "KEYWORD" to StyleHighlight("-fx-fill: #000080;")
+        val KEYWORD_STYLE = "KEYWORD" to StyleHighlight("-fx-fill: #000088; -fx-font-weight: bold;")
+        val ANNOTATION_STYLE = "ANNOTATION" to StyleHighlight("-fx-fill: #808000;")
         val PAREN_STYLE = "PAREN" to StyleHighlight("-fx-fill: #cc33cc;")
         val BRACE_STYLE = "BRACE" to StyleHighlight("-fx-fill: #33cccc;")
         val BRACKET_STYLE = "BRACKET" to StyleHighlight("-fx-fill: #ddaa00;")
-        val SEMICOLON_STYLE = "SEMICOLON" to StyleHighlight("-fx-fill: #ff6666;")
-        val STRING_STYLE = "STRING" to StyleHighlight("-fx-fill: #008000;")
-        val COMMENT_STYLE = "COMMENT" to StyleHighlight("-fx-fill: #808080;")
+        val SEMICOLON_STYLE = "SEMICOLON" to StyleHighlight("-fx-fill: #997799;")
+        val NUMBER_STYLE = "NUMBER" to StyleHighlight("-fx-fill: #0000ff;")
+        val STRING_STYLE = "STRING" to StyleHighlight("-fx-fill: #008000; -fx-font-weight: bold;")
+        val COMMENT_STYLE = "COMMENT" to StyleHighlight("-fx-fill: #808080; -fx-font-style: italic;")
     }
 }

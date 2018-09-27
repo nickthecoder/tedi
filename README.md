@@ -192,7 +192,7 @@ Never mix and match the two calls, otherwise you may end up using two
 completely different undo/redo lists!
 
 I have added code inside BetterUndoRedo which disables the standard
-undo/redo list. (undoable and redoable are always false).
+undo/redo list. (undoable and redoable always return false).
 However I cannot guarantee that it will disable it in future
 versions of JavaFX. So just DON'T mix and match!
 

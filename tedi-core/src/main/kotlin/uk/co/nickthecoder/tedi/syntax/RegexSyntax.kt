@@ -4,6 +4,11 @@ import uk.co.nickthecoder.tedi.Highlight
 import uk.co.nickthecoder.tedi.HighlightRange
 import java.util.regex.Pattern
 
+/**
+ * The regex patterns used were taken from  :
+ *
+ * https://github.com/FXMisc/RichTextFX/blob/master/richtextfx-demos/src/main/java/org/fxmisc/richtext/demo/JavaKeywordsDemo.java
+ */
 open class RegexSyntax(val pattern: Pattern, val styleMap: Map<String, Highlight?>)
 
     : Syntax() {
@@ -59,11 +64,13 @@ open class RegexSyntax(val pattern: Pattern, val styleMap: Map<String, Highlight
 
     companion object {
 
+        val NUMBER_PATTERN = "[0-9.]+"
+        val ANNOTATION_PATTERN = "\\@\\b\\w+\\b"
         val PAREN_PATTERN = "\\(|\\)"
         val BRACE_PATTERN = "\\{|\\}"
         val BRACKET_PATTERN = "\\[|\\]"
         val SEMICOLON_PATTERN = "\\;"
-        val STRING_PATTERN = "\"([^\"\\\\]|\\\\.)*\""
+        val STRING_PATTERN = "\"([^\"\\\\]|\\\\.)*\"|'([^'])*'"
         val COMMENT_PATTERN = "//[^\n]*" + "|" + "/\\*(.|\\R)*?\\*/"
 
         /**
@@ -74,6 +81,18 @@ open class RegexSyntax(val pattern: Pattern, val styleMap: Map<String, Highlight
             return keywords.joinToString(prefix = "\\b(", separator = "|", postfix = ")\\b")
         }
 
+        /**
+         * Builds a big Pattern!
+         *
+         * The result is something like : (?<GROUP1>GROUP1PATTERN))|(?<GROUP2>GROUP2PATTERN)
+         *
+         * @param items A pair of group names (first) and pattern strings (second).
+         *
+         */
+        fun buildPattern(items: Map<String, String>): Pattern {
+            val patternString = items.map { "(?<" + it.key + ">" + it.value + ")" }.joinToString(separator = "|")
+            return Pattern.compile(patternString)
+        }
     }
 
 }
