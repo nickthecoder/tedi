@@ -1,278 +1,37 @@
 package uk.co.nickthecoder.tedi.ui
 
-import javafx.beans.property.SimpleBooleanProperty
-import javafx.beans.property.SimpleObjectProperty
-import javafx.beans.property.SimpleStringProperty
 import javafx.beans.value.ChangeListener
 import javafx.scene.control.TextInputControl
-import uk.co.nickthecoder.tedi.TediArea
-import java.util.regex.Pattern
 
 /**
- * Performs find and replace operations on a TextInputControl.
- * The [textInputControl] can be a TextField, a TextArea or a TediArea.
+ * The Tedi project is really all about TediArea, but it seemed a shame to write a nice find and replace
+ * utility that didn't work for regular TextAreas.
+ * So [TextInputControlMatcher] can work with with TextAreas, or any other control that extends
+ * [TextInputControl].
  *
- * When highlighting of matches is implemented in TediArea, then a sub-class or TextInputControl will be created
- * to use that feature.
+ * Difference between this and [TediAreaMatcher] :
+ *
+ * - No highlighting of matches
+ * - Restarts matching whenever the text changes (because the match start and end positions would
+ *   become invalid as soon as text is inserted or deleted).
  */
-open class TextInputControlMatcher(tediArea: TediArea) {
+open class TextInputControlMatcher(textInputControl: TextInputControl)
 
-    val textInputControlProperty = SimpleObjectProperty<TextInputControl>(tediArea)
-    var textInputControl: TextInputControl
-        get() = textInputControlProperty.get()
-        set(v) {
-            textInputControlProperty.set(v)
-        }
-
-    val findProperty = SimpleStringProperty("")
-    var find: String?
-        get() = findProperty.get()
-        set(v) {
-            findProperty.set(v)
-        }
-
-    val matchCaseProperty = SimpleBooleanProperty(false)
-    var matchCase: Boolean
-        get() = matchCaseProperty.get()
-        set(v) {
-            matchCaseProperty.set(v)
-        }
-
-    val matchRegexProperty = SimpleBooleanProperty(false)
-    var matchRegex: Boolean
-        get() = matchRegexProperty.get()
-        set(v) {
-            matchRegexProperty.set(v)
-        }
-
-    val matchWordsProperty = SimpleBooleanProperty(false)
-    var matchWords: Boolean
-        get() = matchWordsProperty.get()
-        set(v) {
-            matchWordsProperty.set(v)
-        }
-
-    val statusProperty = SimpleStringProperty("")
-    var status: String
-        get() = statusProperty.get()
-        set(v) {
-            statusProperty.set(v)
-        }
-
-    val hasNextProperty = SimpleBooleanProperty(false)
-    var hasNext: Boolean
-        get() = hasNextProperty.get()
-        set(v) {
-            hasNextProperty.set(v)
-        }
-
-
-    val hasPrevProperty = SimpleBooleanProperty(false)
-    var hasPrev: Boolean
-        get() = hasNextProperty.get()
-        set(v) {
-            hasPrevProperty.set(v)
-        }
-
-    val matchSelectedProperty = SimpleBooleanProperty(false)
-    var matchSelected: Boolean
-        get() = matchSelectedProperty.get()
-        set(v) {
-            matchSelectedProperty.set(v)
-        }
-
-    /**
-     * When the find bar is hidden, set this to false.
-     * When [inUse] == true, then matches will be restarted whenever the text changes, so
-     * it will be needless inefficient to keep inUse = true for longer than needed.
-     */
-    val inUseProperty = SimpleBooleanProperty(true)
-    var inUse: Boolean
-        get() = inUseProperty.get()
-        set(v) {
-            inUseProperty.set(v)
-        }
-
-    protected var pattern = Pattern.compile("")
-
-    protected var matcher = pattern.matcher("")
+    : AbstractMatcher<TextInputControl>(textInputControl) {
 
     protected var textChangedListener = ChangeListener<String> { _, _, _ -> textChanged() }
 
-    protected var selectionChangedListener = ChangeListener<Number> { _, _, _ -> selectionChanged() }
-
-    protected val matches = mutableListOf<Match>()
-
-    protected var currentMatchIndex = -1
-
-    protected var state = State.NOTHING
-
     init {
-        textInputControlProperty.addListener { _, oldValue, newValue -> textInputControlChanged(oldValue, newValue) }
-        findProperty.addListener { _, _, _ -> startFind() }
-        matchCaseProperty.addListener { _, _, _ -> startFind() }
-        matchRegexProperty.addListener { _, _, _ -> startFind() }
-        matchWordsProperty.addListener { _, _, _ -> startFind() }
-        inUseProperty.addListener { _, _, _ -> startFind() }
-
-        tediArea.caretPositionProperty().addListener(selectionChangedListener)
-        tediArea.anchorProperty().addListener(selectionChangedListener)
-        tediArea.textProperty().addListener(textChangedListener)
+        textInputControl.textProperty().addListener(textChangedListener)
     }
 
-    protected fun textInputControlChanged(oldValue: TextInputControl, newValue: TextInputControl) {
-        with(oldValue) {
-            textProperty().removeListener(textChangedListener)
-            caretPositionProperty().removeListener(selectionChangedListener)
-            anchorProperty().removeListener(selectionChangedListener)
-        }
-
-        with(newValue) {
-            newValue.textProperty().addListener(textChangedListener)
-            caretPositionProperty().addListener(selectionChangedListener)
-            anchorProperty().addListener(selectionChangedListener)
-        }
+    override fun controlChanged(oldValue: TextInputControl?, newValue: TextInputControl?) {
+        super.controlChanged(oldValue, newValue)
+        oldValue?.textProperty()?.removeListener(textChangedListener)
+        newValue?.textProperty()?.addListener(textChangedListener)
     }
 
     open fun textChanged() {
-        if (state == State.NOTHING) {
-            startFind()
-        }
+        startFind()
     }
-
-    open fun startFind(changeSelection: Boolean = true) {
-        matches.clear()
-        currentMatchIndex = -1
-
-        if (inUse && find?.isNotEmpty() ?: false) {
-
-            val caseFlag = if (matchCase) 0 else Pattern.CASE_INSENSITIVE
-            val literalFlag = if (matchRegex) 0 else Pattern.LITERAL
-            if (matchWords) {
-                if (matchRegex) {
-                    pattern = Pattern.compile("\\b${find}\\b", caseFlag + literalFlag)
-                } else {
-                    pattern = Pattern.compile("\\b${Pattern.quote(find)}\\b", caseFlag)
-                }
-            } else {
-                pattern = Pattern.compile(find, caseFlag + literalFlag + Pattern.MULTILINE)
-            }
-            matcher = pattern.matcher(textInputControl.text)
-            val caret = textInputControl.caretPosition
-            while (matcher.find()) {
-                val match = Match(matcher.start(), matcher.end())
-                matches.add(match)
-                if (match.start >= caret && currentMatchIndex < 0) {
-                    currentMatchIndex = matches.size - 1
-                }
-            }
-            // If no matches were found AFTER the caret position, use the FIRST match (if there is one).
-            if (currentMatchIndex < 0) {
-                currentMatchIndex = 0
-            }
-            if (changeSelection) {
-                updateSelection()
-            }
-        }
-        updatePrevNext()
-    }
-
-    protected fun updatePrevNext() {
-        hasPrev = currentMatchIndex > 0
-        hasNext = currentMatchIndex < matches.size - 1
-        status = if (find?.isEmpty() ?: true) {
-            ""
-        } else if (inUse) {
-            if (matches.isEmpty()) {
-                "No matches"
-            } else if (matches.size == 1) {
-                "One match"
-            } else {
-                "${currentMatchIndex + 1} of ${matches.size} matches"
-            }
-        } else {
-            "idle"
-        }
-    }
-
-    open fun previousMatch() {
-        if (currentMatchIndex > 0) {
-            currentMatchIndex--
-            updateSelection()
-            updatePrevNext()
-        }
-    }
-
-    open fun nextMatch() {
-        if (currentMatchIndex < matches.size - 1) {
-            currentMatchIndex++
-            updateSelection()
-            updatePrevNext()
-        }
-    }
-
-    protected fun updateSelection() {
-        if (currentMatchIndex >= 0 && currentMatchIndex < matches.size) {
-            val match = matches[currentMatchIndex]
-            textInputControl.selectRange(match.end, match.start)
-        }
-    }
-
-    protected fun selectionChanged() {
-        if (inUse && state == State.NOTHING) {
-            val start = Math.min(textInputControl.anchor, textInputControl.caretPosition)
-            val end = Math.max(textInputControl.anchor, textInputControl.caretPosition)
-            currentMatchIndex = findMatchIndex(Match(start, end))
-            matchSelected = currentMatchIndex >= 0
-        } else {
-            matchSelected = false
-        }
-    }
-
-    open fun replace(replacement: String) {
-        if (matchSelected) {
-            state = State.REPLACE
-            textInputControl.replaceSelection(replacement)
-            state = State.NOTHING
-            startFind() // Will select the next match
-        }
-    }
-
-    open fun replaceAll(replacement: String) {
-        val control = textInputControl
-        if (control is TediArea) {
-            control.undoRedo.beginCompound()
-        }
-        state = State.REPLACE_ALL
-        currentMatchIndex = matches.size - 1
-        while (currentMatchIndex >= 0) {
-            updateSelection()
-            textInputControl.replaceSelection(replacement)
-            currentMatchIndex--
-        }
-        if (control is TediArea) {
-            control.undoRedo.endCompound()
-        }
-        state = State.NOTHING
-        startFind(false)
-    }
-
-    open fun findMatchIndex(match: Match): Int {
-        // Optimisation : Test the current match first, as it is the most likely.
-        if (currentMatchIndex >= 0 && currentMatchIndex < matches.size) {
-            if (matches[currentMatchIndex] == match) {
-                return currentMatchIndex
-            }
-        }
-
-        matches.forEachIndexed { i, m ->
-            if (match == m) return i
-            if (m.start > match.start) return -1 // Matches are in order, so we can end early
-        }
-        return -1
-    }
-
-    data class Match(val start: Int, val end: Int)
-
-    enum class State { NOTHING, REPLACE, REPLACE_ALL }
 }

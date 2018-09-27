@@ -1,6 +1,24 @@
 Bugs
 ----
 
+Syntax highlighting clears search matches.
+
+replacing text spanning a range doesn't keep the highlight.
+    The text is first removed (which deletes the range), and then adds new text.
+
+    Maybe allow zero length ranges (but not -ve ones).
+    When inserting text at a zero length range, extend it.
+    BTW, I think it appropriate to extend a non-zero range when inserting at its end too.
+    Deleting a character BEFORE a zero length range will delete the range
+
+    However, if a range spans the whole document, how can it ever be deleted?
+    And if it could, how can it be preserved?
+
+    If I had a rich text editor, then the "Bold" button could be used to style a selection,
+    but pressing it with NO selection could insert an empty range.
+    Pressing it AGAIN could delete the empty range.
+    Therefore the problem above is not a problem.
+
 Current Work
 ------------
 
@@ -10,11 +28,13 @@ Use this for search matches
 Next
 ----
 
-Create a SimpleDemo app in a single java file
-    No tabs
-    Better undo/redo.
-    find/replace and go to
-    No syntax highlighting.
+Make syntax highlighter a class, and pass an instance to Editor tab .syntax( xxx ) method.
+    So that there isn't duplicated code.
+
+Consider adding owner : Any? to HighlightRange, so that Syntax highlighter can remove its old values
+without keeping a copy.
+
+Make undo/redo property look more like the standard. See Java Example app.
 
 HitInfo
     Move boundsInLocal to a local variable.
@@ -25,6 +45,7 @@ Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
 Check when layoutChildren is being called, and try to minimise this.
 
 Add font +/- buttons in the Demo.
+    Some things will fail!!!
 
 Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 
@@ -36,6 +57,20 @@ is lineHeight() correct? Can the text area adjust the line spacing???
 
 Later
 -----
+
+Consider writing a method of loading/saving highlighted documents (not only to disc).
+    e.g. for clipboard.
+    Maybe a json document, with the text up front, and a list of ranges at the end.
+    Shouldn't be part of TediArea.
+    Option to include zero length ranges (on load AND save).
+
+
+Consider adding a hyperlink feature to the demo.
+    Add a sub-class of HighlightRange called Hyperlink for the github link
+    Add mouseevent handler, and if ctrl (shortcut) is pressed,
+    then look for all Hyperlinks, and use the text (or the Hyperlink's
+    url) to browse to that address!
+    Also add menu items to the context menu to copy the url, and browse.
 
 Consider adding a gutter to the right, which shows where the match results are.
     Kate puts it IN the scroll bar, whereas IntelliJ puts it the left of the scroll bar, floating above the text.

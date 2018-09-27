@@ -1,6 +1,7 @@
 package uk.co.nickthecoder.tedi.ui
 
 import com.sun.javafx.collections.ObservableListWrapper
+import javafx.application.Platform
 import javafx.event.EventHandler
 import javafx.scene.control.Button
 import javafx.scene.control.ToggleButton
@@ -10,15 +11,21 @@ import uk.co.nickthecoder.tedi.loadGraphic
 import uk.co.nickthecoder.tedi.onSceneAvailable
 import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
-open class ReplaceBar(val matcher: TextInputControlMatcher) {
+/**
+ * An example GUI for use with [TextInputControlMatcher] or [TediAreaMatcher].
+ *
+ * Add [toolBar] to your scene.
+ * You will also need a [FindBar] to go with this [ReplaceBar].
+ */
+open class ReplaceBar(val matcher: AbstractMatcher<*>) {
 
     val toolBar = ToolBar()
 
     val replacement = HistoryComboBox(replacementHistory)
 
-    val replace = Button("Replace")
+    val replace = Button("_Replace")
 
-    val replaceAll = Button("Replace All")
+    val replaceAll = Button("Replace _All")
 
     init {
 
@@ -35,13 +42,13 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
         with(replace) {
             styleClass.add("replace")
             disableProperty().bind(matcher.matchSelectedProperty.not())
-            onAction = EventHandler { matcher.replace(replacement.value ?: "") }
+            onAction = EventHandler { matcher.replace(replacement.editor.text ?: "") }
         }
 
         with(replaceAll) {
             styleClass.add("replaceAll")
             disableProperty().bind(matcher.matchSelectedProperty.not())
-            onAction = EventHandler { matcher.replaceAll(replacement.value ?: "") }
+            onAction = EventHandler { matcher.replaceAll(replacement.editor.text ?: "") }
         }
 
         matcher.inUseProperty.addListener { _, _, newValue ->
@@ -59,12 +66,15 @@ open class ReplaceBar(val matcher: TextInputControlMatcher) {
 
     /**
      * This is a work-around for a bug in ComboBox.
-     * I want to focus on [search], but doing search.requestFocus causes the caret to be hidden.
+     * I want to focus on [find], but doing search.requestFocus causes the caret to be hidden.
      * See https://stackoverflow.com/questions/40239400/javafx-8-missing-caret-in-switch-editable-combobox
      */
     fun requestFocus() {
         replacement.onSceneAvailable {
             replacement.requestFocusWithCaret()
+            Platform.runLater {
+                replacement.editor.selectAll()
+            }
         }
     }
 

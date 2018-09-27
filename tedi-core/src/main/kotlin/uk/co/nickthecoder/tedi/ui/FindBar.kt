@@ -1,6 +1,7 @@
 package uk.co.nickthecoder.tedi.ui
 
 import com.sun.javafx.collections.ObservableListWrapper
+import javafx.application.Platform
 import javafx.event.EventHandler
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
@@ -10,10 +11,10 @@ import uk.co.nickthecoder.tedi.onSceneAvailable
 import uk.co.nickthecoder.tedi.requestFocusWithCaret
 
 /**
- * An example GUI for use with [TextInputControlMatcher].
+ * An example GUI for use with [TextInputControlMatcher] or [TediAreaMatcher].
  *
  * Add [toolBar] to your scene.
- * Making the [toolBar] hidden (toolbar.isVisible = false) will disable the [TextInputControlMatcher].
+ * Making the [toolBar] hidden (toolbar.isVisible = false) will disable the [matcher].
  *
  * If your application has multiple TediAreas (for example inside a TabPane), then you can either :
  * 1. Create a single matcher, and a single [FindBar] for uses
@@ -22,7 +23,7 @@ import uk.co.nickthecoder.tedi.requestFocusWithCaret
  * If doing the former, then you need to set the TextInputControlMatcher.textInputControl appropriately
  * (for example, whenever you select a new tab, or whenever a TediArea gains focus).
  */
-open class FindBar(val matcher: TextInputControlMatcher) {
+open class FindBar(val matcher: AbstractMatcher<*>) {
 
     val toolBar = ToolBar()
 
@@ -32,11 +33,11 @@ open class FindBar(val matcher: TextInputControlMatcher) {
 
     val next = Button()
 
-    val matchCase = CheckBox("Match Case")
+    val matchCase = CheckBox("_Match Case")
 
-    val matchRegex = CheckBox("Regex")
+    val matchRegex = CheckBox("R_egex")
 
-    val matchWords = CheckBox("Words")
+    val matchWords = CheckBox("_Words")
 
     val status = Label()
 
@@ -52,18 +53,18 @@ open class FindBar(val matcher: TextInputControlMatcher) {
 
         matcher.inUseProperty.bindBidirectional(toolBar.visibleProperty())
 
-        toolBar.setVisible(true)
+        toolBar.isVisible = true
 
         with(toolBar) {
             styleClass.add("tedi-find-bar")
             items.addAll(find, prev, next, Separator(), matchCase, matchRegex, matchWords, Separator(), status)
+            addEventFilter(KeyEvent.KEY_PRESSED) { keyPressed(it) }
         }
 
         with(find) {
             promptText = "find"
             styleClass.add("find")
-            valueProperty().bindBidirectional(matcher.findProperty)
-            addEventHandler(KeyEvent.KEY_PRESSED) { keyPressedInFindField(it) }
+            editor.textProperty().bindBidirectional(matcher.findProperty)
         }
 
         with(prev) {
@@ -83,6 +84,7 @@ open class FindBar(val matcher: TextInputControlMatcher) {
         }
 
         with(matchCase) {
+            isMnemonicParsing = true
             styleClass.add("match-case")
             tooltip = Tooltip("(ctrl+M)")
             selectedProperty().bindBidirectional(matcher.matchCaseProperty)
@@ -114,30 +116,54 @@ open class FindBar(val matcher: TextInputControlMatcher) {
     fun requestFocus() {
         find.onSceneAvailable {
             find.requestFocusWithCaret()
+            // Without a run later, the selection is ignored (or is de-selected), when pressing the "search" button.
+            Platform.runLater {
+                find.editor.selectAll()
+            }
         }
     }
 
-    fun keyPressedInFindField(event: KeyEvent) {
+    /**
+     * Up/down keys move through the matches. Enter and shift+Enter move down/up through the searches,
+     * looping if you get to the end/start of the list.
+     *
+     * I've added mnemonics to the checkboxes, however, on Linux using JavaFX 8, using the mnemonic
+     * only moves the focus to that checkbox, it doesn't actually change its state. Grr. So I've
+     * created ANOTHER shortcut, (ctrl+ instead of alt+) which actually changes the state!
+     */
+    fun keyPressed(event: KeyEvent) {
         var consume = true
-        if (event.isControlDown) {
+        if (event.isShortcutDown) {
 
             when (event.code) {
                 KeyCode.E -> matcher.matchRegex = !matcher.matchRegex
                 KeyCode.M -> matcher.matchCase = !matcher.matchCase
                 KeyCode.W -> matcher.matchWords = !matcher.matchWords
-                else -> consume = false
+                else -> {
+                    consume = false
+                }
             }
 
         } else {
             when (event.code) {
-                KeyCode.ENTER -> matcher.startFind()
                 KeyCode.UP -> matcher.previousMatch()
                 KeyCode.DOWN -> matcher.nextMatch()
-                else -> consume = false
+                KeyCode.ENTER -> {
+                    if (event.isShiftDown) {
+                        matcher.previousMatch(true)
+                    } else {
+                        matcher.nextMatch(true)
+                    }
+                }
+                else -> {
+                    consume = false
+                }
             }
         }
 
-        if (consume) event.consume()
+        if (consume) {
+            event.consume()
+        }
     }
 
     fun createToggleButton(): ToggleButton {

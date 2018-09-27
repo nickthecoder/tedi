@@ -39,7 +39,7 @@ class DemoWindow(stage: Stage = Stage()) {
     /**
      * The non-gui part of find and replace.
      */
-    val matcher = TextInputControlMatcher(dummyArea)
+    val matcher = TediAreaMatcher(dummyArea)
 
     /**
      * A tool bar, which appears below the tabPane (inside findAndReplaceToolBars)
@@ -64,39 +64,32 @@ class DemoWindow(stage: Stage = Stage()) {
     val toggleFindAndReplace = replaceBar.createToggleButton()
     val goto = GotoDialog.createGotoButton { currentArea }.apply { tooltip = Tooltip("Go to Line (ctrl+G)") }
 
-    val scene = Scene(borderPane, 700.0, 500.0)
+    val scene = Scene(borderPane, 800.0, 600.0)
 
     /**
-     * Keep track of the "current" TextArea/TediArea, so that find and replace, and the line-number toggle button
+     * Keep track of the "current" TediArea, so that find and replace, and the line-number toggle button
      * affect the correct Control.
-     * This is set from within EditorTab (when a the TextInputControl gains focus).
+     * This is set from within EditorTab (when a the TediArea gains focus).
      *
      * Note, if we were able to close tabs, then closing the last tab should set this back to dummyArea.
      */
-    var currentArea: TextInputControl = dummyArea
+    var currentArea: TediArea = dummyArea
         set(v) {
-            val oldValue = field
-            if (oldValue is TediArea) {
-                oldValue.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
-            }
+            field.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
 
             field = v
 
-            if (v is TediArea) {
-                toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
-                toggleLineNumbers.isDisable = false
-                // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.undoableProperty().
-                undo.disableProperty().bind(v.undoRedo.undoableProperty.not())
-                redo.disableProperty().bind(v.undoRedo.redoableProperty.not())
-            } else {
-                toggleLineNumbers.isSelected = false
-                toggleLineNumbers.isDisable = true
-                undo.disableProperty().bind(v.undoableProperty().not())
-                redo.disableProperty().bind(v.redoableProperty().not())
-            }
+            toggleLineNumbers.selectedProperty().bindBidirectional(v.displayLineNumbersProperty())
+            toggleLineNumbers.isDisable = false
 
-            matcher.textInputControl = v
+            // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.undoableProperty().
+            undo.disableProperty().bind(v.undoRedo.undoableProperty.not())
+            redo.disableProperty().bind(v.undoRedo.redoableProperty.not())
 
+            matcher.control = v
+
+            // Without the runLater, this doesn't work. I think that's because the new tab is still "kind-of"
+            // hidden. Hmm.
             Platform.runLater {
                 v.requestFocusOnSceneAvailable()
             }
@@ -114,20 +107,26 @@ class DemoWindow(stage: Stage = Stage()) {
         TediArea.style(scene)
 
         with(borderPane) {
-            styleClass.add("example")
             center = tabPane
             top = toolBar
             bottom = findAndReplaceToolBars
         }
 
+        tabPane.selectionModel.selectedItemProperty().addListener { _, _, newValue ->
+            // NOTE. If we could CLOSE tabs, then we'd also need to handle the case when there are NO
+            // open tabs (and therefore newValue == null.
+            currentArea = (newValue as EditorTab).tediArea
+        }
+
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
-            tabs.add(TediTab().apply {
+            tabs.add(EditorTab().apply {
                 load(DemoWindow::class.java, "Welcome", false)
                 welcomeHighlights()
             })
-            tabs.add(TediTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
-            tabs.add(TediTab().apply {
+            tabs.add(EditorTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
+            tabs.add(EditorTab().apply {
+                // Perform Kotlin syntax highlighting after 100 milliseconds of idleness since the last edit.
                 propertyChangeDelayedThread(tediArea.textProperty(), 100) {
                     val ranges = kotlinSyntax(tediArea.text)
                     Platform.runLater {
@@ -137,10 +136,10 @@ class DemoWindow(stage: Stage = Stage()) {
                 }
                 load(DemoWindow::class.java, "Demo", true)
             })
-            tabs.add(TediTab().apply {
-                // Perform syntax highlighting after 100 milliseconds of idleness since the last edit.
+            tabs.add(EditorTab().apply {
+                // Perform Kotlin syntax highlighting after 100 milliseconds of idleness since the last edit.
                 propertyChangeDelayedThread(tediArea.textProperty(), 100) {
-                    val ranges = javaSyntax(tediArea.text)
+                    val ranges = kotlinSyntax(tediArea.text)
                     Platform.runLater {
                         tediArea.highlightRanges().clear()
                         tediArea.highlightRanges().addAll(ranges)
@@ -149,8 +148,19 @@ class DemoWindow(stage: Stage = Stage()) {
                 load(DemoWindow::class.java, "DemoWindow", true)
             })
 
-            tabs.add(TediTab().apply { load(TediArea::class.java, "tedi.css", true) })
-            tabs.add(TextAreaTab().apply { load(DemoWindow::class.java, "TextArea", false) })
+            tabs.add(EditorTab().apply {
+                // Perform JAVA syntax highlighting after 100 milliseconds of idleness since the last edit.
+                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
+                    val ranges = javaSyntax(tediArea.text)
+                    Platform.runLater {
+                        tediArea.highlightRanges().clear()
+                        tediArea.highlightRanges().addAll(ranges)
+                    }
+                }
+                load(DemoWindow::class.java, "Example", true)
+            })
+
+            tabs.add(EditorTab().apply { load(TediArea::class.java, "tedi.css", true) })
         }
 
         with(undo) {
@@ -276,58 +286,16 @@ class DemoWindow(stage: Stage = Stage()) {
      * A [Tab] within the [tabPane].
      * Contains a TediArea.
      */
-    abstract inner class EditorTab(
-            val textInput: TextInputControl,
+    inner class EditorTab(
             title: String = "New Document") : Tab() {
 
+        val tediArea = TediArea()
+
         init {
-            content = textInput
+
+            content = tediArea
             this.text = title
 
-            // Select the TediArea when this tab is selected
-            selectedProperty().addListener { _, _, newValue ->
-                if (newValue == true) {
-                    textInput.requestFocusOnSceneAvailable()
-                }
-            }
-
-            // Make toggleLineNumbers button and the matcher refer this this textInput whenever it gains focus.
-            textInput.focusedProperty().addListener { _, _, newValue ->
-                if (newValue == true) {
-                    currentArea = textInput
-                }
-            }
-        }
-
-        fun load(klass: Class<*>, name: String, code: Boolean) {
-            val url = klass.getResource(name)
-            text = name
-
-            if (url == null) {
-                textInput.text = "Couldn't find resource :\n\n    ${klass.name}.$name"
-                return
-            }
-
-            try {
-                textInput.text = url.readText()
-            } catch (e: Exception) {
-                textInput.text = "Couldn't load resource :\n\n    ${klass.name}.$name"
-            }
-
-            if (code) {
-                // This will use a monospaced font, and display line numbers.
-                textInput.styleClass.add("code")
-            }
-        }
-
-    }
-
-    inner class TediTab
-        : EditorTab(TediArea()) {
-
-        val tediArea = textInput as TediArea
-
-        init {
             with(tediArea) {
                 // When selecting "words", this is much better that the default when editing source code.
                 wordIterator = SourceCodeWordIterator()
@@ -338,6 +306,27 @@ class DemoWindow(stage: Stage = Stage()) {
             }
             tediArea.addEventFilter(MouseEvent.MOUSE_PRESSED) { contextMenuHandler(it) }
             tediArea.addEventFilter(MouseEvent.MOUSE_RELEASED) { contextMenuHandler(it) }
+        }
+
+        fun load(klass: Class<*>, name: String, code: Boolean) {
+            val url = klass.getResource(name)
+            text = name
+
+            if (url == null) {
+                tediArea.text = "Couldn't find resource :\n\n    ${klass.name}.$name"
+                return
+            }
+
+            try {
+                tediArea.text = url.readText()
+            } catch (e: Exception) {
+                tediArea.text = "Couldn't load resource :\n\n    ${klass.name}.$name"
+            }
+
+            if (code) {
+                // This will use a monospaced font, and display line numbers.
+                tediArea.styleClass.add("code")
+            }
         }
 
         /**
@@ -399,9 +388,6 @@ class DemoWindow(stage: Stage = Stage()) {
                     HighlightRange(15, 23, tedi)
             )
         }
-
     }
-
-    inner class TextAreaTab : EditorTab(TextArea(), "TextArea")
 
 }

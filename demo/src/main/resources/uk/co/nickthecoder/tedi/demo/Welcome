@@ -2,7 +2,23 @@ Welcome to the TediArea Demo
 
 This is a demo application, showing how to use some of the features
 of TediArea, and its helper classes, such as FindBar, ReplaceBar,
-TextInputControlMatcher and GotoDialog.
+TediAreaMatcher and GotoDialog.
 
-The contents of these tabs are from this demo app's jar file.
-Note that the source code for DemoWindow.kt may be an OLD version!
+The contents of these tabs are from this demo's jar file.
+
+The Demo and DemoWindow tabs contain the Kotlin source code for this
+application.
+
+The Example tab contains the source code for a simpler application
+to this one, but written in Java. It is also much simpler, as it only
+has one TediArea (there is no TabPane).
+
+Note. The Demo and DemoWindow tab use the kotlin syntax highlighter,
+whereas the Example tab uses the java syntax highlighter. They are
+very similar, but have a different set of keywords, and the kotlin's
+semi-colons are highlighted in RED ;-)
+
+Also note that the source code shown here may not be the latest version,
+so please check the code on github.
+
+https://github.com/nickthecoder/tedi

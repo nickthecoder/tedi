@@ -46,7 +46,6 @@ class HistoryComboBox(history: ObservableList<String>)
         valueProperty().addListener { _, _, newValue ->
             if (!ignoreUpdates && !isShowing) {
                 if (newValue.isNotBlank()) {
-                    println("valueProperty changed")
                     history.remove(newValue)
                     history.add(newValue)
                 }
