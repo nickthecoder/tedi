@@ -25,10 +25,6 @@ if search's match count > 1000 stop adding highlights.
 Next
 ----
 
-Split pane in Demo, making sure the highlighting is only done ONCE.
-
-Make undo/redo property look more like the standard. See Java Example app.
-
 HitInfo
     Move boundsInLocal to a local variable.
 
@@ -59,22 +55,4 @@ Consider writing a method of loading/saving highlighted documents (not only to d
     Shouldn't be part of TediArea.
     Option to include zero length ranges (on load AND save).
 
-
-Consider adding a hyperlink feature to the demo.
-    Add a sub-class of HighlightRange called Hyperlink for the github link
-    Add mouseevent handler, and if ctrl (shortcut) is pressed,
-    then look for all Hyperlinks, and use the text (or the Hyperlink's
-    url) to browse to that address!
-    Also add menu items to the context menu to copy the url, and browse.
-
-Consider adding a gutter to the right, which shows where the match results are.
-    Kate puts it IN the scroll bar, whereas IntelliJ puts it the left of the scroll bar, floating above the text.
-    Copy IntelliJ - don't make it a "gutter", float it over the content.
-
 Consider adding back line-wrapping
-    Set set display-line-numbers=false whenever it is set.
-    Likewise setting displayLineNumbers forces line-wrap = false.
-
-    OR, build the line numbers as a set of Text objects, and line them up with the main Text nodes.
-
-    This would prevent some optimisations later though (allowing only *visible* nodes to be created/updated).

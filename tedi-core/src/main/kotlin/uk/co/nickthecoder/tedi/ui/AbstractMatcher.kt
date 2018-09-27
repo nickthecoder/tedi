@@ -299,11 +299,14 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
         if (currentMatchIndex >= 0) {
             val match = matches[currentMatchIndex]
             removeMatch(currentMatchIndex)
-            addReplacement(match.start, match.end)
 
             control.selectionProperty().removeListener(selectionChangedListener)
             control.replaceText(match.start, match.end, replacement)
             control.selectionProperty().addListener(selectionChangedListener)
+
+            if (replacement.isNotEmpty()) {
+                addReplacement(match.start, match.start + replacement.length)
+            }
 
             highlightCurrentMatch()
             updatePrevNext()

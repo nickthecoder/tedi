@@ -159,22 +159,23 @@ class ParagraphList
             while (i.hasNext()) {
                 val hr = i.next()
 
-                if (hr.end < start) { // BEFORE the deleted segment. Do nothing
+                if (hr.end <= start) { // BEFORE the deleted segment.
+                    // Do nothing
                 } else if (hr.start >= end) { // AFTER the deleted segment. Simple adjustment
                     hr.start -= difference
                     hr.end -= difference
-                } else if (hr.start < start && hr.end > end) { // A superset of the deletion.
-                    // Shrink the highlight
+                } else if (hr.start <= start && hr.end >= end) { // A superset of (or exactly the same as) the deletion.
                     hr.end -= difference
-                } else if (hr.start < start && hr.end > start) { // Straddling the start of the deletion
-                    // Chop off the end of the highlight
-                    hr.end = start
-                } else if (hr.start < end && hr.end > end) { // Straddling the end of the deletion
-                    // Chop off the start of the highlight
-                    hr.end -= hr.start - start
-                    hr.start = start
                 } else if (hr.start >= start && hr.end <= end) { // within the deletion.
                     i.remove()
+                } else if (hr.start < end && hr.end > end) { // Straddling the end of the deletion
+                    val before = hr.start - start
+                    hr.end -= end - hr.start + before
+                    hr.start -= before
+                } else if (hr.start < start && hr.end > start) { // Straddling the start of the deletion
+                    hr.end = start
+                } else {
+                    throw IllegalStateException("Something weird has happened")
                 }
             }
         }
@@ -239,11 +240,13 @@ class ParagraphList
         if (length > 0) {
 
             for (hr in highlightRanges) {
-                if (hr.from >= position) {
+                if (hr.start == position) {
+                    hr.end += length
+                } else if (hr.start > position) {
                     // Update any HighlightRanges after position.
                     hr.start += length
                     hr.end += length
-                } else if (hr.start < position && hr.end > position) {
+                } else if (hr.start <= position && hr.end >= position) {
                     // Update any HighlightRanges that contain the inserted text.
                     hr.end += length
                 }
