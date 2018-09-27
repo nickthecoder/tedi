@@ -1,7 +1,6 @@
 package uk.co.nickthecoder.tedi.example;
 
 import javafx.application.Application;
-import javafx.application.Platform;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.ToggleButton;
@@ -12,13 +11,10 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import uk.co.nickthecoder.tedi.BetterUndoRedo;
-import uk.co.nickthecoder.tedi.HighlightRange;
 import uk.co.nickthecoder.tedi.TediArea;
 import uk.co.nickthecoder.tedi.TediUtilKt;
-import uk.co.nickthecoder.tedi.syntax.JavaSyntaxKt;
+import uk.co.nickthecoder.tedi.syntax.JavaSyntax;
 import uk.co.nickthecoder.tedi.ui.*;
-
-import java.util.List;
 
 /**
  * An example application with a TediArea.
@@ -138,8 +134,10 @@ public class Example extends Application {
             // Handle keyboard shortcuts
             borderPane.addEventFilter(KeyEvent.KEY_PRESSED, this::onKeyPressed);
 
-            // Whenever the document is changed, re-apply the java syntax highlighting.
-            tediArea.textProperty().addListener((observable, oldValue, newValue) -> applySyntax());
+            // Whenever the document is changed, re-apply the java syntax highlighting. The 500ms wait time
+            // prevents the highlighting being performed for EVERY keystroke, and instead only does it
+            // after an idle period.
+            JavaSyntax.getInstance().attach(tediArea, 500);
 
             // Add some example text.
             tediArea.setText("public class Example {\n\n" +
@@ -169,19 +167,6 @@ public class Example extends Application {
 
             stage.setTitle("Tedi Example Application");
             stage.show();
-        }
-
-        /**
-         * Note, this is bad, as it is doing a potentially LONG task on the JavaFX thread.
-         * Alas, I couldn't work out how to call my Kotlin function propertyChangeDelayedThread
-         * from Java. Sorry.
-         */
-        void applySyntax() {
-            List<HighlightRange> ranges = JavaSyntaxKt.javaSyntax(tediArea.getText());
-            Platform.runLater(() -> {
-                tediArea.highlightRanges().clear();
-                tediArea.highlightRanges().addAll(ranges);
-            });
         }
 
         /**

@@ -5,19 +5,19 @@ import javafx.beans.value.ChangeListener
 import java.util.concurrent.CountDownLatch
 
 /**
- * Whenever the [property] changes, start a new Thread, and wait for [delay] milliseconds,
+ * Whenever the [property] changes, start a new Thread, and [wait] for a while (in milliseconds),
  * then run the [action].
  *
- * If another change to [property] occurs before the delay is complete, then the thread is interrupted
- * and the process repeats, waiting for delay.
+ * If another change to [property] occurs before the wait is complete, then the thread is interrupted
+ * and the process repeats, waiting again.
  *
- * I use this to perform syntax highlighting from within the Demo application.
+ * I use this to perform syntax highlighting.
  *
  * NOTE. I'm not great with multi-threading code, and I don't know how to test this well.
  *
  * @return The ChangeListener. call [property].removeListener( resultValue ) to stop listening to change events.
  */
-fun <T> propertyChangeDelayedThread(property: Property<T>, delay: Long, action: () -> Unit): ChangeListener<T> {
+fun <T> propertyChangeDelayedThread(property: Property<T>, wait: Long, action: () -> Unit): ChangeListener<T> {
 
     var thread: Thread? = null
     var actionLatch: CountDownLatch? = null
@@ -29,7 +29,7 @@ fun <T> propertyChangeDelayedThread(property: Property<T>, delay: Long, action: 
         val newThread = Thread {
             try {
                 actionLatch?.await() // Wait for the previous action to finish if there is one.
-                Thread.sleep(delay)
+                Thread.sleep(wait)
 
                 // If the thread is interrupted during sleep, then we won't get to here.
                 // So no further action will be performed.
@@ -41,7 +41,7 @@ fun <T> propertyChangeDelayedThread(property: Property<T>, delay: Long, action: 
                     thread = null
                     actionLatch?.countDown()
                 }
-            } catch (e : InterruptedException) {
+            } catch (e: InterruptedException) {
                 // Do nothing.
             }
         }

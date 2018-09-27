@@ -11,11 +11,13 @@ import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
-import uk.co.nickthecoder.tedi.syntax.javaSyntax
-import uk.co.nickthecoder.tedi.syntax.kotlinSyntax
-import uk.co.nickthecoder.tedi.syntax.propertyChangeDelayedThread
+import uk.co.nickthecoder.tedi.syntax.JavaSyntax
+import uk.co.nickthecoder.tedi.syntax.KotlinSyntax
 import uk.co.nickthecoder.tedi.ui.*
-import java.util.regex.Pattern
+import java.util.regex.Pattern;
+
+// Note I've deliberately left a trailing semi-colon above, to show that the KotlinSyntax colours are different to
+// JavaSyntax (The semicolon should be RED!)
 
 class DemoWindow(stage: Stage = Stage()) {
 
@@ -126,37 +128,21 @@ class DemoWindow(stage: Stage = Stage()) {
             })
             tabs.add(EditorTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
             tabs.add(EditorTab().apply {
-                // Perform Kotlin syntax highlighting after 100 milliseconds of idleness since the last edit.
-                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
-                    val ranges = kotlinSyntax(tediArea.text)
-                    Platform.runLater {
-                        tediArea.highlightRanges().clear()
-                        tediArea.highlightRanges().addAll(ranges)
-                    }
-                }
+                // Attach Kotlin syntax highlighting (using the default colour scheme)
+                KotlinSyntax.instance.attach(tediArea)
+                // Load text from this demo's jar file
                 load(DemoWindow::class.java, "Demo", true)
             })
             tabs.add(EditorTab().apply {
-                // Perform Kotlin syntax highlighting after 100 milliseconds of idleness since the last edit.
-                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
-                    val ranges = kotlinSyntax(tediArea.text)
-                    Platform.runLater {
-                        tediArea.highlightRanges().clear()
-                        tediArea.highlightRanges().addAll(ranges)
-                    }
-                }
+                // Attach Kotlin syntax highlighting (using the default colour scheme)
+                KotlinSyntax.instance.attach(tediArea)
+                // Load text from this demo's jar file
                 load(DemoWindow::class.java, "DemoWindow", true)
             })
 
             tabs.add(EditorTab().apply {
-                // Perform JAVA syntax highlighting after 100 milliseconds of idleness since the last edit.
-                propertyChangeDelayedThread(tediArea.textProperty(), 100) {
-                    val ranges = javaSyntax(tediArea.text)
-                    Platform.runLater {
-                        tediArea.highlightRanges().clear()
-                        tediArea.highlightRanges().addAll(ranges)
-                    }
-                }
+                // Attach JAVA syntax highlighting (using the default colour scheme)
+                JavaSyntax.instance.attach(tediArea)
                 load(DemoWindow::class.java, "Example", true)
             })
 
