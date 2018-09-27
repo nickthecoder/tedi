@@ -333,6 +333,7 @@ class TediAreaSkin(control: TediArea)
             return createText(paragraph.text.toString())
 
         } else {
+
             // Find all the boundaries between highlights.
             // Using a set, because if two highlights start at the same column, we only want that column
             // in the set once.
@@ -355,8 +356,8 @@ class TediAreaSkin(control: TediArea)
                 val to = clamp(0, splitsList[i + 1], paragraph.text.length)
 
                 val text = createText(paragraph.text.substring(from, to))
-                val textBounds = text.boundsInLocal
                 text.layoutX = x
+                val textBounds = text.boundsInLocal
 
                 // We may not need a background color, so don't create a Rectangle yet.
                 var rectangle: Rectangle? = null
@@ -378,7 +379,6 @@ class TediAreaSkin(control: TediArea)
                         }
                     }
                 }
-
                 rectangle?.let { group.children.add(it) }
                 group.children.add(text)
                 x += textBounds.width

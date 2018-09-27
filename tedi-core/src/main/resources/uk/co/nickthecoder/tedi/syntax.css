@@ -1,0 +1,13 @@
+/***** A default colour scene for syntax highlighting *****/
+
+.syntax-keyword { -fx-fill: #000088; -fx-font-weight: bold; }
+.syntax-softKeyword { -fx-fill: #000088; -fx-font-weight: bold; }
+.syntax-modifier { -fx-fill: #000088; -fx-font-weight: bold; }
+.syntax-string { -fx-fill: #008000; -fx-font-weight: bold; }
+.syntax-comment { -fx-fill: #808080; -fx-font-style: italic; }
+.syntax-annotation { -fx-fill: #808000; }
+.syntax-paren { -fx-fill: #cc33cc; }
+.syntax-brace { -fx-fill: #33cccc; }
+.syntax-bracket { -fx-fill: #ddaa00; }
+.syntax-semicolon { -fx-fill: #997799; }
+.syntax-number { -fx-fill: #0000ff; }

@@ -1,26 +1,20 @@
 package uk.co.nickthecoder.tedi.syntax
 
-import uk.co.nickthecoder.tedi.Highlight
-
 /**
- * Creates HighlightRanges suitable for Kotlin source code.
- *
- * When using your own styles (i.e. choosing your own color scheme), the style map may contain
- * the following keys :
- *
- * - KEYWORD
- * - ANNOTATION
- * - NUMBER
- * - PAREN
- * - BRACE
- * - BRACKET
- * - SEMICOLON
- * - STRING
- * - COMMENT
+ * Creates HighlightRanges suitable for Groovy source code.
  */
-open class GroovySyntax(styles: Map<String, Highlight>) : RegexSyntax(PATTERN, styles) {
-
-    constructor() : this(JavaSyntax.defaultStyles)
+open class GroovySyntax()
+    : RegexSyntax(listOf(
+        RegexHighlight("keyword", KEYWORD_PATTERN),
+        RegexHighlight("number", NUMBER_PATTERN),
+        RegexHighlight("comment", COMMENT_PATTERN),
+        RegexHighlight("annotation", ANNOTATION_PATTERN),
+        RegexHighlight("paren", PAREN_PATTERN),
+        RegexHighlight("brace", BRACE_PATTERN),
+        RegexHighlight("bracket", BRACKET_PATTERN),
+        RegexHighlight("string", STRING_PATTERN),
+        RegexHighlight("semicolon", SEMICOLON_EOL_PATTERN, ERROR_HIGHLIGHT)
+)) {
 
     companion object {
 
@@ -29,7 +23,7 @@ open class GroovySyntax(styles: Map<String, Highlight>) : RegexSyntax(PATTERN, s
          * http://docs.groovy-lang.org/latest/html/documentation/
          */
         @JvmStatic
-        protected val KEYWORDS = listOf(
+        val KEYWORDS = listOf(
                 "as", "assert", "break", "case", "catch", "class", "const", "continue",
                 "def", "default", "do", "else", "enum", "extends", "false", "finally", "for", "goto", "if",
                 "implements", "import", "in", "instanceof", "interface", "new", "null", "package", "return",
@@ -37,19 +31,9 @@ open class GroovySyntax(styles: Map<String, Highlight>) : RegexSyntax(PATTERN, s
 
 
         @JvmStatic
-        protected val KEYWORD_PATTERN = createKeywordsPattern(KEYWORDS)
+        val KEYWORD_PATTERN = createKeywordsPattern(KEYWORDS)
 
         @JvmStatic
-        protected val PATTERN = buildPattern(mapOf(
-                "KEYWORD" to KEYWORD_PATTERN,
-                "NUMBER" to NUMBER_PATTERN,
-                "ANNOTATION" to ANNOTATION_PATTERN,
-                "PAREN" to PAREN_PATTERN,
-                "BRACE" to BRACE_PATTERN,
-                "BRACKET" to BRACKET_PATTERN,
-                "SEMICOLON" to SEMICOLON_PATTERN,
-                "STRING" to STRING_PATTERN,
-                "COMMENT" to COMMENT_PATTERN))
-
+        val instance = GroovySyntax()
     }
 }

@@ -34,8 +34,6 @@ import javafx.beans.InvalidationListener
 import javafx.beans.binding.Bindings
 import javafx.beans.property.*
 import javafx.beans.value.ChangeListener
-import javafx.collections.ListChangeListener
-import javafx.collections.ObservableList
 import javafx.css.CssMetaData
 import javafx.css.StyleConverter
 import javafx.css.Styleable
@@ -135,11 +133,9 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      **************************************************************************/
 
     // Paragraphs
-    private val paragraphsProperty = content.paragraphsProperty()
+    fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = content.paragraphsProperty()
 
-    fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = paragraphsProperty
-
-    val paragraphs = paragraphsProperty.get()
+    val paragraphs = content.paragraphsProperty().get()
 
     // Highlight Ranges
     fun highlightRanges() = content.highlightRanges()
@@ -637,6 +633,15 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         @JvmStatic fun style(scene: Scene) {
             val url = TediArea::class.java.getResource("tedi.css")
+            scene.stylesheets.add(url.toExternalForm())
+        }
+
+        /**
+         * Includes a default colour sceme for syntax highlighting.
+         * This is in a separate css file, as it is likely that you'll want your own colour scheme.
+         */
+        @JvmStatic fun syntaxStyle(scene: Scene) {
+            val url = TediArea::class.java.getResource("syntax.css")
             scene.stylesheets.add(url.toExternalForm())
         }
     }

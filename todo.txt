@@ -51,6 +51,8 @@ is lineHeight() correct? Can the text area adjust the line spacing???
 Later
 -----
 
+Get BOLD etc working with non-monospaced fonts.
+
 Consider writing a method of loading/saving highlighted documents (not only to disc).
     e.g. for clipboard.
     Maybe a json document, with the text up front, and a list of ranges at the end.

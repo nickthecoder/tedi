@@ -13,4 +13,6 @@ class ParagraphHighlightRange(
         val cause: HighlightRange) {
 
     fun intersects(from: Int, to: Int): Boolean = from >= startColumn && to <= endColumn
+
+    override fun toString() = "PHR $startColumn..$endColumn from $cause"
 }

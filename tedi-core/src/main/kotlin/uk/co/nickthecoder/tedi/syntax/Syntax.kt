@@ -2,8 +2,8 @@ package uk.co.nickthecoder.tedi.syntax
 
 import javafx.application.Platform
 import javafx.beans.value.ChangeListener
+import uk.co.nickthecoder.tedi.FillStyleHighlight
 import uk.co.nickthecoder.tedi.HighlightRange
-import uk.co.nickthecoder.tedi.StyleHighlight
 import uk.co.nickthecoder.tedi.TediArea
 
 abstract class Syntax {
@@ -20,10 +20,17 @@ abstract class Syntax {
      */
     open fun attach(tediArea: TediArea, wait: Long = 500): ChangeListener<String> {
         val listener = propertyChangeDelayedThread(tediArea.textProperty(), wait) {
-            val ranges = createRanges(tediArea.text)
+
+            val requiredRanges = createRanges(tediArea.text)
+            val existingRanges = tediArea.highlightRanges().filter { it.owner === this }
+
+            // This isn't exactly efficient (it's O(n*n)), but at least we are changing as few Paragraphs as possible.
+            val newRanges = requiredRanges.filter { !existingRanges.contains(it) }
+            val toRemove = existingRanges.filter { !requiredRanges.contains(it) }
+
             Platform.runLater {
-                clear(tediArea)
-                tediArea.highlightRanges().addAll(ranges)
+                tediArea.highlightRanges().removeAll(toRemove)
+                tediArea.highlightRanges().addAll(newRanges)
             }
         }
         return listener
@@ -44,19 +51,11 @@ abstract class Syntax {
      * Note. this assumes that the [HighlightRange.owner] == this
      */
     open fun clear(tediArea: TediArea) {
-        tediArea.highlightRanges().removeAll(tediArea.highlightRanges().filter { it.owner === this })
+        val toRemove = tediArea.highlightRanges().filter { it.owner === this }
+        tediArea.highlightRanges().removeAll(toRemove)
     }
 
-
     companion object {
-        val KEYWORD_STYLE = "KEYWORD" to StyleHighlight("-fx-fill: #000088; -fx-font-weight: bold;")
-        val ANNOTATION_STYLE = "ANNOTATION" to StyleHighlight("-fx-fill: #808000;")
-        val PAREN_STYLE = "PAREN" to StyleHighlight("-fx-fill: #cc33cc;")
-        val BRACE_STYLE = "BRACE" to StyleHighlight("-fx-fill: #33cccc;")
-        val BRACKET_STYLE = "BRACKET" to StyleHighlight("-fx-fill: #ddaa00;")
-        val SEMICOLON_STYLE = "SEMICOLON" to StyleHighlight("-fx-fill: #997799;")
-        val NUMBER_STYLE = "NUMBER" to StyleHighlight("-fx-fill: #0000ff;")
-        val STRING_STYLE = "STRING" to StyleHighlight("-fx-fill: #008000; -fx-font-weight: bold;")
-        val COMMENT_STYLE = "COMMENT" to StyleHighlight("-fx-fill: #808080; -fx-font-style: italic;")
+        val ERROR_HIGHLIGHT = FillStyleHighlight("-fx-fill: black;", "-fx-fill: #ffcccc;")
     }
 }

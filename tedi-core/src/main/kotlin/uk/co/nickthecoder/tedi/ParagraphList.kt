@@ -473,6 +473,7 @@ class ParagraphList
                 val hr = list[hrIndex]
                 val fromP = lineFor(hr.from)
                 val toP = lineFor(hr.to)
+                lineStartPosition(toP) // Force cachedPosition to become valid.
                 for (pIndex in fromP..toP) {
                     val paragraph = paragraphs[pIndex]
                     paragraph.addHighlight(hr)

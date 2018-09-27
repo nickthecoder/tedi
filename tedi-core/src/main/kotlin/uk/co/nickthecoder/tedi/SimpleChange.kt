@@ -38,6 +38,8 @@ class SimpleUpdateChange<E>(
     : SimpleChange<E>(list, from, to) {
 
     override fun wasUpdated() = true
+
+    override fun toString() = "Change $from..$to"
 }
 
 class SimpleAddChange<E>(
@@ -47,6 +49,8 @@ class SimpleAddChange<E>(
     : SimpleChange<E>(list, from, to) {
 
     override fun wasAdded() = true
+
+    override fun toString() = "Addition $from..$to"
 }
 
 class SimpleRemoveChange<E>(
@@ -59,4 +63,6 @@ class SimpleRemoveChange<E>(
     override fun wasRemoved() = true
 
     override fun getRemoved(): List<E> = removed
+
+    override fun toString() = "Remove $removedSize from $from"
 }

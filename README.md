@@ -165,6 +165,10 @@ You can add this to your scene using :
 
 ## Known Bugs/Issues
 
+- Applying highlights, which change the font weight or style, only work
+  correctly with mono-spaced fonts.
+- Highlights won't work correctly if they change the font size or font family
+
 ### Undo/Redo is weird.
 
 The undo/redo feature inherited from TextInputControl isn't very good,

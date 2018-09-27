@@ -116,8 +116,9 @@ class DemoWindow(stage: Stage = Stage()) {
          */
         RemoveHiddenChildren(findAndReplaceToolBars.children)
 
-        // Applies tedi.css found in tedi-core's jar file.
+        // Applies tedi.css and syntax.css found in tedi-core's jar file.
         TediArea.style(scene)
+        TediArea.syntaxStyle(scene)
 
         with(borderPane) {
             center = tabPane
@@ -284,6 +285,16 @@ class DemoWindow(stage: Stage = Stage()) {
                         replaceBar.requestFocus()
                     }
                 }
+                KeyCode.DIGIT2 -> {
+                    val tab = tabPane.selectionModel.selectedItem
+                    if (tab is EditorTab) {
+                        if (tab.splitPane.items.size == 1) {
+                            tab.splitPane.items.add(TediArea(tab.tediArea).apply { styleClass.add("code") })
+                        } else {
+                            tab.splitPane.items.removeAt(1)
+                        }
+                    }
+                }
                 else -> consume = false
             }
 
@@ -313,9 +324,11 @@ class DemoWindow(stage: Stage = Stage()) {
 
         val tediArea = TediArea()
 
+        val splitPane = SplitPane(tediArea)
+
         init {
 
-            content = tediArea
+            content = splitPane
             this.text = title
 
             with(tediArea) {
