@@ -260,10 +260,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
 
-    fun getSequence(start: Int, end: Int) = content.getSequence(start, end)
-
-    fun getSequence() = content.getSequence(0, length)
-
     fun getLine(line: Int) = content.getLine(line)
 
     /**
@@ -387,7 +383,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         if (end <= start) {
             return
         }
-        val cs = getSequence(start, end)
+        val cs = getText(start, end)
 
         // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
         // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
@@ -413,7 +409,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         // look for the end of the next non-blank line.
         val start = caretPosition
         val end = Math.max(start + 100, length)
-        val cs = getSequence(start, end)
+        val cs = getText(start, end)
 
         // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
         // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
@@ -459,7 +455,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         // look for the end of the next non-blank line.
         val start = caretPosition
         val end = Math.max(start + 100, length)
-        val cs = getSequence(start, end)
+        val cs = getText(start, end)
 
         // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
         // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
@@ -574,8 +570,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         override fun get(start: Int, end: Int): String {
             return paragraphList.get(start, end)
         }
-
-        fun getSequence(start: Int, end: Int) = paragraphList.getSequence(start, end)
 
         fun getLine(line: Int) = paragraphList[line].text
 

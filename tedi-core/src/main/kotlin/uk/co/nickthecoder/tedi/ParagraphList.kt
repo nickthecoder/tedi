@@ -141,8 +141,6 @@ class ParagraphList
         return textBuilder.toString()
     }
 
-    fun getSequence(start: Int, end: Int): CharSequence = ContentCharSequence(start, end)
-
     fun delete(start: Int, end: Int) {
         if (start > end) {
             throw IllegalArgumentException()
@@ -620,47 +618,4 @@ class ParagraphList
         override fun toString() = "($cachedPosition) : $text\n"
 
     }
-
-
-    /**
-     * A [CharSequence] for part of the document.
-     *
-     * NOTE. This is backed by the [ParagraphList], and therefore, if you
-     * change the document, this CharSequence will reflect those changes.
-     *
-     * If you delete content, then [get] can return character 0x00 for
-     * characters beyond the end of the document.
-     */
-    inner class ContentCharSequence(val startPosition: Int, endPosition: Int)
-        : CharSequence {
-
-        override val length = endPosition - startPosition
-
-        override fun get(index: Int): Char {
-            val (line, column) = lineColumnFor(startPosition + index)
-            val paragraph = paragraphs[line]
-            if (column < paragraph.length - 1) {
-                return paragraph.text.get(column)
-            } else {
-                if (line < paragraphs.size - 1) {
-                    return '\n'
-                } else {
-                    return '\u0000'
-                }
-            }
-        }
-
-        override fun subSequence(startIndex: Int, endIndex: Int): CharSequence {
-            return ContentCharSequence(startPosition + startIndex, startPosition + endIndex)
-        }
-
-        override fun toString(): String {
-            val buffer = StringBuffer()
-            for (i in 0..length - 1) {
-                buffer.append(get(i))
-            }
-            return buffer.toString()
-        }
-    }
-
 }

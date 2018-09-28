@@ -10,9 +10,6 @@ Current Work
 Next
 ----
 
-HitInfo
-    Move boundsInLocal to a local variable.
-
 Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
     At the very least rename it, as it isn't in Content!!!
 
