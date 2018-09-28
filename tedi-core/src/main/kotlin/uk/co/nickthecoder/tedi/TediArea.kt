@@ -630,14 +630,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             scene.stylesheets.add(url.toExternalForm())
         }
 
-        /**
-         * Includes a default colour sceme for syntax highlighting.
-         * This is in a separate css file, as it is likely that you'll want your own colour scheme.
-         */
-        @JvmStatic fun syntaxStyle(scene: Scene) {
-            val url = TediArea::class.java.getResource("syntax.css")
-            scene.stylesheets.add(url.toExternalForm())
-        }
     }
     // End Companion Object
 

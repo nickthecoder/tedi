@@ -117,9 +117,8 @@ class DemoWindow(stage: Stage = Stage()) {
          */
         RemoveHiddenChildren(findAndReplaceToolBars.children)
 
-        // Applies tedi.css and syntax.css found in tedi-core's jar file.
+        // Applies tedi.css found in tedi-core's jar file.
         TediArea.style(scene)
-        TediArea.syntaxStyle(scene)
 
         with(borderPane) {
             center = tabPane
