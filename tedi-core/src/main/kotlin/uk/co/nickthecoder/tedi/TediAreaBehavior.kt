@@ -262,7 +262,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled) {
             if (deferClick) {
                 deferClick = false
-                skin.positionCaret(skin.positionForPoint(e!!.x, e.y), shiftDown, false)
+                skin.positionCaret(skin.positionForContentPoint(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
         }

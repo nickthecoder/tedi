@@ -174,4 +174,15 @@ class TestRangesDelete {
         tediArea.deleteText(2, 8)
         assertEquals(0, tediArea.highlightRanges().size, "Size")
     }
+
+
+    @Test
+    fun replaceHighlighted() {
+        tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
+        tediArea.replaceText(2, 7, "CDEFG")
+        assertEquals(1, tediArea.highlightRanges().size, "Size")
+        assertEquals("CDEFG", rangeText(), "Range After")
+        assertEquals(2, tediArea.highlightRanges()[0].from, "From")
+        assertEquals(7, tediArea.highlightRanges()[0].to, "To")
+    }
 }

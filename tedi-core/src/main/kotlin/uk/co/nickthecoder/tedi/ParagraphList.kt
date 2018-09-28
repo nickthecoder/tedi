@@ -588,8 +588,8 @@ class ParagraphList
                 val newStartColumn = phr.cause.from - cachedPosition
                 val newEndColumn = phr.cause.to - cachedPosition
 
-                // Is this highlight still no longer applicable to this Paragraph?
-                if (newEndColumn < 0 || newStartColumn >= length || newEndColumn <= newStartColumn) {
+                // Is this highlight no longer applicable to this Paragraph?
+                if (newEndColumn < 0 || newStartColumn >= length) {
                     phr.startColumn = -1
                 } else {
                     phr.startColumn = clamp(0, newStartColumn, line.length)

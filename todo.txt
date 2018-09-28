@@ -1,22 +1,6 @@
 Bugs
 ----
 
-replacing text spanning a range doesn't keep the highlight.
-    The text is first removed (which deletes the range), and then adds new text.
-
-    Maybe allow zero length ranges (but not -ve ones).
-    When inserting text at a zero length range, extend it.
-    BTW, I think it appropriate to extend a non-zero range when inserting at its end too.
-    Deleting a character BEFORE a zero length range will delete the range
-
-    However, if a range spans the whole document, how can it ever be deleted?
-    And if it could, how can it be preserved?
-
-    If I had a rich text editor, then the "Bold" button could be used to style a selection,
-    but pressing it with NO selection could insert an empty range.
-    Pressing it AGAIN could delete the empty range.
-    Therefore the problem above is not a problem.
-
 Current Work
 ------------
 

@@ -131,6 +131,9 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
 
     protected var currentMatchIndex = -1
 
+    var maxMatches = 400
+
+    
     init {
         controlProperty.addListener { _, oldValue, newValue -> controlChanged(oldValue, newValue) }
         findProperty.addListener { _, _, _ -> startFind() }
@@ -140,6 +143,7 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
     }
 
     open fun controlChanged(oldValue: C?, newValue: C?) {
+        clearMatches()
         oldValue?.selectionProperty()?.removeListener(selectionChangedListener)
         newValue?.selectionProperty()?.addListener(selectionChangedListener)
         startFind(false)
@@ -176,6 +180,9 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
                 if (matcher.start() >= caret && currentMatchIndex < 0) {
                     currentMatchIndex = matches.size - 1
                 }
+                if (matches.size >= maxMatches) {
+                    break
+                }
             }
             // If no matches were found AFTER the caret position, use the FIRST match (if there is one).
             if (currentMatchIndex < 0) {
@@ -191,6 +198,7 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
     open protected fun clearMatches() {
         matches.clear()
         replacements.clear()
+        currentMatchIndex = -1
         updatePrevNext()
     }
 
@@ -226,6 +234,8 @@ abstract class AbstractMatcher<C : TextInputControl>(control: C) {
                 "No matches"
             } else if (matches.size == 1) {
                 "One match"
+            } else if (matches.size >= maxMatches) {
+                "Too many matches"
             } else {
                 if (currentMatchIndex >= 0) {
                     "${currentMatchIndex + 1} of ${matches.size} matches"

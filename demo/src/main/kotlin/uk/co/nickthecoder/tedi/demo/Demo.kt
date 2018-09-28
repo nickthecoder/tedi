@@ -127,12 +127,12 @@ class DemoWindow(stage: Stage = Stage()) {
         }
 
         tabPane.selectionModel.selectedItemProperty().addListener { _, oldValue, newValue ->
-            // NOTE. If we could CLOSE tabs, then we'd also need to handle the case when there are NO
-            // open tabs (and therefore newValue == null.
-            if (oldValue is EditorTab && newValue is EditorTab) {
-                tediAreaChanged(oldValue.tediArea, newValue.tediArea)
-            }
+            val oldTedi = if (oldValue is EditorTab) oldValue.tediArea else null
+            // NOTE. If we close ALL tabs, then we should do something better than this!!!
+            val newTedi = if (newValue is EditorTab) newValue.tediArea else TediArea()
+            tediAreaChanged(oldTedi, newTedi)
         }
+        tediAreaChanged(null, currentArea)
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
@@ -218,11 +218,11 @@ class DemoWindow(stage: Stage = Stage()) {
      * Update the tool bar buttons, unbinding them from the old TediArea, and binding them to the new one.
      * Called from a listener of TabPane's selection (see init).
      */
-    fun tediAreaChanged(oldValue: TediArea, newValue: TediArea) {
+    fun tediAreaChanged(oldValue: TediArea?, newValue: TediArea) {
+
+        oldValue?.displayLineNumbersProperty()?.unbindBidirectional(toggleLineNumbers.selectedProperty())
 
         currentArea = newValue
-
-        oldValue.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
 
         toggleLineNumbers.selectedProperty().bindBidirectional(newValue.displayLineNumbersProperty())
         toggleLineNumbers.isDisable = false
