@@ -70,12 +70,15 @@ class TestRangesInsert {
     // It does make it tricky to write plain text at the start of the document
     // if there is a range at the start!
     @Test
-    fun atFront() { // Should be included in the range.
+    fun atFront() { // Should NOT be included in the range.
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
         tediArea.insertText(2, "X")
-        assertEquals("Xcdefg", rangeText(), "Range After")
-        assertEquals(2, tediArea.highlightRanges()[0].from, "From")
+        assertEquals("cdefg", rangeText(), "Range After")
+        assertEquals(3, tediArea.highlightRanges()[0].from, "From")
         assertEquals(8, tediArea.highlightRanges()[0].to, "To")
+        //assertEquals("Xcdefg", rangeText(), "Range After")
+        //assertEquals(2, tediArea.highlightRanges()[0].from, "From")
+        //assertEquals(8, tediArea.highlightRanges()[0].to, "To")
     }
 
     // TODO I'm not 100% sure this is the right thing to do.

@@ -37,11 +37,7 @@ GPL version 2 (with no option to move to a later version).
 
 ## Progress
 
-TediArea already does most of what I want, with the notable exception of
-syntax highlighting, or highlighting multiple search matches.
-
-It's still in active development (as of Sept 2018).
-There is no stable release yet.
+TediArea does everything I want it to.
 
 I'm currently optimising things, and I may well introduce new bugs!
 Check the **todo.txt** file for details!
@@ -70,14 +66,16 @@ similar. Here are the main differences :
 
 #### Additional Features in Tedi
 
-- Option to display line numbers.
+- Can display line numbers.
+- Highlighting text (e.g. syntax highlighting / find & replace highlights)
 - Better word breaks for coding. See SourceCodeWordIterator class.
 - Indent/un-indent block of text/
 - Tab key can insert spaces or tabs/
 - Easier navigation through a document, by line & column,
   character position, or pixel coordinate.
 - Exposes an observable list of "Paragraphs", which can be more useful
-  than only listening to chages to the "text" property.
+  than only listening to changes to the "text" property.
+- Better undo/redo.
 
 
 #### Features Missing from Tedi
@@ -168,6 +166,9 @@ You can add this to your scene using :
 - Applying highlights, which change the font weight or style, only work
   correctly with mono-spaced fonts.
 - Highlights won't work correctly if they change the font size or font family
+- HighlightRanges are not considered part of the document, and therefore are
+  not included in the undo/redo list. This is deliberate, so if you want to
+  use TediArea as a rich text document editor, you are out of luck. Sorry.
 
 ### Undo/Redo is weird.
 
@@ -202,8 +203,6 @@ versions of JavaFX. So just DON'T mix and match!
 
 ## Planned additional features
 
-- Add support for syntax highlighting
-- Highlight all search matches
 - Optimise for large documents. TextArea (on which this is based),
   is not efficient at all. See below.
 

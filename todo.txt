@@ -1,10 +1,11 @@
 Bugs
 ----
 
+When text is deleted, causing a HR to be deleted, the list's listeners aren't informed
+    Note, Paragraph list doesn't WANT to know!
+
 Current Work
 ------------
-
-if search's match count > 1000 stop adding highlights.
 
 Next
 ----
@@ -20,8 +21,6 @@ Check when layoutChildren is being called, and try to minimise this.
 Add font +/- buttons in the Demo.
     Some things will fail!!!
 
-Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
-
 get rid of getLine?
 change Paragraph.text to charSequence, and add text, which does a toString.
 rename "line" methods to paragraph?
@@ -31,12 +30,8 @@ is lineHeight() correct? Can the text area adjust the line spacing???
 Later
 -----
 
-Get BOLD etc working with non-monospaced fonts.
+Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 
-Consider writing a method of loading/saving highlighted documents (not only to disc).
-    e.g. for clipboard.
-    Maybe a json document, with the text up front, and a list of ranges at the end.
-    Shouldn't be part of TediArea.
-    Option to include zero length ranges (on load AND save).
+Get BOLD etc working with non-monospaced fonts.
 
 Consider adding back line-wrapping

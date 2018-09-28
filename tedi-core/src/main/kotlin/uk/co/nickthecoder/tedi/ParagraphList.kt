@@ -238,16 +238,14 @@ class ParagraphList
 
         val length = text.length
         if (length > 0) {
-
             for (hr in highlightRanges) {
-                if (hr.start == position) {
-                    hr.end += length
-                } else if (hr.start > position) {
-                    // Update any HighlightRanges after position.
-                    hr.start += length
+                if (hr.start >= position) {
+                    if (hr.start == hr.end && hr.start == position) {
+                    } else {
+                        hr.start += length
+                    }
                     hr.end += length
                 } else if (hr.start <= position && hr.end >= position) {
-                    // Update any HighlightRanges that contain the inserted text.
                     hr.end += length
                 }
             }
