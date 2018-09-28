@@ -10,10 +10,6 @@ Current Work
 Next
 ----
 
-Add font +/- buttons in the Demo.
-    Some things will fail!!!
-
-get rid of getLine?
 change Paragraph.text to charSequence, and add text, which does a toString.
 rename "line" methods to paragraph?
 

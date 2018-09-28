@@ -430,8 +430,8 @@ class TediAreaSkin(control: TediArea)
         selectionHighlightGroup.children.clear()
 
         if (skinnable.selection.length != 0) {
-            val (fromLine, fromColumn) = skinnable.lineColumnFor(skinnable.selection.start)
-            val (toLine, toColumn) = skinnable.lineColumnFor(skinnable.selection.end)
+            val (fromLine, fromColumn) = skinnable.lineColumnForPosition(skinnable.selection.start)
+            val (toLine, toColumn) = skinnable.lineColumnForPosition(skinnable.selection.end)
 
             val firstLineText = skinnable.paragraphs[fromLine].text
             tmpText.text = firstLineText.substring(0, fromColumn)
@@ -510,7 +510,7 @@ class TediAreaSkin(control: TediArea)
     fun onCaretMoved() {
         targetCaretX = -1.0
 
-        val (line, column) = skinnable.lineColumnFor(skinnable.caretPosition)
+        val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
         caretPath.layoutY = line * lineHeight()
         tmpText.text = skinnable.paragraphs[line].text.substring(0, column)
         caretPath.layoutX = tmpText.boundsInLocal.width
@@ -558,9 +558,9 @@ class TediAreaSkin(control: TediArea)
 
         val node = paragraphGroup.children[line]
         if (node is Text) {
-            return skinnable.lineStartPosition(line) + node.hitTestChar(normX, normY).getInsertionIndex()
+            return skinnable.positionOfLine(line) + node.hitTestChar(normX, normY).getInsertionIndex()
         } else if (node is Group) {
-            var soFar = skinnable.lineStartPosition(line)
+            var soFar = skinnable.positionOfLine(line)
             node.children.forEach { text ->
                 if (text is Text) { // Ignore any Rectangles which may also be in the group.
                     if (normX < text.layoutX) {
@@ -657,18 +657,18 @@ class TediAreaSkin(control: TediArea)
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
-        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
+        val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
 
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
         val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
-        val lineText = skinnable.getLine(requiredLine).toString()
+        val lineText = skinnable.getTextOfLine(requiredLine).toString()
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
         val hit = tmpText.hitTestChar(requiredX - insideGroup.layoutX, -insideGroup.layoutY)
         val columnIndex = hit.getInsertionIndex()
 
-        val newPosition = skinnable.positionFor(requiredLine, 0) + columnIndex
+        val newPosition = skinnable.positionOfLine(requiredLine, 0) + columnIndex
 
         if (select) {
             skinnable.selectRange(skinnable.anchor, newPosition)
@@ -720,8 +720,8 @@ class TediAreaSkin(control: TediArea)
     }
 
     fun lineStart(select: Boolean) {
-        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
-        val newPosition = skinnable.positionFor(lineColumn.first, 0)
+        val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
+        val newPosition = skinnable.positionOfLine(lineColumn.first, 0)
         if (select) {
             skinnable.selectRange(skinnable.anchor, newPosition)
         } else {
@@ -730,8 +730,8 @@ class TediAreaSkin(control: TediArea)
     }
 
     fun lineEnd(select: Boolean) {
-        val lineColumn = skinnable.lineColumnFor(skinnable.caretPosition)
-        val newPosition = skinnable.positionFor(lineColumn.first, Int.MAX_VALUE)
+        val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
+        val newPosition = skinnable.positionOfLine(lineColumn.first, Int.MAX_VALUE)
         if (select) {
             skinnable.selectRange(skinnable.anchor, newPosition)
         } else {

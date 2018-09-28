@@ -523,9 +523,9 @@ class TediAreaBehavior(val control: TediArea)
         val textArea = getControl()
 
         val selection = textArea.selection
-        val lc = textArea.lineColumnFor(selection.start)
+        val lc = textArea.lineColumnForPosition(selection.start)
         if (lc.second != 0) {
-            textArea.selectRange(textArea.lineStartPosition(lc.first), selection.end)
+            textArea.selectRange(textArea.positionOfLine(lc.first), selection.end)
         }
     }
 

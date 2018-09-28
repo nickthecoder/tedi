@@ -60,9 +60,9 @@ import java.text.BreakIterator
  * - Better "word" selection for source code. See [wordIterator] and [SourceCodeWordIterator].
  * - Better undo/redo (see below).
  * - Can display line numbers. See [displayLineNumbers].
- * - More methods to navigate around the document, such as [lineColumnFor], [positionFor] and [paragraphs].
- * - Locate the character position for a 2D point. See [positionFor].
- * - Better word selection for source code, see [SourceCodeWordIterator].
+ * - More methods to navigate around the document, such as [lineColumnForPosition], [positionForEvent] and [paragraphs].
+ * - Locate the character position for a 2D point. See [positionForEvent].
+ * - Highlight text (for syntax highlighting and while using find & replace).
  *
  * ## Limitations of TediArea
  *
@@ -260,25 +260,19 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
 
-    fun getLine(line: Int) = content.getLine(line)
+    fun getTextOfLine(line: Int) = paragraphs[line].text.toString()
 
     /**
      * Returns the position within [text] of the start of the nth line.
      * [line] and the returned result are zero based.
      */
-    fun lineStartPosition(line: Int) = content.lineStartPosition(line)
-
-    /**
-     * Returns the position within [text] of the end of the nth line.
-     * [line] and the returned result are zero based.
-     */
-    fun lineEndPosition(line: Int) = content.lineEndPosition(line)
+    fun positionOfLine(line: Int) = content.positionOfLine(line)
 
     /**
      * Returns the position within [text] of the given line number and column.
-     * Everything is zero based (so positionFor(0,0) will return 0).
+     * Everything is zero based (so positionForLine(0,0) will return 0).
      */
-    fun positionFor(line: Int, column: Int) = content.positionFor(line, column)
+    fun positionOfLine(line: Int, column: Int) = content.positionOfLine(line, column)
 
     /**
      * Returns the line number for the character position. This is "safe", i.e.
@@ -289,12 +283,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *
      * Therefore, the following is safe. 'line' is always a valid index into [TediArea.paragraphs] :
      *
-     *     val line = tediArea.lineFor( position )
+     *     val line = tediArea.lineForPosition( position )
      *     val paragraph = tediArea.paragraphs[line] // Safe
      *
      * (Note that [TediArea.paragraphs] is never empty, it always has at least one [Paragraph]).
      */
-    fun lineFor(position: Int) = content.lineFor(position)
+    fun lineForPosition(position: Int) = content.lineForPosition(position)
 
     /**
      * Returns the line/column as a [Pair] for the given position within the [text].
@@ -303,32 +297,32 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * If [position] < = 0, then (0,0) is returned.
      *
      * If [position] is beyond the end of the document, then
-     * lineColumnFor( position ) == lineColumnFor( position -1 )
+     * lineColumnForPosition( position ) == lineColumnForPosition( position -1 )
      *
      * Note that the column can range from 0 to the line's length, so for example :
      *
-     *     val (line,column) = tediArea.lineColumnFor( position )
-     *     val lineText = tediArea.getLine( line )
+     *     val (line,column) = tediArea.lineColumnForPosition( position )
+     *     val lineText = tediArea.getTextOfLine( line )
      *     val c1 = (lineText + "\n")[column] // Safe
      *     val c2 = lineText[column] // Dangerous! Can throw an exception
      *
-     *  The last line can throw because 'getLine' does NOT include the new-line character, and
+     *  The last line can throw because 'getTextOfLine' does NOT include the new-line character, and
      *  'column' ranges from 0 to lineText.length INCLUSIVE.
      *  This is especially important for the last line of the document, which does NOT
      *  have an implied new line after it.
      */
-    fun lineColumnFor(position: Int) = content.lineColumnFor(position)
+    fun lineColumnForPosition(position: Int) = content.lineColumnForPosition(position)
 
     /**
      * Returns the character position for a give point, relative to TediArea's bounds.
      * You will usually get [x],[y] from a mouse event for a TediArea,
-     * in which case [positionFor] may be easier to use!
+     * in which case [positionForEvent] may be easier to use!
      */
     fun positionForPoint(x: Double, y: Double): Int {
         return (skin as TediAreaSkin).positionForPoint(x, y)
     }
 
-    fun positionFor(event: MouseEvent) = positionForPoint(event.x, event.y)
+    fun positionForEvent(event: MouseEvent) = positionForPoint(event.x, event.y)
 
 
     /***************************************************************************
@@ -571,18 +565,13 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             return paragraphList.get(start, end)
         }
 
-        fun getLine(line: Int) = paragraphList[line].text
+        fun positionOfLine(line: Int) = paragraphList.positionOfLine(line)
 
+        fun lineForPosition(position: Int) = paragraphList.lineForPosition(position)
 
-        fun lineStartPosition(line: Int) = paragraphList.lineStartPosition(line)
+        fun lineColumnForPosition(position: Int) = paragraphList.lineColumnForPosition(position)
 
-        fun lineEndPosition(line: Int) = paragraphList.lineEndPosition(line)
-
-        fun lineFor(position: Int) = paragraphList.lineFor(position)
-
-        fun lineColumnFor(position: Int) = paragraphList.lineColumnFor(position)
-
-        fun positionFor(line: Int, column: Int) = paragraphList.positionFor(line, column)
+        fun positionOfLine(line: Int, column: Int) = paragraphList.positionOfLine(line, column)
 
 
         override fun addListener(changeListener: ChangeListener<in String>) {

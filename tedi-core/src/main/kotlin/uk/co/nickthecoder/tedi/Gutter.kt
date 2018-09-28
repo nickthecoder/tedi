@@ -90,8 +90,8 @@ class Gutter(val tediArea: TediArea) : Region() {
     }
 
     private fun updateCaretPosition(oldValue: Int, newValue: Int) {
-        val oldLine = tediArea.lineFor(oldValue)
-        val newLine = tediArea.lineFor(newValue)
+        val oldLine = tediArea.lineForPosition(oldValue)
+        val newLine = tediArea.lineForPosition(newValue)
 
         if (oldLine != newLine) {
             if (oldLine < group.children.size - 1) {
@@ -126,7 +126,7 @@ class Gutter(val tediArea: TediArea) : Region() {
 
         with(rectangle) {
             height = lineHeight
-            layoutY = tediArea.lineFor(tediArea.caretPosition) * lineHeight + snappedTopInset()
+            layoutY = tediArea.lineForPosition(tediArea.caretPosition) * lineHeight + snappedTopInset()
         }
         border?.insets?.let { rectangle.width = width - it.right - it.left }
     }

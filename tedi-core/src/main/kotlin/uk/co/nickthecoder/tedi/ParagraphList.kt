@@ -182,8 +182,8 @@ class ParagraphList
 
         if (length > 0) {
             // Identify the trailing paragraph index
-            val (leadingLine, leadingColumn) = lineColumnFor(start)
-            val (trailingLine, trailingColumn) = lineColumnFor(end)
+            val (leadingLine, leadingColumn) = lineColumnForPosition(start)
+            val (trailingLine, trailingColumn) = lineColumnForPosition(end)
 
             val leadingParagraph = paragraphs[leadingLine]
             val trailingParagraph = paragraphs[trailingLine]
@@ -251,7 +251,7 @@ class ParagraphList
             val lines = text.split("\n")
             val n = lines.size
 
-            val (startLine, startColumn) = lineColumnFor(position)
+            val (startLine, startColumn) = lineColumnForPosition(position)
             val startParagraph = paragraphs[startLine]
 
             if (n == 1) {
@@ -286,7 +286,7 @@ class ParagraphList
                     val lastIndex = startLine + n - 1
                     val lastParagraph = paragraphs[lastIndex]
                     invalidateLineStartPosition(lastIndex + 1)
-                    lineStartPosition(lastIndex) // Force the cachedPosition to become valid.
+                    positionOfLine(lastIndex) // Force the cachedPosition to become valid.
                     lastParagraph.insert(lastParagraph.length, trailingText)
                     lastParagraph.adjustHighlights(startParagraphsHighlightRanges)
                     fireParagraphUpdate(lastIndex)
@@ -324,12 +324,12 @@ class ParagraphList
     }
 
     /**
-     * See [TediArea.lineStartPosition]
+     * See [TediArea.positionOfLine]
      *
      * This is optimised from O(n) to O(1) (where n line number requested).
      * However, if you edit near the start of the document, then the next call will be O(n).
      */
-    fun lineStartPosition(line: Int): Int {
+    fun positionOfLine(line: Int): Int {
         if (validCacheIndex < line) {
 
             if (validCacheIndex < 0) {
@@ -351,13 +351,8 @@ class ParagraphList
         return paragraphs[line].cachedPosition
     }
 
-    /**
-     * See [TediArea.lineEndPosition]
-     */
-    fun lineEndPosition(line: Int) = lineStartPosition(line) + paragraphs[line].length
-
-    fun positionFor(line: Int, column: Int): Int {
-        val lineStart = lineStartPosition(line)
+    fun positionOfLine(line: Int, column: Int): Int {
+        val lineStart = positionOfLine(line)
         if (line >= 0 && line < paragraphs.size) {
             return lineStart + clamp(0, paragraphs[line].length, column)
         } else {
@@ -366,7 +361,7 @@ class ParagraphList
     }
 
     /**
-     * Used with the [lineFor] heuristic to guess a line number for a given position, in order to minimise
+     * Used with the [lineForPosition] heuristic to guess a line number for a given position, in order to minimise
      * the number of [Paragraph]s that need to be checked before homing in on the correct line number.
      *
      * The must never be <= 0
@@ -375,16 +370,16 @@ class ParagraphList
 
 
     /**
-     * See [TediArea.lineFor]
+     * See [TediArea.lineForPosition]
      *
      * This is optimised from O(n) to O(1) (where n line number returned).
      * However, if you edit near the start of the document, then the next call will be O(n).
      *
      */
-    fun lineFor(position: Int): Int {
+    fun lineForPosition(position: Int): Int {
 
         val guessedLine = clamp(0, position / guessCharsPerLine, paragraphs.size - 1)
-        var count = lineStartPosition(guessedLine)
+        var count = positionOfLine(guessedLine)
         if (count == position) return guessedLine
 
         if (count < position) {
@@ -421,11 +416,11 @@ class ParagraphList
     }
 
     /**
-     * See [TediArea.lineColumnFor]
+     * See [TediArea.lineColumnForPosition]
      */
-    fun lineColumnFor(position: Int): Pair<Int, Int> {
-        val line = lineFor(position)
-        val linePos = lineStartPosition(line)
+    fun lineColumnForPosition(position: Int): Pair<Int, Int> {
+        val line = lineForPosition(position)
+        val linePos = positionOfLine(line)
 
         return Pair(line, clamp(0, position - linePos, paragraphs[line].length))
     }
@@ -457,7 +452,7 @@ class ParagraphList
      */
     internal fun highlightsChanged(change: ListChangeListener.Change<out HighlightRange>) {
         // validate all cachedPositions.
-        lineFor(contentLength)
+        lineForPosition(contentLength)
 
         // We do this in two passes, so that paragraph change events are only
         // fired ONCE per paragraph. This holds the list of paragraph indices affected.
@@ -470,9 +465,9 @@ class ParagraphList
         fun add(list: List<HighlightRange>, from: Int, to: Int) {
             for (hrIndex in from..to - 1) {
                 val hr = list[hrIndex]
-                val fromP = lineFor(hr.from)
-                val toP = lineFor(hr.to)
-                lineStartPosition(toP) // Force cachedPosition to become valid.
+                val fromP = lineForPosition(hr.from)
+                val toP = lineForPosition(hr.to)
+                positionOfLine(toP) // Force cachedPosition to become valid.
                 for (pIndex in fromP..toP) {
                     val paragraph = paragraphs[pIndex]
                     paragraph.addHighlight(hr)
@@ -491,7 +486,7 @@ class ParagraphList
                 hr.affectedParagraphs.forEach { paragraph ->
                     // A deleted paragraph will have a -ve cachedPosition
                     if (paragraph.cachedPosition >= 0) {
-                        val line = lineFor(paragraph.cachedPosition)
+                        val line = lineForPosition(paragraph.cachedPosition)
                         affectedParagraphs.add(line)
                         paragraph.removeHighlight(hr)
                     }
@@ -553,7 +548,7 @@ class ParagraphList
 
         /**
          * The position of the start of this paragraph.
-         * NOTE. This data becomes invalid, and must only be read via [ParagraphList.lineStartPosition]
+         * NOTE. This data becomes invalid, and must only be read via [ParagraphList.positionOfLine]
          */
         internal var cachedPosition: Int = 0
 

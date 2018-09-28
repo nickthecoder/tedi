@@ -50,52 +50,6 @@ fun ButtonBase.loadGraphic(klass: Class<*>, name: String) {
 }
 
 /**
- * Extension function for all [TextInputControl]s, for compatibility with [TediArea.lineColumnFor]
- */
-fun TextInputControl.lineColumnFor(position: Int): Pair<Int, Int> {
-
-    // Call the TediArea version if we can (this may be more efficient if/when I optimise it)
-    if (this is TediArea) return lineColumnFor(position)
-
-    var count = 0
-    var i = 0
-    val paragraphs = text.split("\n")
-    for (p in paragraphs) {
-        if (count + p.length >= position) {
-            return Pair(i, position - count)
-        }
-        count += p.length + 1 // 1 for the new line character
-        i++
-    }
-    return Pair(i, position - count)
-}
-
-/**
- * Extension function for all [TextInputControl]s, for compatibility with [TediArea.positionFor]
- */
-fun TextInputControl.positionFor(line: Int, column: Int): Int {
-
-    // Call the TediArea version if we can (this may be more efficient if/when I optimise it)
-    if (this is TediArea) return positionFor(line, column)
-
-    val paragraphs = text.split("\n")
-    var lineStart = 0
-    for ((i, p) in paragraphs.withIndex()) {
-        if (i >= line) {
-            break
-        }
-        lineStart += p.length + 1 // 1 for the new line character
-    }
-
-    if (line >= 0 && line < paragraphs.size) {
-        return lineStart + clamp(0, paragraphs[line].length, column)
-    } else {
-        return lineStart
-    }
-
-}
-
-/**
  * If the scene property for the node is null, then set up a listener, and focus once the scene is
  * set. If already set, then no listener is created, and requestFocus is performed straight away.
  */
