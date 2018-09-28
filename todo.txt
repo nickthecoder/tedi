@@ -10,11 +10,6 @@ Current Work
 Next
 ----
 
-Consider removing ParagraphList.ContentCharSequence as it isn't efficient.
-    At the very least rename it, as it isn't in Content!!!
-
-Check when layoutChildren is being called, and try to minimise this.
-
 Add font +/- buttons in the Demo.
     Some things will fail!!!
 
@@ -26,6 +21,8 @@ is lineHeight() correct? Can the text area adjust the line spacing???
 
 Later
 -----
+
+Check when layoutChildren is being called, and try to minimise this.
 
 Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 

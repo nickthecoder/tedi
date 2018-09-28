@@ -10,6 +10,7 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
+import javafx.scene.text.Font
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax
@@ -295,6 +296,10 @@ class DemoWindow(stage: Stage = Stage()) {
                         }
                     }
                 }
+                KeyCode.PLUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
+                KeyCode.EQUALS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
+                KeyCode.MINUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size - 2)
+
                 else -> consume = false
             }
 

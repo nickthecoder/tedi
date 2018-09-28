@@ -487,17 +487,23 @@ class TediAreaSkin(control: TediArea)
             }
             if (change.wasUpdated()) {
                 for (i in change.from..change.to - 1) {
-                    val child = paragraphGroup.children[i]
-                    // A simple text change without highlights before and after?
-                    if (child is Text && change.list[i].highlights.isEmpty()) {
-                        // We can reuse the existing Text object
-                        child.text = change.list[i].text.toString()
-                    } else {
-                        paragraphGroup.children[i] = createParagraphNode(change.list[i])
-                    }
+                    rebuildParagraph(i)
                 }
             }
             contentView.requestLayout()
+        }
+    }
+
+    fun rebuildParagraph(i: Int) {
+        val child = paragraphGroup.children[i]
+        val paragraph = skinnable.paragraphs[i]
+        // A simple text change without highlights before and after?
+        if (child is Text && paragraph.highlights.isEmpty()) {
+            // We can reuse the existing Text object
+            child.text = paragraph.text.toString()
+            child.font = skinnable.font
+        } else {
+            paragraphGroup.children[i] = createParagraphNode(paragraph)
         }
     }
 
@@ -521,6 +527,9 @@ class TediAreaSkin(control: TediArea)
         caretPath.elements.add(LineTo(0.0, lineHeight()))
         caretPath.fillProperty().bind(textFill)
         caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
+        for (i in 0..skinnable.paragraphs.size - 1) {
+            rebuildParagraph(i)
+        }
         contentView.requestLayout()
     }
 

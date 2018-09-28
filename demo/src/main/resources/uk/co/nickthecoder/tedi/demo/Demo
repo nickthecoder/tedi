@@ -10,6 +10,7 @@ import javafx.scene.input.KeyEvent
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.VBox
+import javafx.scene.text.Font
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax
@@ -116,8 +117,9 @@ class DemoWindow(stage: Stage = Stage()) {
          */
         RemoveHiddenChildren(findAndReplaceToolBars.children)
 
-        // Applies tedi.css found in tedi-core's jar file.
+        // Applies tedi.css and syntax.css found in tedi-core's jar file.
         TediArea.style(scene)
+        TediArea.syntaxStyle(scene)
 
         with(borderPane) {
             center = tabPane
@@ -126,12 +128,12 @@ class DemoWindow(stage: Stage = Stage()) {
         }
 
         tabPane.selectionModel.selectedItemProperty().addListener { _, oldValue, newValue ->
-            // NOTE. If we could CLOSE tabs, then we'd also need to handle the case when there are NO
-            // open tabs (and therefore newValue == null.
-            if (oldValue is EditorTab && newValue is EditorTab) {
-                tediAreaChanged(oldValue.tediArea, newValue.tediArea)
-            }
+            val oldTedi = if (oldValue is EditorTab) oldValue.tediArea else null
+            // NOTE. If we close ALL tabs, then we should do something better than this!!!
+            val newTedi = if (newValue is EditorTab) newValue.tediArea else TediArea()
+            tediAreaChanged(oldTedi, newTedi)
         }
+        tediAreaChanged(null, currentArea)
 
         // Create some tabs, whose contents are taken from resources within the jar files.
         with(tabPane) {
@@ -217,11 +219,11 @@ class DemoWindow(stage: Stage = Stage()) {
      * Update the tool bar buttons, unbinding them from the old TediArea, and binding them to the new one.
      * Called from a listener of TabPane's selection (see init).
      */
-    fun tediAreaChanged(oldValue: TediArea, newValue: TediArea) {
+    fun tediAreaChanged(oldValue: TediArea?, newValue: TediArea) {
+
+        oldValue?.displayLineNumbersProperty()?.unbindBidirectional(toggleLineNumbers.selectedProperty())
 
         currentArea = newValue
-
-        oldValue.displayLineNumbersProperty().unbindBidirectional(toggleLineNumbers.selectedProperty())
 
         toggleLineNumbers.selectedProperty().bindBidirectional(newValue.displayLineNumbersProperty())
         toggleLineNumbers.isDisable = false
@@ -284,6 +286,20 @@ class DemoWindow(stage: Stage = Stage()) {
                         replaceBar.requestFocus()
                     }
                 }
+                KeyCode.DIGIT2 -> {
+                    val tab = tabPane.selectionModel.selectedItem
+                    if (tab is EditorTab) {
+                        if (tab.splitPane.items.size == 1) {
+                            tab.splitPane.items.add(TediArea(tab.tediArea).apply { styleClass.add("code") })
+                        } else {
+                            tab.splitPane.items.removeAt(1)
+                        }
+                    }
+                }
+                KeyCode.PLUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
+                KeyCode.EQUALS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
+                KeyCode.MINUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size - 2)
+
                 else -> consume = false
             }
 
@@ -313,9 +329,11 @@ class DemoWindow(stage: Stage = Stage()) {
 
         val tediArea = TediArea()
 
+        val splitPane = SplitPane(tediArea)
+
         init {
 
-            content = tediArea
+            content = splitPane
             this.text = title
 
             with(tediArea) {

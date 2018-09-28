@@ -102,8 +102,11 @@ public class Example extends Application {
              */
             new RemoveHiddenChildren(findAndReplaceToolBars.getChildren());
 
-            // Applies tedi.css found in tedi-core's jar file.
+            // Applies tedi.css and syntax.css found in tedi-core's jar file.
             TediArea.style(scene);
+            TediArea.syntaxStyle(scene);
+
+            tediArea.getStyleClass().add("code"); // Fixed with font + line numbers
 
             borderPane.setCenter(tediArea);
             borderPane.setTop(toolBar);
