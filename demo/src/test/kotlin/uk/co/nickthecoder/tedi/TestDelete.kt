@@ -49,7 +49,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 
@@ -69,7 +69,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -92,7 +92,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -116,7 +116,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("Ho", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraph")
-        assertEquals("Ho", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("Ho", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 
@@ -134,7 +134,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("Held", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraph")
-        assertEquals("Held", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("Held", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -158,7 +158,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("He", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraph")
-        assertEquals("He", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("He", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -181,7 +181,7 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("Hello", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 
@@ -200,8 +200,8 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals("Hello\nBye", tediArea.text, "Text")
 
         assertEquals(2, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
-        assertEquals("Bye", tediArea.paragraphs[1].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
+        assertEquals("Bye", tediArea.paragraphs[1].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 

@@ -132,7 +132,7 @@ class ParagraphList
                 paragraph = paragraphs[++paragraphIndex]
                 offset = 0
             } else {
-                textBuilder.append(paragraph.text[offset++])
+                textBuilder.append(paragraph.charSequence[offset++])
             }
 
             i++
@@ -199,7 +199,7 @@ class ParagraphList
 
                 if (leadingColumn != paragraphs[leadingLine].length || trailingColumn != paragraphs[trailingLine].length) {
                     // Remove the end part of the leadingParagraph, and add the trailing segment
-                    val trailingSegment = trailingParagraph.text.subSequence(trailingColumn, trailingParagraph.length)
+                    val trailingSegment = trailingParagraph.charSequence.subSequence(trailingColumn, trailingParagraph.length)
                     invalidateLineStartPosition(leadingLine + 1)
                     leadingParagraph.delete(leadingColumn, leadingParagraph.length)
                     leadingParagraph.insert(leadingColumn, trailingSegment)
@@ -263,7 +263,7 @@ class ParagraphList
 
             } else {
                 // The text contains multiple lines; split the intersecting paragraph
-                val trailingText = startParagraph.text.subSequence(startColumn, startParagraph.length)
+                val trailingText = startParagraph.charSequence.subSequence(startColumn, startParagraph.length)
 
                 // Remove the trailing part
                 invalidateLineStartPosition(startLine + 1)
@@ -518,8 +518,8 @@ class ParagraphList
     }
 
     /**
-     * Internally a paragraph is stored as a StringBuffer, however, never cast [text] to StringBuffer,
-     * because if you make changes to [text], then bad things will happen!
+     * Internally a paragraph is stored as a StringBuffer, however, never cast [charSequence] to StringBuffer,
+     * because if you make changes to [charSequence], then bad things will happen!
      *
      * In addition to the StringBuffer, a Paragraph stores [cachedPosition], its position within the document.
      * So for if we have two paragraphs "Hello" and "World", then Hello will store a 0, and World will
@@ -530,14 +530,17 @@ class ParagraphList
      * [ParagraphList] keeps track of which [cachedPosition]s can be trusted via [validCacheIndex].
      * [validCacheIndex] is used to optimise conversion between line/column numbers and positions.
      */
-    inner class Paragraph(private val line: StringBuffer) {
+    inner class Paragraph(private val buffer: StringBuffer) {
 
         constructor(text: CharSequence) : this(StringBuffer(text))
 
         val length
-            get() = line.length
+            get() = buffer.length
 
-        val text: CharSequence = line
+        val charSequence: CharSequence = buffer
+
+        val text
+            get() = buffer.toString()
 
         /**
          * Highlights that intersected this paragraph when they were added.
@@ -553,17 +556,17 @@ class ParagraphList
         internal var cachedPosition: Int = 0
 
         internal fun insert(start: Int, str: CharSequence) {
-            line.insert(start, str)
+            buffer.insert(start, str)
         }
 
         internal fun delete(start: Int, end: Int) {
-            line.delete(start, end)
+            buffer.delete(start, end)
         }
 
         internal fun addHighlight(hr: HighlightRange) {
             // Convert the hr into a ParagraphHighlightRange
-            val fromColumn = clamp(0, hr.from - cachedPosition, line.length)
-            val toColumn = clamp(0, hr.to - cachedPosition, line.length)
+            val fromColumn = clamp(0, hr.from - cachedPosition, buffer.length)
+            val toColumn = clamp(0, hr.to - cachedPosition, buffer.length)
             highlights.add(ParagraphHighlightRange(fromColumn, toColumn, hr))
         }
 
@@ -583,8 +586,8 @@ class ParagraphList
                 if (newEndColumn < 0 || newStartColumn >= length) {
                     phr.startColumn = -1
                 } else {
-                    phr.startColumn = clamp(0, newStartColumn, line.length)
-                    phr.endColumn = clamp(0, newEndColumn, line.length)
+                    phr.startColumn = clamp(0, newStartColumn, buffer.length)
+                    phr.endColumn = clamp(0, newEndColumn, buffer.length)
                 }
             }
             highlights.removeIf { it.startColumn < 0 }
@@ -610,7 +613,7 @@ class ParagraphList
             return false
         }
 
-        override fun toString() = "($cachedPosition) : $text\n"
+        override fun toString() = "($cachedPosition) : $buffer\n"
 
     }
 }

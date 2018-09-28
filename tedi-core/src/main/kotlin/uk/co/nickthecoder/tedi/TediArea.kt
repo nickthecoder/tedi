@@ -260,8 +260,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     fun tabIndentation() = if (tabInsertsSpaces) " ".repeat(indentSize) else "\t"
 
-    fun getTextOfLine(line: Int) = paragraphs[line].text.toString()
-
     /**
      * Returns the position within [text] of the start of the nth line.
      * [line] and the returned result are zero based.

@@ -69,7 +69,7 @@ class Gutter(val tediArea: TediArea) : Region() {
         for (i in group.children.size..required - 1) {
             val text = Text((i + 1).toString())
             with(text) {
-                styleClass.add("text") // Must use the same style as the main content's text.
+                styleClass.add("charSequence") // Must use the same style as the main content's text.
                 textOrigin = VPos.TOP
                 wrappingWidth = 0.0
                 isManaged = false
@@ -137,7 +137,7 @@ class Gutter(val tediArea: TediArea) : Region() {
 
     companion object {
 
-        private val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-text-fill",
+        private val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-charSequence-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
             override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
             override fun getStyleableProperty(gutter: Gutter) = gutter.textFill
@@ -146,7 +146,7 @@ class Gutter(val tediArea: TediArea) : Region() {
         /**
          * The color for the line number where the caret is positioned.
          */
-        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-text-fill",
+        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-charSequence-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
             override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
             override fun getStyleableProperty(gutter: Gutter) = gutter.highlightTextFill

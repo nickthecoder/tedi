@@ -10,13 +10,13 @@ Current Work
 Next
 ----
 
-change Paragraph.text to charSequence, and add text, which does a toString.
-rename "line" methods to paragraph?
-
-is lineHeight() correct? Can the text area adjust the line spacing???
+Skin.changeLine is using a tmpText, and not the real Text objects. Will cause problems
+    for proportional fonts with BOLD or italics ranges.
 
 Later
 -----
+
+Only place those paragraphNodes which are VISIBLE into the scene graph to improve performance.
 
 Check when layoutChildren is being called, and try to minimise this.
 
@@ -25,3 +25,4 @@ Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizon
 Get BOLD etc working with non-monospaced fonts.
 
 Consider adding back line-wrapping
+    I'd have to use a TextFlow instead of Group for styled paragraphs. (Check "is Group")

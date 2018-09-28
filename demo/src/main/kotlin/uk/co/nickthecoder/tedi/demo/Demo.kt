@@ -376,7 +376,7 @@ class DemoWindow(stage: Stage = Stage()) {
             if (event.isPopupTrigger) {
                 val pos = tediArea.positionForPoint(event.x, event.y)
                 val (line, column) = tediArea.lineColumnForPosition(pos)
-                val lineText = tediArea.getTextOfLine(line)
+                val lineText = tediArea.paragraphs[line].text
 
                 tediArea.contextMenu = ContextMenu(
                         MenuItem("Mouse : (${event.x.toInt()},${event.y.toInt()})"),

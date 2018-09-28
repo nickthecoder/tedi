@@ -117,9 +117,8 @@ class DemoWindow(stage: Stage = Stage()) {
          */
         RemoveHiddenChildren(findAndReplaceToolBars.children)
 
-        // Applies tedi.css and syntax.css found in tedi-core's jar file.
+        // Applies tedi.css found in tedi-core's jar file.
         TediArea.style(scene)
-        TediArea.syntaxStyle(scene)
 
         with(borderPane) {
             center = tabPane
@@ -377,7 +376,7 @@ class DemoWindow(stage: Stage = Stage()) {
             if (event.isPopupTrigger) {
                 val pos = tediArea.positionForPoint(event.x, event.y)
                 val (line, column) = tediArea.lineColumnForPosition(pos)
-                val lineText = tediArea.getTextOfLine(line)
+                val lineText = tediArea.paragraphs[line].text
 
                 tediArea.contextMenu = ContextMenu(
                         MenuItem("Mouse : (${event.x.toInt()},${event.y.toInt()})"),

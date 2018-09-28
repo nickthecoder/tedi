@@ -44,7 +44,7 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(0, changes.size, "# Changes")
     }
@@ -56,7 +56,7 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 
@@ -76,7 +76,7 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello", tediArea.text, "Text")
 
         assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
 
         assertEquals(1, changes.size, "# Changes")
 
@@ -96,8 +96,8 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello\nWorld", tediArea.text, "Text")
 
         assertEquals(2, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -122,8 +122,8 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello\nWorld", tediArea.text, "Text")
 
         assertEquals(2, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text, "Paragraph")
 
         assertEquals(3, changes.size, "# Changes")
 
@@ -150,9 +150,9 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello\nWorld\nBye", tediArea.text, "Text")
 
         assertEquals(3, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
-        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text, "Paragraph")
+        assertEquals("Bye", tediArea.paragraphs[2].text, "Paragraph")
 
         assertEquals(2, changes.size, "# Changes")
 
@@ -177,9 +177,9 @@ class TestInsert : ListChangeListener<Paragraph> {
         assertEquals("Hello\nWorld\nBye", tediArea.text, "Text")
 
         assertEquals(3, tediArea.paragraphs.size, "# Paragraphs")
-        assertEquals("Hello", tediArea.paragraphs[0].text.toString(), "Paragraph")
-        assertEquals("World", tediArea.paragraphs[1].text.toString(), "Paragraph")
-        assertEquals("Bye", tediArea.paragraphs[2].text.toString(), "Paragraph")
+        assertEquals("Hello", tediArea.paragraphs[0].text, "Paragraph")
+        assertEquals("World", tediArea.paragraphs[1].text, "Paragraph")
+        assertEquals("Bye", tediArea.paragraphs[2].text, "Paragraph")
 
         assertEquals(3, changes.size, "# Changes")
 

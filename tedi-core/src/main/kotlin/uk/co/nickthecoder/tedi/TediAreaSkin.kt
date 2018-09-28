@@ -330,7 +330,7 @@ class TediAreaSkin(control: TediArea)
         }
 
         if (paragraph.highlights.isEmpty()) {
-            return createText(paragraph.text.toString())
+            return createText(paragraph.text)
 
         } else {
 
@@ -352,10 +352,10 @@ class TediAreaSkin(control: TediArea)
             // Create a Text object between each consecutive column indices in the list.
             var x = 0.0
             for (i in 0..splitsList.size - 2) {
-                val from = clamp(0, splitsList[i], paragraph.text.length)
-                val to = clamp(0, splitsList[i + 1], paragraph.text.length)
+                val from = clamp(0, splitsList[i], paragraph.charSequence.length)
+                val to = clamp(0, splitsList[i + 1], paragraph.charSequence.length)
 
-                val text = createText(paragraph.text.substring(from, to))
+                val text = createText(paragraph.charSequence.substring(from, to))
                 text.layoutX = x
                 val textBounds = text.boundsInLocal
 
@@ -433,7 +433,7 @@ class TediAreaSkin(control: TediArea)
             val (fromLine, fromColumn) = skinnable.lineColumnForPosition(skinnable.selection.start)
             val (toLine, toColumn) = skinnable.lineColumnForPosition(skinnable.selection.end)
 
-            val firstLineText = skinnable.paragraphs[fromLine].text
+            val firstLineText = skinnable.paragraphs[fromLine].charSequence
             tmpText.text = firstLineText.substring(0, fromColumn)
 
             if (fromLine == toLine) {
@@ -452,12 +452,12 @@ class TediAreaSkin(control: TediArea)
 
                 // Whole lines
                 for (i in fromLine + 1..toLine - 1) { // Don't include the last line
-                    val (text, background) = createText(skinnable.paragraphs[i].text.toString(), 0.0, i * lineHeight())
+                    val (text, background) = createText(skinnable.paragraphs[i].text, 0.0, i * lineHeight())
                     selectionHighlightGroup.children.addAll(background, text)
                 }
 
                 // Last line
-                val lastLineLeadingText = skinnable.paragraphs[toLine].text.substring(0, toColumn)
+                val lastLineLeadingText = skinnable.paragraphs[toLine].charSequence.substring(0, toColumn)
                 if (lastLineLeadingText.isNotEmpty()) {
                     val (text, background) = createText(lastLineLeadingText, 0.0, toLine * lineHeight())
                     selectionHighlightGroup.children.addAll(background, text)
@@ -500,7 +500,7 @@ class TediAreaSkin(control: TediArea)
         // A simple text change without highlights before and after?
         if (child is Text && paragraph.highlights.isEmpty()) {
             // We can reuse the existing Text object
-            child.text = paragraph.text.toString()
+            child.text = paragraph.text
             child.font = skinnable.font
         } else {
             paragraphGroup.children[i] = createParagraphNode(paragraph)
@@ -512,7 +512,7 @@ class TediAreaSkin(control: TediArea)
 
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
         caretPath.layoutY = line * lineHeight()
-        tmpText.text = skinnable.paragraphs[line].text.substring(0, column)
+        tmpText.text = skinnable.paragraphs[line].charSequence.substring(0, column)
         caretPath.layoutX = tmpText.boundsInLocal.width
 
         if (skinnable.isFocused) {
@@ -662,7 +662,7 @@ class TediAreaSkin(control: TediArea)
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
         val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
-        val lineText = skinnable.getTextOfLine(requiredLine).toString()
+        val lineText = skinnable.paragraphs[requiredLine].text
         // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
         tmpText.text = lineText
         val hit = tmpText.hitTestChar(requiredX - insideGroup.layoutX, -insideGroup.layoutY)
@@ -957,7 +957,7 @@ class TediAreaSkin(control: TediArea)
      **************************************************************************/
     companion object {
 
-        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
+        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-charSequence-fill",
                 StyleConverter.getPaintConverter(), Color.BLACK) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).textFill
@@ -969,7 +969,7 @@ class TediAreaSkin(control: TediArea)
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightFill
         }
 
-        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
+        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-charSequence-fill",
                 StyleConverter.getPaintConverter(), Color.WHITE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightTextFill
