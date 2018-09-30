@@ -11,7 +11,7 @@ import java.util.*
  * The document is stored as a list of [Paragraph]s, split by new-line characters.
  * The [Paragraph] does not store the new-line characters (they are implied).
  *
- * Note, TediArea's [text] and [textProperty] are backed by this ParagraphList (via [TediAreaContent]).
+ * Note, [TediArea.text] and [TediArea.textProperty] are backed by ParagraphList.
  * At no point does TediArea store the document as a String (or even a set of strings).
  */
 class ParagraphList
@@ -157,7 +157,14 @@ class ParagraphList
             while (i.hasNext()) {
                 val hr = i.next()
 
-                if (hr.end <= start) { // BEFORE the deleted segment.
+                if (hr.start == start && hr.end == end) {
+                    // non stretchy ranges are deleted if they become zero length.
+                    if (hr.stretchy) {
+                        hr.end = hr.start // Make zero size
+                    } else {
+                        i.remove()
+                    }
+                } else if (hr.end <= start) { // BEFORE the deleted segment.
                     // Do nothing
                 } else if (hr.start >= end) { // AFTER the deleted segment. Simple adjustment
                     hr.start -= difference

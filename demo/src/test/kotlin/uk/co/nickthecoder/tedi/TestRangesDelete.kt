@@ -142,9 +142,23 @@ class TestRangesDelete {
         //  ><
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
         tediArea.deleteText(2, 7)
+        assertEquals(0, tediArea.highlightRanges().size, "Size")
+    }
+
+    @Test
+    fun deleteSameStretchy() {
+        // 01234567890
+        // abcdefghijk
+        //   -----
+        // abhijk
+        //  ><
+        tediArea.highlightRanges().add(HighlightRange(2, 7, highlight, stretchy = true))
+        tediArea.deleteText(2, 7)
+        assertEquals(1, tediArea.highlightRanges().size, "Size")
         assertEquals("", rangeText(), "Range After")
         assertEquals(2, tediArea.highlightRanges()[0].from, "From")
         assertEquals(2, tediArea.highlightRanges()[0].to, "To")
+
     }
 
     @Test
@@ -159,7 +173,6 @@ class TestRangesDelete {
         assertEquals(0, tediArea.highlightRanges().size, "Size")
     }
 
-    // TODO I'm not 100% sure if this should delete the range or not
     @Test
     fun deleteMoreFront() {
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
@@ -167,7 +180,6 @@ class TestRangesDelete {
         assertEquals(0, tediArea.highlightRanges().size, "Size")
     }
 
-    // TODO I'm not 100% sure if this should delete the range or not
     @Test
     fun deleteMoreBack() {
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
@@ -175,14 +187,21 @@ class TestRangesDelete {
         assertEquals(0, tediArea.highlightRanges().size, "Size")
     }
 
-
     @Test
     fun replaceHighlighted() {
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
+        tediArea.replaceText(2, 7, "CDEFG")
+        assertEquals(0, tediArea.highlightRanges().size, "Size")
+    }
+
+    @Test
+    fun replaceHighlightedStretchy() {
+        tediArea.highlightRanges().add(HighlightRange(2, 7, highlight, stretchy = true))
         tediArea.replaceText(2, 7, "CDEFG")
         assertEquals(1, tediArea.highlightRanges().size, "Size")
         assertEquals("CDEFG", rangeText(), "Range After")
         assertEquals(2, tediArea.highlightRanges()[0].from, "From")
         assertEquals(7, tediArea.highlightRanges()[0].to, "To")
     }
+
 }

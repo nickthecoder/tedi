@@ -12,7 +12,7 @@ import java.util.*
  * Add [HighlightRange]s to [TediArea.highlightRanges].
  *
  * [owner] is not used by TediArea, but can be used for whatever purpose you see fit.
- * The Syntax class use it to filter TediArea.highlightRanges(), so
+ * The Syntax classes use it to filter TediArea.highlightRanges(), so
  * that ranges that it created can easily be removed, without affecting any other ranges
  * (such as those from find and replace).
  *
@@ -20,6 +20,19 @@ import java.util.*
  * which has a URL.
  * Your application can use that to view the web page in a browser (maybe via a context menu, or
  * by double clicking on the highlighted range).
+ *
+ * [stretchy] ranges differ from non-stretchy ones when text is inserted at the front or end of the
+ * range. When deleting text exactly the same size as a stretchy range will leave the range intact
+ * (with zero length), however, a non-stretchy range will be deleted.
+ *
+ * TediArea pays no other attention to [stretchy], but this may be helpful to an application
+ * which builds a rich-text around TediArea. For example, when inserting BOLD text, the range can be
+ * initially stretchy (so that typing extends the range). Then when bold is turned off
+ * (by pressing a button, or a keyboard shortcut), the range is changed to a non-stretchy one,
+ * allowing plain text to be added.
+ *
+ * Note that [stretchy] is immutable, and therefore the highlight will need to be REPLACED, and
+ * not merely changed.
  */
 open class HighlightRange(
         internal var start: Int,
