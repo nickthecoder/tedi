@@ -1,18 +1,11 @@
 Bugs
 ----
 
-When text is deleted, causing a HR to be deleted, the list's listeners aren't informed
-    Note, Paragraph list doesn't WANT to know!
-    This isn't causing me any problems, but does limit the usefulness of the paragraphsProperty.
-
 Current Work
 ------------
 
 Next
 ----
-
-Remove zero-length non-stretchy ranges during delete.
-    Add test cases for stretchy and non-stretchy ranges.
 
 Skin.changeLine is using a tmpText, and not the real Text objects. Will cause problems
     for proportional fonts with BOLD or italics ranges.
