@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox
 import javafx.scene.text.Font
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
+import uk.co.nickthecoder.tedi.syntax.HighlightIdenticalWords
 import uk.co.nickthecoder.tedi.syntax.HighlightMatchedPairs
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax
 import uk.co.nickthecoder.tedi.syntax.KotlinSyntax
@@ -149,6 +150,8 @@ class DemoWindow(stage: Stage = Stage()) {
                 KotlinSyntax.instance.attach(tediArea)
                 // Highlight matching bracket, braces and parentheses.
                 HighlightMatchedPairs(tediArea)
+                // Highlight words matching that at the caret (this is threaded, as it may be slow).
+                HighlightIdenticalWords(tediArea)
                 // Load text from this demo's jar file
                 load(DemoWindow::class.java, "Demo", true)
             })

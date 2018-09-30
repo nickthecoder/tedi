@@ -226,7 +226,6 @@ class ParagraphList
     }
 
     fun insert(position: Int, insertText: String) {
-
         var text = insertText
         if (position < 0 || position > contentLength) {
             throw IndexOutOfBoundsException()
@@ -237,14 +236,34 @@ class ParagraphList
         val length = text.length
         if (length > 0) {
             for (hr in highlightRanges) {
-                if (hr.start >= position) {
-                    if (hr.start == hr.end && hr.start == position) {
+
+                if (position < hr.start) {
+                    hr.start += length
+                    hr.end += length
+                } else if (position > hr.end) {
+                } else if (position > hr.start && position < hr.end) {
+                    hr.end += length
+                } else {
+                    // That's the simple cases taken care of! position must be straddling the start and/or end
+                    if (hr.stretchy) {
+                        if (position == hr.start && position == hr.end) {
+                            hr.end += length
+                        } else if (position == hr.end) {
+                            hr.end += length
+                        } else {
+                            hr.end += length
+                        }
                     } else {
-                        hr.start += length
+                        // Not stretchy
+                        if (position == hr.start) {
+                            hr.start += length
+                            hr.end += length
+                        } else if (position == hr.end) {
+                            // Do nothing
+                        } else {
+                            hr.end += length
+                        }
                     }
-                    hr.end += length
-                } else if (hr.start <= position && hr.end >= position) {
-                    hr.end += length
                 }
             }
 

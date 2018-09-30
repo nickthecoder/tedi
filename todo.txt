@@ -3,12 +3,16 @@ Bugs
 
 When text is deleted, causing a HR to be deleted, the list's listeners aren't informed
     Note, Paragraph list doesn't WANT to know!
+    This isn't causing me any problems, but does limit the usefulness of the paragraphsProperty.
 
 Current Work
 ------------
 
 Next
 ----
+
+Remove zero-length non-stretchy ranges during delete.
+    Add test cases for stretchy and non-stretchy ranges.
 
 Skin.changeLine is using a tmpText, and not the real Text objects. Will cause problems
     for proportional fonts with BOLD or italics ranges.
@@ -26,3 +30,6 @@ Get BOLD etc working with non-monospaced fonts.
 
 Consider adding back line-wrapping
     I'd have to use a TextFlow instead of Group for styled paragraphs. (Check "is Group")
+
+Consider allowing ranges to be PART of the document, such that undo/redo affects them.
+    Either through a new boolean on HighlightRange, or via "range.owner = tediArea.content"???

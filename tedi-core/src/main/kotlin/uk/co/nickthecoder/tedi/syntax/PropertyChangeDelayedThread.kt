@@ -1,7 +1,7 @@
 package uk.co.nickthecoder.tedi.syntax
 
-import javafx.beans.property.Property
 import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableValue
 import java.util.concurrent.CountDownLatch
 
 /**
@@ -17,7 +17,7 @@ import java.util.concurrent.CountDownLatch
  *
  * @return The ChangeListener. call [property].removeListener( resultValue ) to stop listening to change events.
  */
-fun <T> propertyChangeDelayedThread(property: Property<T>, wait: Long, action: () -> Unit): ChangeListener<T> {
+fun <T> propertyChangeDelayedThread(property: ObservableValue<T>, wait: Long, action: () -> Unit): ChangeListener<T> {
 
     var thread: Thread? = null
     var actionLatch: CountDownLatch? = null

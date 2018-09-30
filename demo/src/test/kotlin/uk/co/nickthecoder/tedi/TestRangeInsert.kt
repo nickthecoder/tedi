@@ -23,6 +23,7 @@ class TestRangesInsert {
     fun setUp() {
         tediArea = TediArea()
         tediArea.text = "abcdefghijk"
+        tediArea.highlightRanges().clear()
     }
 
     @After
@@ -66,27 +67,38 @@ class TestRangesInsert {
         assertEquals(7, tediArea.highlightRanges()[0].to, "To")
     }
 
-    // TODO I'm not 100% sure this is the right thing to do.
-    // It does make it tricky to write plain text at the start of the document
-    // if there is a range at the start!
     @Test
-    fun atFront() { // Should NOT be included in the range.
+    fun atFront() {
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
         tediArea.insertText(2, "X")
         assertEquals("cdefg", rangeText(), "Range After")
         assertEquals(3, tediArea.highlightRanges()[0].from, "From")
         assertEquals(8, tediArea.highlightRanges()[0].to, "To")
-        //assertEquals("Xcdefg", rangeText(), "Range After")
-        //assertEquals(2, tediArea.highlightRanges()[0].from, "From")
-        //assertEquals(8, tediArea.highlightRanges()[0].to, "To")
     }
 
-    // TODO I'm not 100% sure this is the right thing to do.
-    // It does make it tricky to write plain text at the end of the document
-    // if there is a range at the end!
+
+    // Like [atFront], but with a stretchy highlight.
+    @Test
+    fun atFrontStretchy() { // Should NOT be included in the range.
+        tediArea.highlightRanges().add(HighlightRange(2, 7, highlight, stretchy = true))
+        tediArea.insertText(2, "X")
+        assertEquals("Xcdefg", rangeText(), "Range After")
+        assertEquals(2, tediArea.highlightRanges()[0].from, "From")
+        assertEquals(8, tediArea.highlightRanges()[0].to, "To")
+    }
+
     @Test
     fun atEnd() {
         tediArea.highlightRanges().add(HighlightRange(2, 7, highlight))
+        tediArea.insertText(7, "X")
+        assertEquals("cdefg", rangeText(), "Range After")
+        assertEquals(2, tediArea.highlightRanges()[0].from, "From")
+        assertEquals(7, tediArea.highlightRanges()[0].to, "To")
+    }
+
+    @Test
+    fun atEndStretchy() {
+        tediArea.highlightRanges().add(HighlightRange(2, 7, highlight, stretchy = true))
         tediArea.insertText(7, "X")
         assertEquals("cdefgX", rangeText(), "Range After")
         assertEquals(2, tediArea.highlightRanges()[0].from, "From")
@@ -96,6 +108,15 @@ class TestRangesInsert {
     @Test
     fun atZeroLengthRange() {
         tediArea.highlightRanges().add(HighlightRange(2, 2, highlight))
+        tediArea.insertText(2, "X")
+        assertEquals("", rangeText(), "Range After")
+        assertEquals(3, tediArea.highlightRanges()[0].from, "From")
+        assertEquals(3, tediArea.highlightRanges()[0].to, "To")
+    }
+
+    @Test
+    fun atZeroLengthRangeStretchy() {
+        tediArea.highlightRanges().add(HighlightRange(2, 2, highlight, stretchy = true))
         tediArea.insertText(2, "X")
         assertEquals("X", rangeText(), "Range After")
         assertEquals(2, tediArea.highlightRanges()[0].from, "From")

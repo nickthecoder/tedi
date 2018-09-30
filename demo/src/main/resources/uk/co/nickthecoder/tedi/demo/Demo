@@ -13,6 +13,7 @@ import javafx.scene.layout.VBox
 import javafx.scene.text.Font
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.*
+import uk.co.nickthecoder.tedi.syntax.HighlightMatchedPairs
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax
 import uk.co.nickthecoder.tedi.syntax.KotlinSyntax
 import uk.co.nickthecoder.tedi.ui.*
@@ -146,6 +147,8 @@ class DemoWindow(stage: Stage = Stage()) {
             tabs.add(EditorTab().apply {
                 // Attach Kotlin syntax highlighting (using the default colour scheme)
                 KotlinSyntax.instance.attach(tediArea)
+                // Highlight matching bracket, braces and parentheses.
+                HighlightMatchedPairs(tediArea)
                 // Load text from this demo's jar file
                 load(DemoWindow::class.java, "Demo", true)
             })
@@ -153,6 +156,9 @@ class DemoWindow(stage: Stage = Stage()) {
             tabs.add(EditorTab().apply {
                 // Attach JAVA syntax highlighting (using the default colour scheme)
                 JavaSyntax.instance.attach(tediArea)
+                // Highlight matching bracket, braces and parentheses.
+                HighlightMatchedPairs(tediArea)
+                // Load text from this demo's jar file
                 load(DemoWindow::class.java, "Example", true)
             })
 

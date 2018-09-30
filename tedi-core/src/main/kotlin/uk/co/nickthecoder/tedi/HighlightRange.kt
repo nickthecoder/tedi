@@ -25,7 +25,8 @@ open class HighlightRange(
         internal var start: Int,
         internal var end: Int,
         val highlight: Highlight,
-        val owner: Any?)
+        val owner: Any? = null,
+        val stretchy: Boolean = false)
 
     : Comparable<HighlightRange> {
 
