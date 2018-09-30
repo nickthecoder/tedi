@@ -1,9 +1,6 @@
 package uk.co.nickthecoder.tedi.syntax
 
-import uk.co.nickthecoder.tedi.Highlight
-import uk.co.nickthecoder.tedi.HighlightRange
-import uk.co.nickthecoder.tedi.PairedHighlightRange
-import uk.co.nickthecoder.tedi.StyleClassHighlight
+import uk.co.nickthecoder.tedi.*
 import java.util.regex.Pattern
 
 /**
@@ -12,14 +9,19 @@ import java.util.regex.Pattern
  *
  * It also does something "clever" with parts of the text which should match, such as open/close brackets.
  * Instead of a simple [HighlightRange], it creates [PairedHighlightRange].
+ * If un-matched pairs are found, then the first mis-match is given an [ERROR] highlight.
  *
- * When we move the caret to such a range, we can highlight the other half of the pair, giving the programmer
- * immediate feedback.
- * // TODO Name the class that does this (when its written!)
+ * [TediArea] does nothing special with [PairedHighlightRange], but
+ * [HighlightMatchedPairs] uses the extra information in [PairedHighlightRange] to highlight both parts of the pair,
+ * when we move the caret over these ranges. Therefore the programmer can instantly see where (, [ and { are matched
+ * with }, ] and ), and visa-versa.
+ *
+ * Your code could use [HighlightMatchedPairs] in other ways, for example, double click one to jump to the other
+ * half of the pair.
  *
  * This code was originally from
  * [RichTextFX](https://github.com/FXMisc/RichTextFX/blob/master/richtextfx-demos/src/main/java/org/fxmisc/richtext/demo/JavaKeywordsDemo.java)
- * but has been radically changed.
+ * but has been radically changed. Only the basic idea remains, even the regex expressions have changed.
  */
 open class RegexSyntax(val list: List<RegexHighlight>)
 
@@ -144,13 +146,15 @@ open class RegexSyntax(val list: List<RegexHighlight>)
         val NUMBER = RegexHighlight("number", NUMBER_PATTERN)
         val ANNOTATION = RegexHighlight("annotation", ANNOTATION_PATTERN)
         val SEMICOLON = RegexHighlight("semicolon", SEMICOLON_PATTERN)
-        val WASTEFUL_SEMICOLON = RegexHighlight("error", SEMICOLON_EOL_PATTERN) // For Kotlin and Groovy, where trailing ; are not needed.
         val STRING = RegexHighlight("string", STRING_PATTERN)
         val C_COMMENT = RegexHighlight("comment", C_COMMENT_PATTERN)
 
-        val OPEN_PAREN = RegexHighlight("openparen", OPEN_PAREN_PATTERN, null, StyleClassHighlight("syntax-paren"))
-        val OPEN_BRACKET = RegexHighlight("openbracket", OPEN_BRACKET_PATTERN, null, StyleClassHighlight("syntax-bracket"))
-        val OPEN_BRACE = RegexHighlight("openbrace", OPEN_BRACE_PATTERN, null, StyleClassHighlight("syntax-brace"))
+        // For Kotlin and Groovy, where trailing ; are not needed.
+        val WASTEFUL_SEMICOLON = RegexHighlight("wastefulSemicolon", SEMICOLON_EOL_PATTERN, FillStyleClassHighlight("syntax-error"))
+
+        val OPEN_PAREN = RegexHighlight("openparen", OPEN_PAREN_PATTERN, StyleClassHighlight("syntax-paren"))
+        val OPEN_BRACKET = RegexHighlight("openbracket", OPEN_BRACKET_PATTERN, StyleClassHighlight("syntax-bracket"))
+        val OPEN_BRACE = RegexHighlight("openbrace", OPEN_BRACE_PATTERN, StyleClassHighlight("syntax-brace"))
 
         val CLOSE_PAREN = RegexHighlight("closeparen", CLOSE_PAREN_PATTERN, OPEN_PAREN, StyleClassHighlight("syntax-paren"))
         val CLOSE_BRACKET = RegexHighlight("closebracket", CLOSE_BRACKET_PATTERN, OPEN_BRACKET, StyleClassHighlight("syntax-bracket"))
@@ -197,6 +201,9 @@ class RegexHighlight(
         val openingRegexHighlight: RegexHighlight? = null,
         val highlight: Highlight = StyleClassHighlight("syntax-$name")
 ) {
+
+    constructor(name: String, pattern: String, highlight: Highlight) : this(name, pattern, null, highlight)
+
     var closingRegexHighlight: RegexHighlight? = null
 
     init {
@@ -205,5 +212,5 @@ class RegexHighlight(
         }
     }
 
-    override fun toString() = "$name" + if (openingRegexHighlight != null) " close" else if (closingRegexHighlight != null) " open" else ""
+    override fun toString() = name + if (openingRegexHighlight != null) " close" else if (closingRegexHighlight != null) " open" else ""
 }

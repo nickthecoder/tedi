@@ -373,6 +373,7 @@ class TediAreaSkin(control: TediArea)
                         if (highlight is FillHighlight) {
                             if (rectangle == null) {
                                 rectangle = Rectangle(textBounds.width, textBounds.height)
+                                rectangle.styleClass.add("rectangle")
                                 rectangle.layoutX = text.layoutX
                             }
                             highlight.style(rectangle)

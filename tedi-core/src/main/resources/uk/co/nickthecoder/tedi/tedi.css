@@ -50,6 +50,12 @@
 .tedi-area .content .syntax-semicolon { -fx-fill: #997799; }
 .tedi-area .content .syntax-number { -fx-fill: #0000ff; }
 
+.tedi-area .content .rectangle.syntax-pair { -fx-fill: #99CCff; }
+.tedi-area .content .text.syntax-pair { -fx-fill:black; }
+
+.tedi-area .content .rectangle.syntax-error { -fx-fill: #ff9999; }
+.tedi-area .content .text.syntax-error { -fx-fill:black; }
+
 /***** For the ui package (go to line dialog, and find/replace toolbars) *****/
 
 .tedi-form {

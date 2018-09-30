@@ -52,8 +52,8 @@ open class KotlinSyntax()
         val MODIFIER_PATTERN = createKeywordsPattern(MODIFIER_KEYWORDS)
 
         val HARD_KEYWORD = RegexHighlight("keyword", HARD_KEYWORD_PATTERN)
-        val SOFT_KEYWORD = RegexHighlight("keyword", SOFT_KEYWORD_PATTERN)
-        val MODIFIER = RegexHighlight("keyword", MODIFIER_PATTERN)
+        val SOFT_KEYWORD = RegexHighlight("softKeyword", SOFT_KEYWORD_PATTERN)
+        val MODIFIER = RegexHighlight("modifier", MODIFIER_PATTERN)
 
         @JvmStatic
         val instance = KotlinSyntax()
