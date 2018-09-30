@@ -62,3 +62,31 @@ open class HighlightRange(
 
     override fun toString() = "$start..$end : $highlight"
 }
+
+
+/**
+ * A highlight range, which is part of a matched pair, for example, an opening and closing bracket.
+ *
+ * Note, because of chicken and egg problem, we cannot have a simple 'val' for [other].
+ * Instead, opening = null for the first of the pair, and then the second instance
+ * will assign BOTH of the [other]s in init.
+ */
+class PairedHighlightRange(
+        start: Int,
+        end: Int,
+        highlight: Highlight,
+        opening: PairedHighlightRange?) : HighlightRange(start, end, highlight) {
+
+    private lateinit var other: PairedHighlightRange
+
+    init {
+        if (opening != null) {
+            other = opening
+            opening.other = this
+        }
+    }
+
+    val pairedWith: PairedHighlightRange
+        get() = other
+
+}

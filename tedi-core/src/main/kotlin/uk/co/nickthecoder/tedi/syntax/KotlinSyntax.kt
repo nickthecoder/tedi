@@ -10,18 +10,9 @@ package uk.co.nickthecoder.tedi.syntax
 open class KotlinSyntax()
 
     : RegexSyntax(listOf(
-        RegexHighlight("keyword", HARD_KEYWORD_PATTERN),
-        RegexHighlight("softKeyword", SOFT_KEYWORD_PATTERN),
-        RegexHighlight("modifier", MODIFIER_PATTERN),
-        RegexHighlight("number", NUMBER_PATTERN),
-        RegexHighlight("comment", COMMENT_PATTERN),
-        RegexHighlight("annotation", ANNOTATION_PATTERN),
-        RegexHighlight("paren", PAREN_PATTERN),
-        RegexHighlight("brace", BRACE_PATTERN),
-        RegexHighlight("bracket", BRACKET_PATTERN),
-        RegexHighlight("string", STRING_PATTERN),
-        RegexHighlight("semicolon", SEMICOLON_EOL_PATTERN, ERROR_HIGHLIGHT)
-)) {
+        HARD_KEYWORD, SOFT_KEYWORD, MODIFIER, NUMBER, C_COMMENT, ANNOTATION, STRING,
+        OPEN_PAREN, CLOSE_PAREN, OPEN_BRACE, CLOSE_BRACE, OPEN_BRACKET, CLOSE_BRACKET,
+        WASTEFUL_SEMICOLON)) {
 
     companion object {
 
@@ -59,6 +50,10 @@ open class KotlinSyntax()
 
         @JvmStatic
         val MODIFIER_PATTERN = createKeywordsPattern(MODIFIER_KEYWORDS)
+
+        val HARD_KEYWORD = RegexHighlight("keyword", HARD_KEYWORD_PATTERN)
+        val SOFT_KEYWORD = RegexHighlight("keyword", SOFT_KEYWORD_PATTERN)
+        val MODIFIER = RegexHighlight("keyword", MODIFIER_PATTERN)
 
         @JvmStatic
         val instance = KotlinSyntax()

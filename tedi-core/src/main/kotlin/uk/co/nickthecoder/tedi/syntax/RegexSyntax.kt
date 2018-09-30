@@ -2,10 +2,21 @@ package uk.co.nickthecoder.tedi.syntax
 
 import uk.co.nickthecoder.tedi.Highlight
 import uk.co.nickthecoder.tedi.HighlightRange
+import uk.co.nickthecoder.tedi.PairedHighlightRange
 import uk.co.nickthecoder.tedi.StyleClassHighlight
 import java.util.regex.Pattern
 
 /**
+ * Parses text using a regular expression, creating [HighlightRange]s for different parts of the text
+ * (such as comments, keywords etc).
+ *
+ * It also does something "clever" with parts of the text which should match, such as open/close brackets.
+ * Instead of a simple [HighlightRange], it creates [PairedHighlightRange].
+ *
+ * When we move the caret to such a range, we can highlight the other half of the pair, giving the programmer
+ * immediate feedback.
+ * // TODO Name the class that does this (when its written!)
+ *
  * This code was originally from
  * [RichTextFX](https://github.com/FXMisc/RichTextFX/blob/master/richtextfx-demos/src/main/java/org/fxmisc/richtext/demo/JavaKeywordsDemo.java)
  * but has been radically changed.
@@ -15,8 +26,6 @@ open class RegexSyntax(val list: List<RegexHighlight>)
     : Syntax() {
 
     val pattern = buildPattern(list.map { it.name to it.pattern }.toMap())
-
-    val styleMap = list.map { it.name to it.highlight }.toMap()
 
     /**
      * Create a list of [HighlightRange]s suitable for styling source code.
@@ -32,14 +41,10 @@ open class RegexSyntax(val list: List<RegexHighlight>)
         val matcher = pattern.matcher(text)
         val ranges = mutableListOf<HighlightRange>()
 
-        /**
-         * Don't you just love nested functions. Does Java have these yet? (It's been ages since I wrote in Java).
-         * Ah wait, does Java even HAVE functions?
-         */
-        fun findHighlight(): Highlight? {
-            for (key in styleMap.keys) {
-                if (matcher.group(key) != null) {
-                    return styleMap[key]
+        fun findRegexHighlight(): RegexHighlight? {
+            for (item in list) {
+                if (matcher.group(item.name) != null) {
+                    return item
                 }
             }
             return null
@@ -56,8 +61,64 @@ open class RegexSyntax(val list: List<RegexHighlight>)
             }
         }
 
+        // Keep track of open brackets, open braces etc, which have not been closed
+        val unmatched = mutableListOf<Pair<RegexHighlight, HighlightRange>>()
+
+        // Once we find one unmatched pair, then ignore the rest, as they will only confuse the issue!
+        var allMatched = true
+
         while (catchMatcherFind()) {
-            findHighlight()?.let { ranges.add(HighlightRange(matcher.start(), matcher.end(), it, this)) }
+            findRegexHighlight()?.let { regexHighlight ->
+
+                var range = HighlightRange(matcher.start(), matcher.end(), regexHighlight.highlight, this)
+
+                if (allMatched) {
+
+                    // Have we found an open bracket etc?
+                    val closing = regexHighlight.closingRegexHighlight
+                    if (closing != null) {
+                        unmatched.add(Pair(regexHighlight, range))
+                    }
+
+                    // Have we found a close bracket etc?
+                    val opening = regexHighlight.openingRegexHighlight
+                    if (opening != null) {
+
+                        val top = unmatched.lastOrNull()
+                        if (top?.first == opening) {
+                            // We've found a matching pair. Let's join them together
+
+                            // Upgrade the opening range, (which is a simple HighlightRange), with a PairedHighlightRange.
+                            val oldRange = top.second
+                            val openingRange = PairedHighlightRange(oldRange.start, oldRange.end, oldRange.highlight, null)
+                            ranges[ranges.indexOf(oldRange)] = openingRange
+
+                            // The current range is upgrade to a PairedHighlightRange too.
+                            range = PairedHighlightRange(range.start, range.end, range.highlight, openingRange)
+
+                            // Pop off the stack, now that it has been matched.
+                            unmatched.removeAt(unmatched.size - 1)
+
+                        } else {
+                            // Oops, this is mis-matched.
+                            // Stop further checking for matches
+                            allMatched = false
+                            // Use a different Highlight, so that it's obvious that this is unmatched.
+                            range = HighlightRange(range.start, range.end, ERROR_HIGHLIGHT, this)
+                        }
+
+                    }
+                }
+                ranges.add(range)
+            }
+        }
+
+        // There are unmatched opens. If so, change their highlights to indicate an ERROR.
+        if (allMatched && unmatched.isNotEmpty()) {
+            for ((_, range) in unmatched) {
+                val replacement = HighlightRange(range.start, range.end, ERROR_HIGHLIGHT, this)
+                ranges[ranges.indexOf(range)] = replacement
+            }
         }
 
         return ranges
@@ -68,13 +129,32 @@ open class RegexSyntax(val list: List<RegexHighlight>)
 
         val NUMBER_PATTERN = "[0-9](\\.[0-9]+)?"
         val ANNOTATION_PATTERN = "\\@\\b\\w+\\b" // e.g. @Deprecated
-        val PAREN_PATTERN = "[\\(\\)]+" // Note "()" will form ONE range, not two.
-        val BRACE_PATTERN = "[\\{\\}]+" // Note "{}" will form ONE range, not two.
-        val BRACKET_PATTERN = "[\\[\\]]+" // Note "[]" will form ONE range, not two.
         val SEMICOLON_PATTERN = "\\;"
         val SEMICOLON_EOL_PATTERN = "\\;\\s*$"
         val STRING_PATTERN = "\"([^\"\\\\]|\\\\.)*\"|'([^'])*'" // Both single and double quotes.
-        val COMMENT_PATTERN = "//[^\n]*" + "|" + "/\\*(.|\\R)*?\\*/"
+        val C_COMMENT_PATTERN = "//[^\n]*" + "|" + "/\\*(.|\\R)*?\\*/" // Comments for C-like languages
+
+        val OPEN_PAREN_PATTERN = "\\("
+        val CLOSE_PAREN_PATTERN = "\\)"
+        val OPEN_BRACKET_PATTERN = "\\["
+        val CLOSE_BRACKET_PATTERN = "\\]"
+        val OPEN_BRACE_PATTERN = "\\{"
+        val CLOSE_BRACE_PATTERN = "\\}"
+
+        val NUMBER = RegexHighlight("number", NUMBER_PATTERN)
+        val ANNOTATION = RegexHighlight("annotation", ANNOTATION_PATTERN)
+        val SEMICOLON = RegexHighlight("semicolon", SEMICOLON_PATTERN)
+        val WASTEFUL_SEMICOLON = RegexHighlight("error", SEMICOLON_EOL_PATTERN) // For Kotlin and Groovy, where trailing ; are not needed.
+        val STRING = RegexHighlight("string", STRING_PATTERN)
+        val C_COMMENT = RegexHighlight("comment", C_COMMENT_PATTERN)
+
+        val OPEN_PAREN = RegexHighlight("openparen", OPEN_PAREN_PATTERN, null, StyleClassHighlight("syntax-paren"))
+        val OPEN_BRACKET = RegexHighlight("openbracket", OPEN_BRACKET_PATTERN, null, StyleClassHighlight("syntax-bracket"))
+        val OPEN_BRACE = RegexHighlight("openbrace", OPEN_BRACE_PATTERN, null, StyleClassHighlight("syntax-brace"))
+
+        val CLOSE_PAREN = RegexHighlight("closeparen", CLOSE_PAREN_PATTERN, OPEN_PAREN, StyleClassHighlight("syntax-paren"))
+        val CLOSE_BRACKET = RegexHighlight("closebracket", CLOSE_BRACKET_PATTERN, OPEN_BRACKET, StyleClassHighlight("syntax-bracket"))
+        val CLOSE_BRACE = RegexHighlight("closebrace", CLOSE_BRACE_PATTERN, OPEN_BRACE, StyleClassHighlight("syntax-brace"))
 
         /**
          * Takes a list of keywords, such as "class", "interface" etc, and converts it to a
@@ -108,9 +188,22 @@ open class RegexSyntax(val list: List<RegexHighlight>)
  * - [highlight] : A [Highlight], the default is to use a [StyleClassHighlight],
  *   with a css style class of "syntax-" + [name].
  */
-data class RegexHighlight(
+class RegexHighlight(
         val name: String,
         val pattern: String,
+        /**
+         * e.g. for a closing bracket, this would be the RegexHighlight for an opening bracket.
+         */
+        val openingRegexHighlight: RegexHighlight? = null,
         val highlight: Highlight = StyleClassHighlight("syntax-$name")
-)
+) {
+    var closingRegexHighlight: RegexHighlight? = null
 
+    init {
+        if (openingRegexHighlight != null) {
+            openingRegexHighlight.closingRegexHighlight = this
+        }
+    }
+
+    override fun toString() = "$name" + if (openingRegexHighlight != null) " close" else if (closingRegexHighlight != null) " open" else ""
+}
