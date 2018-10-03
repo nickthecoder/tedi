@@ -400,7 +400,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
         // look for the end of the next non-blank line.
         val start = caretPosition
-        val end = Math.max(start + 100, length)
+        val end = Math.min(start + 100, length)
         val cs = getText(start, end)
 
         // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
@@ -446,7 +446,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
         // look for the end of the next non-blank line.
         val start = caretPosition
-        val end = Math.max(start + 100, length)
+        val end = Math.min(start + 100, length)
         val cs = getText(start, end)
 
         // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a

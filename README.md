@@ -86,6 +86,7 @@ and therefore do not understand the grammar of the languages.
 
 ## Known Bugs/Issues
 
+- Line numbers do not respect horizontal scroll bars (they get scrolled out of the viewport to the left)
 - Applying highlights, which change the font weight or style, only work
   correctly with mono-spaced fonts.
 - Highlights won't work correctly if they change the font size or font family

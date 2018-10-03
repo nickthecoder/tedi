@@ -15,6 +15,28 @@ Later
 
 Only place those paragraphNodes which are VISIBLE into the scene graph to improve performance.
 
+Consider allowing ranges to be PART of the document, such that undo/redo affects them.
+    Either through new UndoAbleRange interface, a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
+
+Add an "Overview" gutter on the right, which show certain HighlightRanges.
+    e.g. matches in Find & Replace
+    Paired punctuation at the caret position
+    Words matching the word at the caret's position
+
+    A new interface OverviewRange extends HighlightRange, which has a field : overviewHighlight : FillHighlight
+
+    Update whenever line count changes, or HighlightRanges implementing OverviewRange are added/deleted
+
+    Can we make this pluggable. i.e. do NOT include it in TediArea, just allow additional gutters to be added to TediArea.
+
+Make the left gutter pluggable in the same way.
+    e.g. to add "breakpoints", "super" and "sub-class" buttons against functions/fields.
+
+Folding
+    Anywhere that there's paired highlights which are on different lines add folding buttons V and ^
+    For python lovers, and for indented plain text, use indentation to determine where folds can appear.
+    NOTE. This would have an effect on how the API for a pluggable left gutter.
+
 Check when layoutChildren is being called, and try to minimise this.
 
 Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
@@ -24,5 +46,37 @@ Get BOLD etc working with non-monospaced fonts.
 Consider adding back line-wrapping
     I'd have to use a TextFlow instead of Group for styled paragraphs. (Check "is Group")
 
-Consider allowing ranges to be PART of the document, such that undo/redo affects them.
-    Either through a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
+
+VirtualFlow
+-----------
+
+Options.
+Roll my own from scratch
+Copy/Paste JavaFX VirtualFlow
+Use Flowless
+
+Correct layout for TediArea (Note there's no ScrollPane!)
+    Scroll bar (right)
+    "inner" section (left) containing :
+        Gutter (left) (with line numbers)
+        Content (center)
+        Scroll bar (bottom)
+    Overview floating section left of the scroll bar
+Content will be a virtual flow, and Gutter is also a virtual flow.
+
+If I'm going to have folding, then my data structure will be tree-like :
+    Root UnFold (0..lineCount-1)
+        Folded (0..10)
+        UnFold (11.20)
+        Folded (21,100)
+            Fold(21, 40)
+            UnFolded(41,60)
+            Fold(60,100)
+        etc.
+And my Root will be in charge of converting visible indices (for the virtual flow) into paragraph indices
+Note. When I implement line-wrapping, then a single Paragraph COULD be folded (so that it only ever takes up one line)
+
+NOTE. This should be EXTERNAL to TediArea.
+Have an interface Folding and the default value is an instance of class NoFolding
+Then I implement TreeFolding.
+
