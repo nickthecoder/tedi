@@ -364,6 +364,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
 
+    /**
+     * Avoid using Character.isSpaceChar() and Character.isWhitespace(),
+     * because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
+     */
+    private fun isWordSeparator(c: Char) = c == ' ' || c == '\t'
+
     protected fun previousWord(select: Boolean) {
 
         // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
@@ -375,17 +381,13 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         if (end <= start) {
             return
         }
-        val cs = getText(start, end)
-
-        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
-        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
-        val txt = cs.toString()
+        val txt = getText(start, end)
         wordIterator.setText(txt)
 
         var pos = wordIterator.preceding(end - start)
 
         // Skip the non-word region, then move/select to the beginning of the word.
-        while (pos != BreakIterator.DONE && !Character.isLetterOrDigit(txt[clamp(0, pos, txt.length - 1)])) {
+        while (pos != BreakIterator.DONE && isWordSeparator(txt[clamp(0, pos, txt.length - 1)])) {
             pos = wordIterator.preceding(clamp(0, pos, txt.length))
         }
 
@@ -393,94 +395,54 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         selectRange(if (select) anchor else start + pos, start + pos)
     }
 
+    /**
+     * This is used on Windows, where on Linux and MacOS, [endOfNextWord] is used.
+     * I'm not sure what the difference is, so for now, I'll make use the linux/macOS version.
+     */
     protected fun nextWord(select: Boolean) {
-
-        // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
-        // large documents. Let's do better, by using a CharSequence starting at the caret position.
-        // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
-        // look for the end of the next non-blank line.
-        val start = caretPosition
-        val end = Math.min(start + 100, length)
-        val cs = getText(start, end)
-
-        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
-        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
-        val txt = cs.toString()
-        wordIterator.setText(txt)
-
-        var last = wordIterator.following(0)
-        var current = wordIterator.next()
-
-        // Skip whitespace characters to the beginning of next word, but
-        // stop at newline. Then move the caret or select a range.
-        while (current != BreakIterator.DONE) {
-            for (p in last..current) {
-                val ch = txt[clamp(0, p, txt.length - 1)]
-                // Avoid using Character.isSpaceChar() and Character.isWhitespace(),
-                // because they include LINE_SEPARATOR, PARAGRAPH_SEPARATOR, etc.
-                if (ch != ' ' && ch != '\t') {
-                    if (select) {
-                        selectRange(anchor, p + start)
-                    } else {
-                        selectRange(p + start, p + start)
-                    }
-                    return
-                }
-            }
-            last = current
-            current = wordIterator.next()
-        }
-
-        // move/select to the end
-        if (select) {
-            selectRange(anchor, length)
-        } else {
-            end()
-        }
+        endOfNextWord(select)
     }
 
+    /**
+     * FYI, I think this is badly named, as it moves to the end of the CURRENT word.
+     * Alas, I cannot change it because its part of TextInputControl.
+     *
+     * Note, on Linux and MacOS, endOfNextWord is used where on Windows endOfWord is used.
+     * I assume on windows, it also
+     */
     protected fun endOfNextWord(select: Boolean) {
-
         // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
-        // large documents. Let's do better, by using a CharSequence starting at the caret position.
+        // large documents. Let's do better, by using a string starting at the caret position.
         // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
         // look for the end of the next non-blank line.
         val start = caretPosition
         val end = Math.min(start + 100, length)
-        val cs = getText(start, end)
 
-        // Grr, BreakIterator needs a CharacterIterator, and AFAIK they haven't provided one which works with a
-        // CharSequence. Grr. I'm feeling lazy, so I'll just make a String. Annoying!
-        val txt = cs.toString()
+        val txt = getText(start, end)
         wordIterator.setText(txt)
 
-        var last = wordIterator.following(0)
-        var current = wordIterator.next()
-
-        // skip the non-word region, then move/select to the end of the word.
-        while (current != BreakIterator.DONE) {
-            for (p in last..current) {
-                if (!Character.isLetterOrDigit(txt[clamp(0, p, txt.length - 1)])) {
-                    if (select) {
-                        selectRange(anchor, p + start)
-                    } else {
-                        selectRange(p + start, p + start)
-                    }
-                    return
-                }
-            }
-            last = current
-            current = wordIterator.next()
+        var pos = wordIterator.following(0)
+        while (pos != BreakIterator.DONE && isWordSeparator(txt[pos])) {
+            pos = wordIterator.next()
         }
 
-        // move/select to the end
-        if (select) {
-            selectRange(anchor, length)
+        if (pos == BreakIterator.DONE) {
+            if (select) {
+                selectRange(anchor, length - 1)
+            } else {
+                selectRange(length, length - 1)
+            }
         } else {
-            end()
+            if (select) {
+                selectRange(anchor, start + pos)
+            } else {
+                selectRange(start + pos, start + pos)
+            }
         }
     }
 
+    // NOTE. These are exact copies of the methods in TextInputControl,
+    // but they MUST remain, because TextInputControl calls private methods.
     override fun previousWord() {
         previousWord(false)
     }

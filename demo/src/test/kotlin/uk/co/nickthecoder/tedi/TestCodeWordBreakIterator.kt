@@ -10,11 +10,11 @@ class TestCodeWordBreakIterator {
     /**
      * This tests the "default" word break iterator.
      * I used this, just so that I understood how the existing one worked.
-     * However, it should be removed from the test suite (remove the @Test and don't begin with "test"),
+     * However, maybe it should be removed from the test suite (remove the @Test),
      * because someone with a different locale will get a different BreakIterator,
-     * which may act differently. (And I don't want it to fail for them!)
+     * which may act differently.
      */
-    //@Test
+    @Test
     fun defaultWordBreakIterator() {
         val bi = BreakIterator.getWordInstance()
         check(bi, "Hello world have a nice day", 5, 6, 11, 12, 16, 17, 18, 19, 23, 24, 27)
@@ -22,8 +22,23 @@ class TestCodeWordBreakIterator {
 
         // These are horrible, and why I need to create my own!
         check(bi, "uk.co.nickthecoder", 18)
-        check(bi, "package uk.co.nickthecoder", 7, 8, 26)
-        check(bi, "a += 2", 1, 2, 3, 4, 5, 6)
+        check(bi, "package uk.co.nickthecoder", 7, 8, 26) // uk.co.nickthecoder is one word
+        check(bi, "a += 2", 1, 2, 3, 4, 5, 6) // += is TWO words.
+    }
+
+    /**
+     * The same tests as [defaultWordBreakIterator], but using my word iterator.
+     * Notice how
+     */
+    @Test
+    fun myWordBreakIterator() {
+        check("Hello world have a nice day", 5, 6, 11, 12, 16, 17, 18, 19, 23, 24, 27)
+        check("Hello, world have a nice day", 5, 6, 7, 12, 13, 17, 18, 19, 20, 24, 25, 28)
+
+        // These are better now!
+        check("uk.co.nickthecoder", 2, 3, 5, 6, 18)
+        check("package uk.co.nickthecoder", 7, 8, 10, 11, 13, 14, 26) // uk.co.nickthecoder is NOT one word
+        check("a += 2", 1, 2, 4, 5, 6) // += are one word
     }
 
     @Test
@@ -42,6 +57,19 @@ class TestCodeWordBreakIterator {
     fun testWordsAndMultipleSymbols() {
         check("a+=1", 1, 3, 4)
         check("a += 1", 1, 2, 4, 5, 6)
+    }
+
+    @Test
+    fun lineBreaks() {
+        check("abc\ndefgh\nijk", 3, 4, 9, 10, 13)
+    }
+
+    /**
+     * Note, this is the same as [lineBreaks], but with symbols for the 2nd line.
+     */
+    @Test
+    fun nonWords() {
+        check("abc\n-----\ndef", 3, 4, 9, 10, 13)
     }
 
     fun check(sentence: String, vararg breaks: Int) {

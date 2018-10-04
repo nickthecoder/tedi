@@ -48,7 +48,6 @@ import javafx.geometry.*
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.control.ScrollPane
-import javafx.scene.control.TreeView
 import javafx.scene.input.MouseEvent
 import javafx.scene.layout.BorderPane
 import javafx.scene.layout.Region
@@ -519,7 +518,7 @@ class TediAreaSkin(control: TediArea)
 
         // TODO Should the view scroll even when not focused?
         //if (skinnable.isFocused) {
-        scrollCaretToVisible()
+            scrollCaretToVisible()
         //}
     }
 
