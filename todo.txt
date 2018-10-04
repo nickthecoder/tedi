@@ -1,6 +1,8 @@
 Bugs
 ----
 
+Tripple clicking a line with "-----" highlights the previous line (word matching problem from double click?)
+
 Current Work
 ------------
 

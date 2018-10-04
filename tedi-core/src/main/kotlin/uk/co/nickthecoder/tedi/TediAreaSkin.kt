@@ -517,9 +517,10 @@ class TediAreaSkin(control: TediArea)
         tmpText.text = skinnable.paragraphs[line].charSequence.substring(0, column)
         caretPath.layoutX = tmpText.boundsInLocal.width
 
-        if (skinnable.isFocused) {
-            scrollCaretToVisible()
-        }
+        // TODO Should the view scroll even when not focused?
+        //if (skinnable.isFocused) {
+        scrollCaretToVisible()
+        //}
     }
 
     fun onFontChanged() {
@@ -844,9 +845,11 @@ class TediAreaSkin(control: TediArea)
                     KeyFrame(Duration.seconds(1.0)))
             caretVisible.addListener { _, _, newValue ->
                 if (newValue == true) {
+                    blinkOn = true
                     animation.play()
                 } else {
                     animation.stop()
+                    blinkOn = false
                 }
             }
             // modifying visibility of the caret forces a layout-pass (RT-32373), so
