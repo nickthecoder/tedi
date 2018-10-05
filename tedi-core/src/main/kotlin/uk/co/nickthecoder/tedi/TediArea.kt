@@ -48,6 +48,8 @@ import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
+import uk.co.nickthecoder.tedi.util.clamp
+import uk.co.nickthecoder.tedi.util.extendList
 import java.text.BreakIterator
 
 /**
@@ -625,7 +627,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
         private val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
                 StyleConverter.getBooleanConverter(), false) {
-            override fun isSettable(n: TediArea) = !n.displayLineNumbersProperty().isBound()
+            override fun isSettable(n: TediArea) = !n.displayLineNumbersProperty().isBound
             override fun getStyleableProperty(n: TediArea) = n.displayLineNumbersProperty()
         }
 

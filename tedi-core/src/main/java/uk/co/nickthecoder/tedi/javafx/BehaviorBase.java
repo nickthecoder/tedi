@@ -33,7 +33,7 @@ import javafx.scene.control.Control;
 import javafx.scene.input.ContextMenuEvent;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.input.MouseEvent;
-import uk.co.nickthecoder.tedi.FocusHelperKt;
+import uk.co.nickthecoder.tedi.util.FocusHelperKt;
 
 import java.util.ArrayList;
 import java.util.Collections;

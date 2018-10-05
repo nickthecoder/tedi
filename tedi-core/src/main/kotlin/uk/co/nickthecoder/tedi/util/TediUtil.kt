@@ -1,4 +1,4 @@
-package uk.co.nickthecoder.tedi
+package uk.co.nickthecoder.tedi.util
 
 import com.sun.javafx.scene.control.skin.ComboBoxPopupControl.FakeFocusTextField
 import javafx.beans.value.ChangeListener
@@ -7,7 +7,6 @@ import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.ButtonBase
 import javafx.scene.control.ComboBox
-import javafx.scene.control.TextInputControl
 import javafx.scene.image.Image
 import javafx.scene.image.ImageView
 import java.lang.reflect.Field

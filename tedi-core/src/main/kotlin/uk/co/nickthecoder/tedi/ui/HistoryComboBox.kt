@@ -6,9 +6,9 @@ import javafx.collections.ObservableList
 import javafx.scene.control.ComboBox
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
-import uk.co.nickthecoder.tedi.focusNext
-import uk.co.nickthecoder.tedi.focusPrevious
-import uk.co.nickthecoder.tedi.javaFXVersion
+import uk.co.nickthecoder.tedi.util.focusNext
+import uk.co.nickthecoder.tedi.util.focusPrevious
+import uk.co.nickthecoder.tedi.util.javaFXVersion
 import java.util.prefs.Preferences
 
 

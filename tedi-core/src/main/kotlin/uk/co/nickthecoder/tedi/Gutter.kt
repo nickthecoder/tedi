@@ -8,6 +8,7 @@ import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
+import uk.co.nickthecoder.tedi.util.extendList
 
 /**
  * A rectangle to the left of the main content, showing line numbers.

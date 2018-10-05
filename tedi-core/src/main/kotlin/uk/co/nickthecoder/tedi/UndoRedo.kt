@@ -2,6 +2,8 @@ package uk.co.nickthecoder.tedi
 
 import javafx.beans.property.BooleanProperty
 import javafx.beans.property.SimpleBooleanProperty
+import uk.co.nickthecoder.tedi.util.getPrivateField
+import uk.co.nickthecoder.tedi.util.setPrivateField
 import java.util.*
 
 abstract class UndoRedo {

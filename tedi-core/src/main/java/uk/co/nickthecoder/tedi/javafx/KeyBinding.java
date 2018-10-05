@@ -29,7 +29,7 @@ import javafx.event.EventType;
 import javafx.scene.control.Control;
 import javafx.scene.input.KeyCode;
 import javafx.scene.input.KeyEvent;
-import uk.co.nickthecoder.tedi.TediUtilKt;
+import uk.co.nickthecoder.tedi.util.TediUtilKt;
 
 /**
  * KeyBindings are used to describe which action should occur based on some

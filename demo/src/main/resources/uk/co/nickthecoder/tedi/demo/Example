@@ -12,9 +12,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import uk.co.nickthecoder.tedi.BetterUndoRedo;
 import uk.co.nickthecoder.tedi.TediArea;
-import uk.co.nickthecoder.tedi.TediUtilKt;
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax;
 import uk.co.nickthecoder.tedi.ui.*;
+import uk.co.nickthecoder.tedi.util.TediUtilKt;
 
 /**
  * An example application with a TediArea.

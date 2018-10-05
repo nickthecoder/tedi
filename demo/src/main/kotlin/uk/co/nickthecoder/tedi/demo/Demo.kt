@@ -18,6 +18,8 @@ import uk.co.nickthecoder.tedi.syntax.HighlightMatchedPairs
 import uk.co.nickthecoder.tedi.syntax.JavaSyntax
 import uk.co.nickthecoder.tedi.syntax.KotlinSyntax
 import uk.co.nickthecoder.tedi.ui.*
+import uk.co.nickthecoder.tedi.util.loadGraphic
+import uk.co.nickthecoder.tedi.util.requestFocusOnSceneAvailable
 import java.util.prefs.Preferences
 import java.util.regex.Pattern;
 

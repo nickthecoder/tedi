@@ -61,6 +61,8 @@ import javafx.scene.text.Text
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
+import uk.co.nickthecoder.tedi.util.clamp
+import uk.co.nickthecoder.tedi.util.hitTestChar
 
 class TediAreaSkin(control: TediArea)
 

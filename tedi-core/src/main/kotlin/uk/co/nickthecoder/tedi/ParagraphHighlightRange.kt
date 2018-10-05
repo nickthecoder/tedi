@@ -7,7 +7,7 @@ package uk.co.nickthecoder.tedi
  * and are only kept so that when [HighlightRange]s are removed, it is easy to tell which
  * slices can be removed or merged.
  */
-class ParagraphHighlightRange(
+internal class ParagraphHighlightRange(
         var startColumn: Int,
         var endColumn: Int,
         val cause: HighlightRange) {

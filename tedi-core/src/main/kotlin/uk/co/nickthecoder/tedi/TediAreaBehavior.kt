@@ -40,6 +40,9 @@ import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.javafx.BehaviorBase
 import uk.co.nickthecoder.tedi.javafx.KeyBinding
 import uk.co.nickthecoder.tedi.javafx.OptionalBoolean
+import uk.co.nickthecoder.tedi.util.isLinux
+import uk.co.nickthecoder.tedi.util.isMac
+import uk.co.nickthecoder.tedi.util.isWindows
 import java.text.Bidi
 import java.util.*
 

@@ -5,6 +5,7 @@ import javafx.beans.value.ChangeListener
 import uk.co.nickthecoder.tedi.FillStyleClassHighlight
 import uk.co.nickthecoder.tedi.HighlightRange
 import uk.co.nickthecoder.tedi.TediArea
+import uk.co.nickthecoder.tedi.util.propertyChangeDelayedThread
 import java.util.concurrent.CountDownLatch
 import java.util.regex.Pattern
 

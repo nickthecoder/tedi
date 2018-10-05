@@ -7,9 +7,9 @@ import javafx.scene.control.Button
 import javafx.scene.control.ToggleButton
 import javafx.scene.control.ToolBar
 import javafx.scene.control.Tooltip
-import uk.co.nickthecoder.tedi.loadGraphic
-import uk.co.nickthecoder.tedi.onSceneAvailable
-import uk.co.nickthecoder.tedi.requestFocusWithCaret
+import uk.co.nickthecoder.tedi.util.loadGraphic
+import uk.co.nickthecoder.tedi.util.onSceneAvailable
+import uk.co.nickthecoder.tedi.util.requestFocusWithCaret
 
 /**
  * An example GUI for use with [TextInputControlMatcher] or [TediAreaMatcher].

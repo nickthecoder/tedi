@@ -11,7 +11,7 @@ import javafx.scene.layout.HBox
 import javafx.stage.Modality
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.TediArea
-import uk.co.nickthecoder.tedi.loadGraphic
+import uk.co.nickthecoder.tedi.util.loadGraphic
 
 /**
  * A dialog box, allowing the user to position the caret to a give line.

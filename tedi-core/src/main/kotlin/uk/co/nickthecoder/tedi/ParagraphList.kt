@@ -5,6 +5,7 @@ import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
+import uk.co.nickthecoder.tedi.util.*
 import java.util.*
 
 /**
@@ -141,7 +142,7 @@ class ParagraphList
         return textBuilder.toString()
     }
 
-    fun delete(start: Int, end: Int) {
+    internal fun delete(start: Int, end: Int) {
         if (start > end) {
             throw IllegalArgumentException()
         }
@@ -232,7 +233,7 @@ class ParagraphList
         */
     }
 
-    fun insert(position: Int, insertText: String) {
+    internal fun insert(position: Int, insertText: String) {
         var text = insertText
         if (position < 0 || position > contentLength) {
             throw IndexOutOfBoundsException()

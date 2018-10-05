@@ -1,4 +1,4 @@
-package uk.co.nickthecoder.tedi
+package uk.co.nickthecoder.tedi.util
 
 import javafx.scene.text.Text
 

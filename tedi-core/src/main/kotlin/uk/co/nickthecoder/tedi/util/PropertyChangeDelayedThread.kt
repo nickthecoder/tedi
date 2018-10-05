@@ -1,4 +1,4 @@
-package uk.co.nickthecoder.tedi.syntax
+package uk.co.nickthecoder.tedi.util
 
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableValue

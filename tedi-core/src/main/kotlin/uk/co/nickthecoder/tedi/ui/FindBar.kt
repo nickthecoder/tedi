@@ -6,9 +6,9 @@ import javafx.event.EventHandler
 import javafx.scene.control.*
 import javafx.scene.input.KeyCode
 import javafx.scene.input.KeyEvent
-import uk.co.nickthecoder.tedi.loadGraphic
-import uk.co.nickthecoder.tedi.onSceneAvailable
-import uk.co.nickthecoder.tedi.requestFocusWithCaret
+import uk.co.nickthecoder.tedi.util.loadGraphic
+import uk.co.nickthecoder.tedi.util.onSceneAvailable
+import uk.co.nickthecoder.tedi.util.requestFocusWithCaret
 
 /**
  * An example GUI for use with [TextInputControlMatcher] or [TediAreaMatcher].

@@ -14,6 +14,7 @@ Later
 
 Only place those paragraphNodes which are VISIBLE into the scene graph to improve performance.
     Virtual Flow (see below)
+Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 
 Consider allowing ranges to be PART of the document, such that undo/redo affects them.
     Either through new UndoAbleRange interface, a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
@@ -38,8 +39,6 @@ Folding
     NOTE. This would have an effect on how the API for a pluggable left gutter.
 
 Check when layoutChildren is being called, and try to minimise this.
-
-Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 
 Get BOLD etc working with non-monospaced fonts.
 
