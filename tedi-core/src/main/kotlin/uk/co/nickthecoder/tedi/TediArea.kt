@@ -205,9 +205,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     var displayLineNumbers: Boolean
         get() = displayLineNumbersProperty.get()
-        set(v) {
-            displayLineNumbersProperty.set(v)
-        }
+        set(v) = displayLineNumbersProperty.set(v)
 
 
     // *** Scroll Top ***
@@ -220,9 +218,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     var scrollTop: Double
         get() = scrollTopProperty.get()
-        set(v) {
-            scrollTopProperty.set(v)
-        }
+        set(v) = scrollTopProperty.set(v)
 
 
     // *** Scroll Left ***
@@ -251,9 +247,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     var tabInsertsSpaces: Boolean
         get() = tabInsertsSpacesProperty.get()
-        set(v) {
-            tabInsertsSpacesProperty.set(v)
-        }
+        set(v) = tabInsertsSpacesProperty.set(v)
 
 
     // *** Indent Size ***
@@ -263,9 +257,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     var indentSize: Int
         get() = indentSizeProperty.get()
-        set(v) {
-            indentSizeProperty.set(v)
-        }
+        set(v) = indentSizeProperty.set(v)
 
 
     // *** wordIterator ***
@@ -283,9 +275,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      */
     var wordIterator: BreakIterator
         get() = wordIteratorProperty.get()
-        set(v) {
-            wordIteratorProperty.set(v)
-        }
+        set(v) = wordIteratorProperty.set(v)
+
 
     /***************************************************************************
      *                                                                         *
@@ -443,7 +434,7 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     protected fun previousWord(select: Boolean) {
 
         // TextInputControl's implementation used the whole text, which would be HORRIBLY inefficient for
-        // large documents. Let's do better, by using a CharSequence.
+        // large documents. Let's do better, by using a small string.
         // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
         // look for the start of the previous non-blank line.
         val end = caretPosition

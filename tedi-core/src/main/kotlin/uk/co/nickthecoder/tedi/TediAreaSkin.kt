@@ -70,17 +70,22 @@ class TediAreaSkin(control: TediArea)
      * There is a 1:1 mapping between the groups children and [Paragraph]s.
      * i.e.
      *
-     *     paragraphGroup.children[n] corresponds to ParagraphsList.paragraphs[n]
+     *     paragraphsGroup.children[n] corresponds to ParagraphsList.paragraphs[n]
      *
      * For a paragraph without highlights, this will be a simple Text object.
      * For those with highlights, it will be a ??Group/TextFlow?? of Text objects.
      */
-    private val paragraphGroup = Group()
+    private val paragraphsGroup = Group()
 
     /**
      * A Region containing line numbers, to the left of the main content.
      */
     private val gutter = Gutter(control)
+
+    /**
+     * A rectangle to highlight the line that the caret is sitting on.
+     */
+    private val currentLineRect = Rectangle()
 
     /**
      * A simple BorderPane with left=[gutter], center=[contentView]
@@ -128,35 +133,59 @@ class TediAreaSkin(control: TediArea)
     /**
      * The fill to use for the text under normal conditions
      */
-    private val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
+    private val textFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.BLACK) {
         override fun getBean() = this@TediAreaSkin
         override fun getName() = "textFill"
         override fun getCssMetaData() = TEXT_FILL
     }
+    var textFill: Paint?
+        get() = textFillProperty.get()
+        set(v) = textFillProperty.set(v)
 
     /**
      * The background behind the selected text
      */
-    private val highlightFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
+    private val highlightFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.DODGERBLUE) {
         override fun getBean() = this@TediAreaSkin
         override fun getName() = "highlightFill"
         override fun getCssMetaData() = HIGHLIGHT_FILL
     }
+    var highlightFill: Paint?
+        get() = highlightFillProperty.get()
+        set(v) = highlightFillProperty.set(v)
 
     /**
      * The selected text's color
      */
-    private val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+    private val highlightTextFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
         override fun getBean() = this@TediAreaSkin
         override fun getName() = "highlightTextFill"
         override fun getCssMetaData() = HIGHLIGHT_TEXT_FILL
     }
+    var highlightTextFill: Paint?
+        get() = highlightTextFillProperty.get()
+        set(v) = highlightTextFillProperty.set(v)
 
-    private val displayCaret: StyleableBooleanProperty = object : StyleableBooleanProperty(true) {
+    /**
+     * The current line's background color
+     */
+    private val currentLineFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+        override fun getBean() = this@TediAreaSkin
+        override fun getName() = "currentLineFill"
+        override fun getCssMetaData() = CURRENT_LINE_FILL
+    }
+    var currentLineFill: Paint?
+        get() = currentLineFillProperty.get()
+        set(v) = currentLineFillProperty.set(v)
+
+    private val displayCaretProperty: StyleableBooleanProperty = object : StyleableBooleanProperty(true) {
         override fun getBean() = this@TediAreaSkin
         override fun getName() = "displayCaret"
         override fun getCssMetaData() = DISPLAY_CARET
     }
+    var displayCaret : Boolean
+        get() = displayCaretProperty.get()
+        set(v) = displayCaretProperty.set(v)
 
     // TODO What is this here for?
     private var caretPosition: ObservableIntegerValue = object : IntegerBinding() {
@@ -181,11 +210,11 @@ class TediAreaSkin(control: TediArea)
     private var caretVisible: ObservableBooleanValue = object : BooleanBinding() {
         init {
             bind(control.focusedProperty(), control.anchorProperty(), control.caretPositionProperty(),
-                    control.disabledProperty(), control.editableProperty(), displayCaret)
+                    control.disabledProperty(), control.editableProperty(), displayCaretProperty)
         }
 
         override fun computeValue(): Boolean {
-            return displayCaret.get() && control.isFocused &&
+            return displayCaretProperty.get() && control.isFocused &&
                     (control.caretPosition == control.anchor) &&
                     !control.isDisabled &&
                     control.isEditable
@@ -226,8 +255,7 @@ class TediAreaSkin(control: TediArea)
         children.add(scrollPane)
 
         // Create nodes for each paragraph.
-
-        with(paragraphGroup) {
+        with(paragraphsGroup) {
             skinnable.paragraphs.forEach { p ->
                 children.add(createParagraphNode(p))
             }
@@ -256,8 +284,17 @@ class TediAreaSkin(control: TediArea)
         // caretPath
         with(caretPath) {
             isManaged = false
-            fillProperty().bind(textFill)
-            strokeProperty().bind(textFill)
+            fillProperty().bind(textFillProperty)
+            //strokeProperty().bind(textFillProperty)
+        }
+
+        // currentLineRect
+        with(currentLineRect) {
+            isManaged = false
+            fillProperty().bind(currentLineFillProperty)
+            skinnable.caretLineProperty().addListener { _, _, _ ->
+                currentLineRect.layoutY = lineHeight() * skinnable.caretLine
+            }
         }
 
         // tmpText
@@ -266,14 +303,13 @@ class TediAreaSkin(control: TediArea)
         // insideGroup
         with(insideGroup) {
             isManaged = false
-            children.addAll(paragraphGroup, selectionHighlightGroup, caretPath)
+            children.addAll(currentLineRect, paragraphsGroup, selectionHighlightGroup, caretPath)
         }
 
         // contentView
-        contentView.children.add(insideGroup)
+        contentView.children.addAll(insideGroup)
 
         // control
-
         control.scrollTopProperty().addListener { _, _, newValue ->
             scrollPane.vvalue = if (newValue.toDouble() < getScrollTopMax()) {
                 newValue.toDouble() / getScrollTopMax()
@@ -298,9 +334,11 @@ class TediAreaSkin(control: TediArea)
             onSelectionChanged()
         }
 
+        // Caret position
         caretPosition.addListener { _, _, _ -> onCaretMoved() }
         onCaretMoved()
 
+        // Font
         control.fontProperty().addListener { _, _, _ -> onFontChanged() }
         onFontChanged()
     }
@@ -325,7 +363,7 @@ class TediAreaSkin(control: TediArea)
                 wrappingWidth = 0.0
                 isManaged = false
                 font = skinnable.font
-                fill = textFill.get()
+                fill = textFillProperty.get()
             }
         }
 
@@ -407,14 +445,14 @@ class TediAreaSkin(control: TediArea)
                 layoutX = x
                 layoutY = y
                 fontProperty().bind(skinnable.fontProperty())
-                fillProperty().bind(highlightTextFill)
+                fillProperty().bind(highlightTextFillProperty)
             }
 
             val bounds = text.boundsInLocal
             val rectangle = Rectangle(bounds.width, bounds.height).apply {
                 layoutX = text.layoutX
                 layoutY = text.layoutY
-                fillProperty().bind(highlightFill)
+                fillProperty().bind(highlightFillProperty)
             }
             return Pair(text, rectangle)
         }
@@ -477,13 +515,13 @@ class TediAreaSkin(control: TediArea)
         while (change.next()) {
             if (change.wasAdded()) {
                 for (i in change.from..change.to - 1) {
-                    paragraphGroup.children.add(i, createParagraphNode(change.list[i]))
+                    paragraphsGroup.children.add(i, createParagraphNode(change.list[i]))
                 }
             }
             if (change.wasRemoved()) {
                 val from = change.from
                 for (n in 1..change.removedSize) {
-                    paragraphGroup.children.removeAt(from)
+                    paragraphsGroup.children.removeAt(from)
                 }
             }
             if (change.wasUpdated()) {
@@ -496,7 +534,7 @@ class TediAreaSkin(control: TediArea)
     }
 
     fun rebuildParagraph(i: Int) {
-        val child = paragraphGroup.children[i]
+        val child = paragraphsGroup.children[i]
         val paragraph = skinnable.paragraphs[i]
         // A simple text change without highlights before and after?
         if (child is Text && paragraph.highlights.isEmpty()) {
@@ -504,7 +542,7 @@ class TediAreaSkin(control: TediArea)
             child.text = paragraph.text
             child.font = skinnable.font
         } else {
-            paragraphGroup.children[i] = createParagraphNode(paragraph)
+            paragraphsGroup.children[i] = createParagraphNode(paragraph)
         }
     }
 
@@ -527,7 +565,7 @@ class TediAreaSkin(control: TediArea)
         caretPath.elements.clear()
         caretPath.elements.add(MoveTo(0.0, 0.0))
         caretPath.elements.add(LineTo(0.0, lineHeight()))
-        caretPath.fillProperty().bind(textFill)
+        caretPath.fillProperty().bind(textFillProperty)
         caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
         for (i in 0..skinnable.paragraphs.size - 1) {
             rebuildParagraph(i)
@@ -554,11 +592,11 @@ class TediAreaSkin(control: TediArea)
         if (normY < 0) return 0 // Beyond the top
         val line = (normY / lineHeight()).toInt()
 
-        if (line >= paragraphGroup.children.size) {
+        if (line >= paragraphsGroup.children.size) {
             return skinnable.length // Beyond the bottom. End of document.
         }
 
-        val node = paragraphGroup.children[line]
+        val node = paragraphsGroup.children[line]
         if (node is Text) {
             return skinnable.positionOfLine(line) + node.hitTestChar(normX, normY).getInsertionIndex()
         } else if (node is Group) {
@@ -664,7 +702,7 @@ class TediAreaSkin(control: TediArea)
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
         val requiredLine = clamp(0, line + n, skinnable.lineCount - 1)
-        val node = paragraphGroup.children[requiredLine]
+        val node = paragraphsGroup.children[requiredLine]
 
         var columnIndex = 0
         if (node is Text) {
@@ -915,7 +953,7 @@ class TediAreaSkin(control: TediArea)
 
         override fun computePrefWidth(height: Double): Double {
             var maxWidth = 0.0
-            paragraphGroup.children.forEach { text ->
+            paragraphsGroup.children.forEach { text ->
                 maxWidth = Math.max(maxWidth, text.prefWidth(height))
             }
             return maxWidth + snappedLeftInset() + snappedRightInset()
@@ -923,7 +961,7 @@ class TediAreaSkin(control: TediArea)
 
         override fun computePrefHeight(width: Double): Double {
             var total = 0.0
-            paragraphGroup.children.forEach { text ->
+            paragraphsGroup.children.forEach { text ->
                 total += text.prefHeight(width)
             }
             return total + snappedTopInset() + snappedBottomInset()
@@ -931,14 +969,20 @@ class TediAreaSkin(control: TediArea)
 
         public override fun layoutChildren() {
             val width = width
+            val lineHeight = lineHeight()
+
+            // currentLineRect
+            currentLineRect.layoutX = -snappedLeftInset()
+            currentLineRect.width = width
+            currentLineRect.height = lineHeight
 
             // insideGroup
             insideGroup.layoutX = snappedLeftInset()
             insideGroup.layoutY = snappedTopInset()
 
+            // paragraphsGroup
             var textY = 0.0
-            val lineHeight = lineHeight()
-            paragraphGroup.children.forEach { text ->
+            paragraphsGroup.children.forEach { text ->
                 text.layoutY = textY
                 textY += lineHeight
             }
@@ -961,6 +1005,7 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
+
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
         return getClassCssMetaData()
     }
@@ -972,32 +1017,38 @@ class TediAreaSkin(control: TediArea)
      **************************************************************************/
     companion object {
 
-        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-charSequence-fill",
+        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
                 StyleConverter.getPaintConverter(), Color.BLACK) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
-            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).textFill
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).textFillProperty
         }
 
         private val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
                 StyleConverter.getPaintConverter(), Color.DODGERBLUE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
-            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightFill
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightFillProperty
         }
 
-        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-charSequence-fill",
+        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
                 StyleConverter.getPaintConverter(), Color.WHITE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
-            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightTextFill
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightTextFillProperty
+        }
+
+        private val CURRENT_LINE_FILL = object : CssMetaData<TediArea, Paint>("-fx-current-line-fill",
+                StyleConverter.getPaintConverter(), null) {
+            override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).currentLineFillProperty
         }
 
         private val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
                 StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
-            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).displayCaret
+            override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).displayCaretProperty
         }
 
         private val STYLEABLES = listOf(
-                TEXT_FILL, HIGHLIGHT_FILL, HIGHLIGHT_TEXT_FILL, DISPLAY_CARET)
+                TEXT_FILL, HIGHLIGHT_FILL, HIGHLIGHT_TEXT_FILL, CURRENT_LINE_FILL, DISPLAY_CARET)
 
         fun getClassCssMetaData() = STYLEABLES
 

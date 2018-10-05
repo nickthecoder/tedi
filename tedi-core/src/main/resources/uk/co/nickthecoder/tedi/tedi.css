@@ -1,10 +1,9 @@
-.tedi-area .content {
-    -fx-padding: 4 10;
+.tedi-area {
+    -fx-current-line-fill: none;
 }
 
-.tedi-area.code {
-    -fx-font-family: 'monospace';
-    -fx-display-line-numbers: true;
+.tedi-area .content {
+    -fx-padding: 4 10;
 }
 
 .tedi-area .gutter {
@@ -13,8 +12,16 @@
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
     -fx-text-fill: gray;
-    -fx-highlight-text-fill: gray; /* For the current line */
-    -fx-highlight-fill: #fff8f8; /* For the current line */
+    -fx-current-line-text-fill: gray;
+}
+
+.tedi-area.code {
+    -fx-font-family: 'monospace';
+    -fx-display-line-numbers: true;
+    -fx-current-line-fill: #fffae3;
+}
+.tedi-area.code .gutter {
+    -fx-current-line-fill: #fffae3;
 }
 
 /*

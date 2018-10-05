@@ -23,23 +23,32 @@ class Gutter(val tediArea: TediArea) : Region() {
 
     private var maxNumberWidth = 0.0
 
-    private val textFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+    private val textFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
         override fun getBean() = this@Gutter
         override fun getName() = "textFill"
         override fun getCssMetaData(): CssMetaData<Gutter, Paint> = TEXT_FILL
     }
+    var textFill: Paint
+        get() = textFillProperty.get()
+        set(v) = textFillProperty.set(v)
 
-    private val highlightTextFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
+    private val currentLineTextFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.GRAY) {
         override fun getBean() = this@Gutter
-        override fun getName() = "highlightTextFill"
-        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_TEXT_FILL
+        override fun getName() = "currentLineTextFill"
+        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = CURRENT_LINE_TEXT_FILL
     }
+    var currentLineTextFill: Paint
+        get() = currentLineTextFillProperty.get()
+        set(v) = currentLineTextFillProperty.set(v)
 
-    private val highlightFill: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(Color.WHITE) {
+    internal val currentLineFillProperty: StyleableObjectProperty<Paint> = object : StyleableObjectProperty<Paint>(null) {
         override fun getBean() = this@Gutter
-        override fun getName() = "highlightFill"
-        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = HIGHLIGHT_FILL
+        override fun getName() = "currentLineFill"
+        override fun getCssMetaData(): CssMetaData<Gutter, Paint> = CURRENT_LINE_FILL
     }
+    var currentLineFill: Paint
+        get() = currentLineFillProperty.get()
+        set(v) = currentLineFillProperty.set(v)
 
     init {
         styleClass.add("gutter")
@@ -47,7 +56,7 @@ class Gutter(val tediArea: TediArea) : Region() {
 
         with(rectangle) {
             isManaged = false
-            fillProperty().bind(highlightFill)
+            fillProperty().bind(currentLineFillProperty)
         }
 
         children.addAll(rectangle, group)
@@ -69,12 +78,12 @@ class Gutter(val tediArea: TediArea) : Region() {
         for (i in group.children.size..required - 1) {
             val text = Text((i + 1).toString())
             with(text) {
-                styleClass.add("charSequence") // Must use the same style as the main content's text.
+                styleClass.add("text") // Must use the same style as the main content's text.
                 textOrigin = VPos.TOP
                 wrappingWidth = 0.0
                 isManaged = false
                 fontProperty().bind(tediArea.fontProperty())
-                fillProperty().bind(textFill)
+                fillProperty().bind(textFillProperty)
             }
             if (text.layoutBounds.width > maxNumberWidth) {
                 maxNumberWidth = text.layoutBounds.width
@@ -95,10 +104,10 @@ class Gutter(val tediArea: TediArea) : Region() {
 
         if (oldLine != newLine) {
             if (oldLine < group.children.size - 1) {
-                (group.children[oldLine] as Text).fillProperty().bind(textFill)
+                (group.children[oldLine] as Text).fillProperty().bind(textFillProperty)
             }
             if (newLine < group.children.size - 1) {
-                (group.children[newLine] as Text).fillProperty().bind(highlightTextFill)
+                (group.children[newLine] as Text).fillProperty().bind(currentLineTextFillProperty)
             }
         }
         rectangle.layoutY = snappedTopInset() + newLine * (tediArea.skin as TediAreaSkin).lineHeight()
@@ -137,32 +146,32 @@ class Gutter(val tediArea: TediArea) : Region() {
 
     companion object {
 
-        private val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-charSequence-fill",
+        private val TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-text-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
-            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
-            override fun getStyleableProperty(gutter: Gutter) = gutter.textFill
+            override fun isSettable(gutter: Gutter) = !gutter.textFillProperty.isBound
+            override fun getStyleableProperty(gutter: Gutter) = gutter.textFillProperty
         }
 
         /**
          * The color for the line number where the caret is positioned.
          */
-        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-highlight-charSequence-fill",
+        private val CURRENT_LINE_TEXT_FILL = object : CssMetaData<Gutter, Paint>("-fx-current-line-text-fill",
                 StyleConverter.getPaintConverter(), Color.GREY) {
-            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
-            override fun getStyleableProperty(gutter: Gutter) = gutter.highlightTextFill
+            override fun isSettable(gutter: Gutter) = !gutter.textFillProperty.isBound
+            override fun getStyleableProperty(gutter: Gutter) = gutter.currentLineTextFillProperty
         }
 
         /**
          * The background color behind the line number where the caret is positioned.
          */
-        private val HIGHLIGHT_FILL= object : CssMetaData<Gutter, Paint>("-fx-highlight-fill",
-                StyleConverter.getPaintConverter(), Color.WHITE) {
-            override fun isSettable(gutter: Gutter) = !gutter.textFill.isBound
-            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> = gutter.highlightFill
+        private val CURRENT_LINE_FILL = object : CssMetaData<Gutter, Paint>("-fx-current-line-fill",
+                StyleConverter.getPaintConverter(), null) {
+            override fun isSettable(gutter: Gutter) = !gutter.textFillProperty.isBound
+            override fun getStyleableProperty(gutter: Gutter): StyleableProperty<Paint> = gutter.currentLineFillProperty
         }
 
         private val STYLEABLES = extendList(Region.getClassCssMetaData(),
-                TEXT_FILL, HIGHLIGHT_TEXT_FILL, HIGHLIGHT_FILL)
+                TEXT_FILL, CURRENT_LINE_TEXT_FILL, CURRENT_LINE_FILL)
 
         fun getClassCssMetaData() = STYLEABLES
 
