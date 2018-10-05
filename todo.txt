@@ -9,8 +9,6 @@ Next
 
 Add a "current line" highlight (not using a range).
 
-Add caretLineProperty and caretColumnProperty
-
 selection is using tempText, rather than the real Text objects.
 
 Later

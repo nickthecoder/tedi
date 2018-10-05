@@ -35,6 +35,8 @@ import javafx.beans.binding.Bindings
 import javafx.beans.binding.IntegerBinding
 import javafx.beans.property.*
 import javafx.beans.value.ChangeListener
+import javafx.beans.value.ObservableIntegerValue
+import javafx.collections.ObservableList
 import javafx.css.CssMetaData
 import javafx.css.StyleConverter
 import javafx.css.Styleable
@@ -133,16 +135,22 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *                                                                         *
      **************************************************************************/
 
-    // Paragraphs
+    // *** Paragraphs ***
     fun paragraphsProperty(): ReadOnlyListProperty<Paragraph> = content.paragraphsProperty()
 
-    val paragraphs = content.paragraphsProperty().get()
+    val paragraphs: ObservableList<Paragraph> = content.paragraphsProperty().get()
 
     // Highlight Ranges
+    /**
+     * Note, highlightRanges are part of the content (AKA document), and therefore if you have two TediAreas
+     * sharing the same content, they will also share the same highlightRanges.
+     *
+     * You CANNOT highlight only one TediArea when its content is shared with another.
+     */
     fun highlightRanges() = content.highlightRanges()
 
 
-    // caretLine
+    // *** caretLine ***
     private val caretLineProperty = SimpleIntegerProperty(this, "caretLine", 0)
 
     /**
@@ -156,7 +164,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     val caretLine: Int
         get() = caretLineProperty.get()
 
-    // caretColumn
+
+    // *** caretColumn ***
     private val caretColumnProperty = SimpleIntegerProperty(this, "caretColumn", 0)
 
     /**
@@ -170,23 +179,24 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     val caretColumn: Int
         get() = caretLineProperty.get()
 
-    // Line Count
+
+    // *** Line Count ***
     private val lineCountProperty = Bindings.size(paragraphsProperty())!!
 
-    fun lineCountProperty() = lineCountProperty
+    fun lineCountProperty(): ObservableIntegerValue = lineCountProperty
 
     val lineCount
         get() = lineCountProperty.get()
 
 
-    // Display Line Numbers
+    // *** Display Line Numbers ***
     private val displayLineNumbersProperty: StyleableBooleanProperty = object : StyleableBooleanProperty(false) {
         override fun getBean() = this@TediArea
         override fun getName() = "displayLineNumbers"
         override fun getCssMetaData() = DISPLAY_LINE_NUMBERS
     }
 
-    fun displayLineNumbersProperty() = displayLineNumbersProperty
+    fun displayLineNumbersProperty(): StyleableBooleanProperty = displayLineNumbersProperty
 
     /**
      * Determines if line numbers are displayed.
@@ -198,7 +208,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             displayLineNumbersProperty.set(v)
         }
 
-    // Scroll Top
+
+    // *** Scroll Top ***
     private val scrollTopProperty = SimpleDoubleProperty(this, "scrollTop", 0.0)
 
     fun scrollTopProperty(): DoubleProperty = scrollTopProperty
@@ -212,7 +223,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             scrollTopProperty.set(v)
         }
 
-    // Scroll Left
+
+    // *** Scroll Left ***
     private val scrollLeftProperty = SimpleDoubleProperty(this, "scrollLeft", 0.0)
 
     fun scrollLeftProperty(): DoubleProperty = scrollLeftProperty
@@ -226,7 +238,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             scrollLeftProperty.set(v)
         }
 
-    // Tab Inserts Spaces
+
+    // *** Tab Inserts Spaces ***
     private val tabInsertsSpacesProperty = SimpleBooleanProperty(this, "tabInsertsSpaces", true)
 
     fun tabInsertsSpacesProperty(): BooleanProperty = tabInsertsSpacesProperty
@@ -241,7 +254,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             tabInsertsSpacesProperty.set(v)
         }
 
-    // Indent Size
+
+    // *** Indent Size ***
     private val indentSizeProperty = SimpleIntegerProperty(this, "indentSize", 4)
 
     fun indentSizeProperty(): IntegerProperty = indentSizeProperty
@@ -252,6 +266,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
             indentSizeProperty.set(v)
         }
 
+
+    // *** wordIterator ***
+    private val wordIteratorProperty = SimpleObjectProperty(this, "wordIterator", BreakIterator.getWordInstance())
+
+    fun wordIteratorProperty(): Property<BreakIterator> = wordIteratorProperty
+
     /**
      * The Break Iterator to use, when double clicking, and also when using Left/Right Arrow + Shift.
      * The default value is :
@@ -259,8 +279,11 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      * which means that TediArea will behave in the same manner as TextArea.
      * However, for coding, set it to a [SourceCodeWordIterator].
      */
-    var wordIterator: BreakIterator = BreakIterator.getWordInstance()
-
+    var wordIterator: BreakIterator
+        get() = wordIteratorProperty.get()
+        set(v) {
+            wordIteratorProperty.set(v)
+        }
 
     /***************************************************************************
      *                                                                         *
