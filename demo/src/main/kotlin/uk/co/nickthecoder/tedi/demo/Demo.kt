@@ -75,6 +75,10 @@ class DemoWindow(stage: Stage = Stage()) {
      */
     val toolBar = ToolBar()
 
+    private val columnLabel = Label()
+    private val lineLabel = Label()
+
+
     /**
      * Contains a set of EditorTabs, which contain the TediViews.
      */
@@ -109,7 +113,6 @@ class DemoWindow(stage: Stage = Stage()) {
     val goto = GotoDialog.createGotoButton { currentArea }.apply { tooltip = Tooltip("Go to Line (ctrl+G)") }
 
     val scene = Scene(borderPane, 800.0, 600.0)
-
 
     init {
         /*
@@ -207,6 +210,7 @@ class DemoWindow(stage: Stage = Stage()) {
 
         with(toolBar) {
             items.addAll(undo, redo, toggleLineNumbers, toggleFind, toggleFindAndReplace, goto)
+            items.addAll(Separator(), Label("Line"), lineLabel, Label("Column"), columnLabel)
         }
 
         with(findAndReplaceToolBars) {
@@ -245,6 +249,9 @@ class DemoWindow(stage: Stage = Stage()) {
         redo.disableProperty().bind(newValue.undoRedo.redoableProperty().not())
 
         matcher.control = newValue
+
+        lineLabel.textProperty().bind(newValue.caretLineProperty().add(1).asString())
+        columnLabel.textProperty().bind(newValue.caretColumnProperty().add(1).asString())
 
         // Focus on the TediArea whenever a tab is clicked
         // Without the runLater, this doesn't work. I think that's because the new tab is still "kind-of"

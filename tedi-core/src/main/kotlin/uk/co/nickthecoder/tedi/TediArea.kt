@@ -32,6 +32,7 @@ package uk.co.nickthecoder.tedi
 
 import javafx.beans.InvalidationListener
 import javafx.beans.binding.Bindings
+import javafx.beans.binding.IntegerBinding
 import javafx.beans.property.*
 import javafx.beans.value.ChangeListener
 import javafx.css.CssMetaData
@@ -141,6 +142,34 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     fun highlightRanges() = content.highlightRanges()
 
 
+    // caretLine
+    private val caretLineProperty = SimpleIntegerProperty(this, "caretLine", 0)
+
+    /**
+     * Note, this is zero-based i.e. the first line is 0
+     */
+    fun caretLineProperty(): ReadOnlyIntegerProperty = caretLineProperty
+
+    /**
+     * Note, this is zero-based i.e. the first line is 0
+     */
+    val caretLine: Int
+        get() = caretLineProperty.get()
+
+    // caretColumn
+    private val caretColumnProperty = SimpleIntegerProperty(this, "caretColumn", 0)
+
+    /**
+     * Note, this is zero-based i.e. the first column is 0
+     */
+    fun caretColumnProperty(): ReadOnlyIntegerProperty = caretColumnProperty
+
+    /**
+     * Note, this is zero-based i.e. the first column is 0
+     */
+    val caretColumn: Int
+        get() = caretLineProperty.get()
+
     // Line Count
     private val lineCountProperty = Bindings.size(paragraphsProperty())!!
 
@@ -244,6 +273,22 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         styleClass.addAll("text-area", "tedi-area")
 
         accessibleRole = AccessibleRole.TEXT_AREA
+
+        caretLineProperty.bind(object : IntegerBinding() {
+            init {
+                bind(caretPositionProperty())
+            }
+
+            override fun computeValue() = lineForPosition(caretPosition)
+        })
+
+        caretColumnProperty.bind(object : IntegerBinding() {
+            init {
+                bind(caretPositionProperty())
+            }
+
+            override fun computeValue() = lineColumnForPosition(caretPosition).second
+        })
     }
 
     /***************************************************************************
