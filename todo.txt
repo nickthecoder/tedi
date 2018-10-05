@@ -7,8 +7,6 @@ Current Work
 Next
 ----
 
-Add a "current line" highlight (not using a range).
-
 selection is using tempText, rather than the real Text objects.
 
 Later

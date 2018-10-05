@@ -286,6 +286,7 @@ class DemoWindow(stage: Stage = Stage()) {
      * A quick and dirty keyboard event handler
      */
     fun onKeyPressed(event: KeyEvent) {
+        // Assume the key press will be handled (set to false in "else" clauses).
         var consume = true
 
         if (event.isShortcutDown) {
@@ -310,14 +311,18 @@ class DemoWindow(stage: Stage = Stage()) {
                     if (tab is EditorTab) {
                         if (tab.splitPane.items.size == 1) {
                             tab.splitPane.items.add(TediArea(tab.tediArea).apply { styleClass.add("code") })
+                            // NOTE. We should also attach HighlightMatchedPairs and HighlightIdenticalWords here
+                            // for the Demo and Example tabs. Omitted for simplicity.
+                            // NOTE. We should NOT attach another syntax highlighter. One is sufficient.
                         } else {
                             tab.splitPane.items.removeAt(1)
                         }
                     }
                 }
-                KeyCode.PLUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
-                KeyCode.EQUALS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
                 KeyCode.MINUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size - 2)
+                KeyCode.PLUS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
+            // My keyboard layout has "+" on shift+EQUALS key, so I'll add this here too.
+                KeyCode.EQUALS -> currentArea.font = Font(currentArea.font.name, currentArea.font.size + 2)
 
                 else -> consume = false
             }
@@ -336,6 +341,7 @@ class DemoWindow(stage: Stage = Stage()) {
     }
 
     fun onEscape() {
+        // Hide the find and replace tool bars.
         matcher.inUse = false
     }
 

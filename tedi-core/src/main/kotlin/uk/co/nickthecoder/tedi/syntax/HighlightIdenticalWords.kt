@@ -1,6 +1,7 @@
 package uk.co.nickthecoder.tedi.syntax
 
 import javafx.application.Platform
+import javafx.beans.value.ChangeListener
 import uk.co.nickthecoder.tedi.FillStyleClassHighlight
 import uk.co.nickthecoder.tedi.HighlightRange
 import uk.co.nickthecoder.tedi.TediArea
@@ -14,7 +15,7 @@ import java.util.regex.Pattern
  * This is based on regular expressions, and therefore is unable to tell if a variable used in one part of the
  * code is actually the SAME variable used elsewhere.
  */
-class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
+open class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
 
     var myRanges = mutableListOf<HighlightRange>()
 
@@ -22,10 +23,29 @@ class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
         caretMoved()
     }
 
+    private val focusListener = ChangeListener<Boolean> { _, _, _ -> onFocusChanged() }
+
+    init {
+        tediArea.focusedProperty().addListener(focusListener)
+    }
+
+    protected var isFocused = tediArea.isFocused
+
+    open fun onFocusChanged() {
+        isFocused = tediArea.isFocused
+        if (!isFocused) {
+            clear()
+        }
+    }
+
     /**
      * NOTE, this is NOT run on the JavaFX thread!
      */
-    fun caretMoved() {
+    open fun caretMoved() {
+        if (!isFocused) {
+            return
+        }
+
         val countdown = CountDownLatch(1)
         var text: String = ""
         var caretPosition: Int = 0
@@ -65,15 +85,15 @@ class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
         }
     }
 
-    fun createMatchedRange(start: Int, end: Int): HighlightRange {
+    open fun createMatchedRange(start: Int, end: Int): HighlightRange {
         return HighlightRange(start, end, matchedHighlight)
     }
 
-    fun createMatchingRange(start: Int, end: Int): HighlightRange {
+    open fun createMatchingRange(start: Int, end: Int): HighlightRange {
         return HighlightRange(start, end, matchingHighlight)
     }
 
-    fun findWordAtPosition(text: String, position: Int): String {
+    open fun findWordAtPosition(text: String, position: Int): String {
         var start = 0
         var end = text.length
         for (i in position - 1 downTo 0) {
@@ -91,16 +111,17 @@ class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
         return text.substring(start, end)
     }
 
-    fun isWordCharacter(c: Char) = c.isJavaIdentifierPart()
+    open fun isWordCharacter(c: Char) = c.isJavaIdentifierPart()
 
-    fun clear() {
+    open fun clear() {
         tediArea.highlightRanges().removeAll(myRanges)
         myRanges.clear()
     }
 
-    fun detach() {
+    open fun detach() {
         clear()
         tediArea.caretPositionProperty().removeListener(listener)
+        tediArea.focusedProperty().removeListener(focusListener)
     }
 
     companion object {

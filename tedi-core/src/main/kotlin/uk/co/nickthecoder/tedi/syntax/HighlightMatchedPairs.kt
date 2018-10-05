@@ -1,24 +1,34 @@
 package uk.co.nickthecoder.tedi.syntax
 
 import javafx.beans.value.ChangeListener
-import javafx.beans.value.ObservableValue
 import uk.co.nickthecoder.tedi.*
 
 /**
  * When the caret position is within a [PairedHighlightRange], highlight the other
  * half of the pair.
  */
-open class HighlightMatchedPairs(val tediArea: TediArea, val pairHighlight: Highlight, val errorHighlight: Highlight) : ChangeListener<Number> {
+open class HighlightMatchedPairs(val tediArea: TediArea, val pairHighlight: Highlight, val errorHighlight: Highlight) {
 
     constructor(tediArea: TediArea) : this(tediArea, FillStyleClassHighlight("syntax-pair"), FillStyleClassHighlight("syntax-error"))
 
     val myRanges = mutableListOf<HighlightRange>()
 
+    private val caretPositionListener = ChangeListener<Number> { _, _, _ -> onCaretPositionChanged() }
+
+    private val focusListener = ChangeListener<Boolean> { _, _, _ -> onFocusChanged() }
+
     init {
-        tediArea.caretPositionProperty().addListener(this)
+        tediArea.caretPositionProperty().addListener(caretPositionListener)
+        tediArea.focusedProperty().addListener(focusListener)
     }
 
-    override fun changed(observable: ObservableValue<out Number>?, oldValue: Number?, newValue: Number?) {
+    open fun onCaretPositionChanged() {
+        if (tediArea.isFocused) {
+            checkPositionAndHighlight()
+        }
+    }
+
+    open fun checkPositionAndHighlight() {
         val caret = tediArea.caretPosition
 
         clear()
@@ -29,6 +39,15 @@ open class HighlightMatchedPairs(val tediArea: TediArea, val pairHighlight: High
         }
         if (myRanges.isNotEmpty()) {
             tediArea.highlightRanges().addAll(myRanges)
+        }
+
+    }
+
+    open fun onFocusChanged() {
+        if (tediArea.isFocused) {
+            checkPositionAndHighlight()
+        } else {
+            clear()
         }
     }
 
@@ -46,6 +65,8 @@ open class HighlightMatchedPairs(val tediArea: TediArea, val pairHighlight: High
 
     fun detach() {
         clear()
-        tediArea.caretPositionProperty().removeListener(this)
+        tediArea.caretPositionProperty().removeListener(caretPositionListener)
+        tediArea.focusedProperty().removeListener(focusListener)
     }
+
 }
