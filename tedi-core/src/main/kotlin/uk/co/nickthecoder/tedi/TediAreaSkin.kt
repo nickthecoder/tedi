@@ -518,7 +518,7 @@ class TediAreaSkin(control: TediArea)
 
         // TODO Should the view scroll even when not focused?
         //if (skinnable.isFocused) {
-            scrollCaretToVisible()
+        scrollCaretToVisible()
         //}
     }
 
@@ -659,16 +659,27 @@ class TediAreaSkin(control: TediArea)
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
-        val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
+        val line = skinnable.lineForPosition(skinnable.caretPosition)
 
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
 
-        val requiredLine = clamp(0, lineColumn.first + n, skinnable.lineCount - 1)
-        val lineText = skinnable.paragraphs[requiredLine].text
-        // TODO, we can use the ACTUAL paragraph node instead of tmpText when this skin uses a list of Text.
-        tmpText.text = lineText
-        val hit = tmpText.hitTestChar(requiredX - insideGroup.layoutX, -insideGroup.layoutY)
-        val columnIndex = hit.getInsertionIndex()
+        val requiredLine = clamp(0, line + n, skinnable.lineCount - 1)
+        val node = paragraphGroup.children[requiredLine]
+
+        var columnIndex = 0
+        if (node is Text) {
+            val hit = node.hitTestChar(requiredX, node.layoutY)
+            columnIndex = hit.getInsertionIndex()
+        } else if (node is Group) {
+            for (child in node.children) {
+                if (child is Text) {
+                    val hit = child.hitTestChar(requiredX, 0.0)
+                    val i = hit.getInsertionIndex()
+                    if (i == 0) break
+                    columnIndex += i
+                }
+            }
+        }
 
         val newPosition = skinnable.positionOfLine(requiredLine, 0) + columnIndex
 

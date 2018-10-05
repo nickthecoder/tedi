@@ -1,21 +1,17 @@
 Bugs
 ----
 
-Triple clicking a line with "-----" highlights the previous line (word matching problem from double click?)
-
 Current Work
 ------------
 
 Next
 ----
 
-Skin.changeLine is using a tmpText, and not the real Text objects. Will cause problems
-    for proportional fonts with BOLD or italics ranges.
-
 Later
 -----
 
 Only place those paragraphNodes which are VISIBLE into the scene graph to improve performance.
+    Virtual Flow (see below)
 
 Consider allowing ranges to be PART of the document, such that undo/redo affects them.
     Either through new UndoAbleRange interface, a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
