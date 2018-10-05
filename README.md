@@ -30,6 +30,10 @@ that are likely to change in future versions of JavaFX.
 Code snippets in this document are Kotlin code, so add a few extra semi-colons,
 and the odd **new** keywords as appropriate ;-)
 
+![demo](screenshots/demo-kotlin.png)
+
+There are more [screenshots](screenshots/screenshots.md) to have a look at.
+
 ## Status
 
 TediArea does everything I want it to, and more!
