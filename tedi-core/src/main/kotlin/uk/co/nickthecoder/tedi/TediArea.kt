@@ -140,12 +140,13 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     val paragraphs: ObservableList<Paragraph> = content.paragraphsProperty().get()
 
-    // Highlight Ranges
+
+    // *** Highlight Ranges ***
     /**
      * Note, highlightRanges are part of the content (AKA document), and therefore if you have two TediAreas
      * sharing the same content, they will also share the same highlightRanges.
      *
-     * You CANNOT highlight only one TediArea when its content is shared with another.
+     * You CANNOT highlight only one TediArea when its content is shared with another TediArea.
      */
     fun highlightRanges() = content.highlightRanges()
 
@@ -273,11 +274,12 @@ open class TediArea private constructor(protected val content: TediAreaContent)
     fun wordIteratorProperty(): Property<BreakIterator> = wordIteratorProperty
 
     /**
-     * The Break Iterator to use, when double clicking, and also when using Left/Right Arrow + Shift.
+     * The Break Iterator to use, when double clicking, and also when using Shift + Left/Right Arrow.
      * The default value is :
      *     BreakIterator.getWordInstance()
      * which means that TediArea will behave in the same manner as TextArea.
-     * However, for coding, set it to a [SourceCodeWordIterator].
+     *
+     * However, for source code, set it to a [SourceCodeWordIterator].
      */
     var wordIterator: BreakIterator
         get() = wordIteratorProperty.get()

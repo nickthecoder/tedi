@@ -37,17 +37,17 @@ import java.util.*
 
 /**
  * This is better than the default word break iterator when used with source code, because
- * the default considers text such as : "foo.bar.baz" ONE word!
+ * the default considers foo.bar.baz ONE word, and += as TWO words.
  *
- * Splits the text into three types : whitespace, words and everything else.
- * A word is considered to be made up of letters, numbers and underscores.
- * However, you can change this definition by using the constructor which takes a lambda.
+ * SourceCodeWordIterator has three types of characters, whitespace, "words-characters" and everything else.
+ * By default "words-characters" are letters, digits and underscores, but you can change this by using
+ * the constructor which takes a lambda).
  *
  * For example uk.co.nickthecoder.tedi will be split before and after each "."
- * Also "a += 2", the breaks will be 1, 2, 4, 5, 6. (i.e. "+=" is considered a word).
+ * Also "a += 2", the breaks will be 1, 2, 4, 5, 6. (i.e. "+=" is ONE group).
  *
  * This class was loosely based off of WhiteSpaceBasedBreakIterator.
- * This is horribly inefficient for large text, therefore do NOT use it large text.
+ * This is horribly inefficient for large text.
  *
  * Note, if you need to change the definition of whitespace, create a sub-class and override [isWhiteSpace].
  */
