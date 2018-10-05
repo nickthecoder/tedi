@@ -7,6 +7,8 @@ Current Work
 Next
 ----
 
+selection is using tempText, rather than the real Text objects.
+
 Later
 -----
 

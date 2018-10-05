@@ -1,11 +1,13 @@
 package uk.co.nickthecoder.tedi
 
-import java.util.*
-
 /**
  * Marks a portion of the document to be highlighted differently from the rest of the document.
+ * When text is inserted/deleted, the range's from and to positions are updated accordingly.
+ * All other parts of [HighlightRange] are immutable. So, for example, if you want to change the
+ * [highlight], you must replace the range with a **new** one.
  *
- * This can be used for syntax highlighting for source code, and also to highlight search matches.
+ * Ranges can be used for syntax highlighting of source code, to highlight search matches and also
+ * to style text in arbitrary ways.
  *
  * It is NOT used for highlighting the currently selected area.
  *
@@ -51,27 +53,25 @@ open class HighlightRange(
     val to
         get() = end
 
+    /**
+     * There is a bi-directional relationship between [ParagraphList.Paragraph] and [HighlightRange].
+     * TediArea maintains this relationship when inserting/deleting text.
+     * The relationship exists to optimise the conversion from a [ParagraphList.Paragraph] to
+     * its corresponding visual Text representation in the Skin.
+     */
     internal val affectedParagraphs = mutableSetOf<ParagraphList.Paragraph>()
 
-    fun contains(position: Int) = start >= position && end <= position
-
+    /**
+     * NOTE. This is NOT consistent with equals. (See [Comparable] for details of why this matters).
+     *
+     * If two ranges have the same start and end positions, but differ in other ways, then
+     * compareTo will return 0, but equals will return false.
+     *
+     * TLDR; Beware, when using in sorted sets, and sorted maps.
+     */
     override fun compareTo(other: HighlightRange): Int {
         if (start == other.start) return end - other.end
         return start - other.start
-    }
-
-    override fun equals(other: Any?): Boolean {
-        other ?: return false
-
-        if (other is HighlightRange) {
-            return start == other.start && end == other.end && highlight == other.highlight && owner == this.owner
-        }
-
-        return false
-    }
-
-    override fun hashCode(): Int {
-        return Objects.hash(start, end, highlight, owner)
     }
 
     override fun toString() = "$start..$end : $highlight"
@@ -81,17 +81,29 @@ open class HighlightRange(
 /**
  * A highlight range, which is part of a matched pair, for example, an opening and closing bracket.
  *
- * Note, because of chicken and egg problem, we cannot have a simple 'val' for [other].
- * Instead, opening = null for the first of the pair, and then the second instance
- * will assign BOTH of the [other]s in init.
+ * Always create [PairedHighlightRange] in pairs, never alone, or with more than two items.
+ *
+ * Note, TediArea knows nothing of PairedHighlightRanges, and will happily remove one of them from its
+ * list, leaving the other untouched.
  */
-class PairedHighlightRange(
-        start: Int,
-        end: Int,
-        highlight: Highlight,
-        opening: PairedHighlightRange?) : HighlightRange(start, end, highlight) {
+class PairedHighlightRange
 
+/**
+ * @param opening Set to null for the 1st ot the pair to be created.
+ * When creating the 2nd of the pair (with opening != null), the first range will be suitably updated.
+ */
+(start: Int, end: Int, highlight: Highlight, opening: PairedHighlightRange?) : HighlightRange(start, end, highlight) {
+
+    /*
+     * Note, because of a chicken and egg problem, we cannot have a simple 'val' for [other].
+     * Instead, opening = null for the first of the pair, and then the second instance
+     * will assign BOTH of the [other]s in init.
+     */
     private lateinit var other: PairedHighlightRange
+
+
+    val pairedWith: PairedHighlightRange
+        get() = other
 
     init {
         if (opening != null) {
@@ -99,8 +111,5 @@ class PairedHighlightRange(
             opening.other = this
         }
     }
-
-    val pairedWith: PairedHighlightRange
-        get() = other
 
 }
