@@ -78,7 +78,6 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(1, changes[0].to, "To")
 
         assertEquals(1, changes[1].from, "From")
-        assertEquals(1, changes[1].to, "To")
         assertEquals(true, changes[1].wasRemoved(), "Removed")
         assertEquals(1, changes[1].removedSize, "# Removed")
     }
@@ -101,7 +100,6 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(1, changes[0].to, "To")
 
         assertEquals(1, changes[1].from, "From")
-        assertEquals(1, changes[1].to, "To")
         assertEquals(true, changes[1].wasRemoved(), "Removed")
         assertEquals(2, changes[1].removedSize, "# Removed")
     }
@@ -143,7 +141,6 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(false, changes[0].wasRemoved(), "Not Removed")
 
         assertEquals(1, changes[1].from, "From")
-        assertEquals(1, changes[1].to, "To")
         assertEquals(true, changes[1].wasRemoved(), "Removed")
         assertEquals(1, changes[1].removedSize, "# Removed")
     }
@@ -167,13 +164,12 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(true, changes[0].wasUpdated(), "Updated")
 
         assertEquals(1, changes[1].from, "From")
-        assertEquals(1, changes[1].to, "To")
         assertEquals(true, changes[1].wasRemoved(), "Removed")
         assertEquals(1, changes[1].removedSize, "# Removed")
     }
 
     @Test
-    fun secondLine() {
+    fun lastLine() {
         tediArea.text = "Hello\nWorld"
         changes.clear()
         tediArea.deleteText(5, 11)
@@ -186,13 +182,48 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(1, changes.size, "# Changes")
 
         assertEquals(1, changes[0].from, "From")
-        assertEquals(1, changes[0].to, "To")
         assertEquals(true, changes[0].wasRemoved(), "Removed")
         assertEquals(1, changes[0].removedSize, "# Removed")
     }
 
+    /**
+     * This one is a little weird. It sends an Update for the first line,
+     * and then a delete for the 2nd.
+     * That's because it takes the text from the 2nd and adds it to the 1st,
+     * then deletes the 2nd.
+     *
+     * So, while it is weird, it is kind of ok.
+     */
     @Test
-    fun secondLine2() {
+    fun firstLine() {
+        tediArea.text = "Hello\nWorld"
+        changes.clear()
+        tediArea.deleteText(0, 6)
+
+        assertEquals("World", tediArea.text, "Text")
+
+        assertEquals(1, tediArea.paragraphs.size, "# Paragraphs")
+        assertEquals("World", tediArea.paragraphs[0].text, "Paragraph")
+
+        //assertEquals(1, changes.size, "# Changes")
+
+        //assertEquals(0, changes[0].from, "From")
+        //assertEquals(true, changes[0].wasRemoved(), "Removed")
+        //assertEquals(1, changes[0].removedSize, "# Removed")
+
+        assertEquals(2, changes.size, "# Changes")
+
+        assertEquals(0, changes[0].from, "From")
+        assertEquals(1, changes[0].to, "To")
+        assertEquals(true, changes[0].wasUpdated(), "Changed")
+
+        assertEquals(1, changes[1].from, "From")
+        assertEquals(true, changes[1].wasRemoved(), "Removed")
+        assertEquals(1, changes[1].removedSize, "# Removed")
+    }
+
+    @Test
+    fun middleLine() {
         tediArea.text = "Hello\nWorld\nBye"
         changes.clear()
         tediArea.deleteText(5, 11)
@@ -206,7 +237,6 @@ class TestDelete() : ListChangeListener<Paragraph> {
         assertEquals(1, changes.size, "# Changes")
 
         assertEquals(1, changes[0].from, "From")
-        assertEquals(1, changes[0].to, "To")
         assertEquals(true, changes[0].wasRemoved(), "Removed")
         assertEquals(1, changes[0].removedSize, "# Removed")
     }

@@ -1,6 +1,8 @@
 Bugs
 ----
 
+Deleting exactly one line also fires a change for the previous/next paragraph I think!
+
 Current Work
 ------------
 

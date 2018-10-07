@@ -12,7 +12,7 @@ import javafx.scene.control.ScrollBar
  *
  * The [increment] is 1 (scrolling up by one item in the virtual list)
  */
-class VirtualScrollBar(val virtualView: VirtualView)
+class VirtualScrollBar(val virtualView: VirtualView<*>)
     : ScrollBar() {
 
     init {

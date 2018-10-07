@@ -1,6 +1,9 @@
 package uk.co.nickthecoder.tedi.util
 
 import javafx.application.Application
+import javafx.collections.ListChangeListener
+import javafx.collections.ObservableList
+import javafx.event.EventHandler
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.Scene
@@ -10,6 +13,9 @@ import javafx.scene.layout.StackPane
 import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
 import javafx.stage.Stage
+import uk.co.nickthecoder.tedi.ParagraphList
+import uk.co.nickthecoder.tedi.TediArea
+import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 
 /*
  * Before writing this class, I looked for alternatives, and found :
@@ -41,7 +47,9 @@ import javafx.stage.Stage
  * with TediArea. However, VirtualView know nothing of TediArea's
  * internals, nor its data structures.
  */
-open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
+class VirtualView<P>(
+        val list: ObservableList<P>,
+        val nodeFactory: (Int, P) -> Node) : Region() {
 
     /**
      * A list of [Node]s. Any of the nodes which go out of the viewport are removed,
@@ -49,14 +57,14 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
      */
     internal val nodes = mutableListOf<Node>()
 
-    protected val hScroll = ScrollBar()
+    private val hScroll = ScrollBar()
 
-    protected val vScroll = VirtualScrollBar(this)
+    private val vScroll = VirtualScrollBar(this)
 
     /**
      * The "empty" area in the bottom right when both scroll bars are visible.
      */
-    protected var corner = StackPane().apply { styleClass.setAll("corner") }
+    private var corner = StackPane().apply { styleClass.setAll("corner") }
 
     /**
      * The main content. As the scrollbar changes value, [visibleNodes]'s layoutY is adjusted accordingly
@@ -65,29 +73,22 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
      * Its children are the same nodes as those in [nodes], which means any nodes which go out of the
      * viewport are removed, and only the visible ones remain.
      */
-    protected val visibleNodes = Group()
+    private val visibleNodes = Group()
 
-    protected val clippedView = ClippedView(visibleNodes)
+    private val clippedView = ClippedView(visibleNodes)
 
-    protected var viewportHeight: Double = 0.0
-    protected var viewportWidth: Double = 0.0
+    private var viewportHeight: Double = 0.0
+    private var viewportWidth: Double = 0.0
 
-    protected var needsRebuild = true
+    private var needsRebuild = true
 
     /**
      * The index of the first visible node.
      */
-    protected var topNodeIndex = 0
+    private var topNodeIndex = 0
 
-    var nodeCount: Int = 0
-        set(v) {
-            val countChanged = field != v
-            field = v
-
-            if (countChanged) {
-                requestLayout()
-            }
-        }
+    private val bottomNodeIndex
+        get() = topNodeIndex + nodes.size - 1
 
     /**
      * The maximum preferred width of the nodes.
@@ -103,6 +104,8 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
             vScroll.standardScrolling = v
         }
 
+    private var ignoreVScrollChanges = false
+
     init {
         children.addAll(vScroll, hScroll, corner, clippedView)
 
@@ -115,15 +118,110 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         standardScrolling = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
+
+        list.addListener { change: ListChangeListener.Change<out P> -> listChanged(change) }
     }
 
-    protected fun clear() {
+    private fun clear() {
         visibleNodes.children
         nodes.clear()
         visibleNodes.children.clear()
     }
 
-    private var ignoreVScrollChanges = false
+    private fun listChanged(change: ListChangeListener.Change<out P>) {
+
+        // Set if a rebuild is needed due to these changes
+        var rebuild = false
+
+        // Set to the index into "nodes" of the first node that needs re-jigging
+        var adjustFrom = Int.MAX_VALUE
+
+        val initialOffset = nodes.firstOrNull()?.layoutY ?: 0.0
+
+        fun addedItems(from: Int, to: Int) {
+            println("Add $from .. $to")
+            if (nodes.isEmpty() || (to - from > 1)) {
+                rebuild = true
+            } else {
+                if (from >= topNodeIndex && to < bottomNodeIndex) {
+                    // We don't care about the offset at this stage, it will be corrected later.
+                    val node = createNode(from, 0.0)
+                    val index = from - topNodeIndex
+                    nodes.add(index, node)
+                    adjustFrom = index
+                }
+            }
+        }
+
+        fun removedItems(from: Int, amount: Int) {
+            println("Remove $from  ($amount) topNodeIndex=$topNodeIndex")
+
+            if (from < topNodeIndex || from > bottomNodeIndex) return
+
+            val visibleFrom = Math.max(0, from - topNodeIndex)
+            val visibleTo = Math.min(nodes.size - 1, from - topNodeIndex + amount)
+
+            println("$visibleFrom .. $visibleTo")
+            for (i in visibleTo - 1 downTo visibleFrom) {
+                val node = nodes[i]
+                visibleNodes.children.remove(node)
+            }
+            adjustFrom = Math.min(adjustFrom, visibleFrom)
+            nodes.subList(visibleFrom, visibleTo).clear()
+        }
+
+        fun updatedItems(from: Int, to: Int) {
+            println("Update $from .. $to")
+            if (from < topNodeIndex || to > bottomNodeIndex) return
+
+            for (i in from..to - 1) {
+                if (i >= topNodeIndex && i <= bottomNodeIndex) {
+                    val index = i - topNodeIndex
+                    // We don't care about the offset at this stage, it will be corrected later.
+                    val node = createNode(i, 0.0)
+                    if (!rebuild) {
+                        // Don't bother removing if we are going to rebuild anyway
+                        visibleNodes.children.remove(nodes[index])
+                    }
+                    nodes[index] = node
+                }
+                adjustFrom = Math.min(adjustFrom, from - topNodeIndex)
+            }
+        }
+
+        while (change.next()) {
+            if (change.wasRemoved()) {
+                removedItems(change.from, change.removedSize)
+            }
+            if (change.wasAdded()) {
+                addedItems(change.from, change.to)
+            }
+            if (change.wasUpdated()) {
+                updatedItems(change.from, change.to)
+            }
+        }
+
+        if (rebuild) {
+            rebuild()
+
+        } else {
+
+            if (adjustFrom != Int.MAX_VALUE) {
+                var offset = if (adjustFrom == 0) initialOffset else nodePosition(nodes[adjustFrom - 1]) + nodeHeight(nodes[adjustFrom - 1])
+
+                for (i in adjustFrom..nodes.size - 1) {
+                    val node = nodes[i]
+                    node.layoutY = offset
+                    offset += nodeHeight(node)
+                }
+
+                addTrailingNodes()
+            }
+
+            updateScrollMaxAndVisible()
+        }
+    }
+
 
     fun setVScrollValue(newValue: Double) {
         ignoreVScrollChanges = true
@@ -172,16 +270,28 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
     }
 
     fun updateScrollMaxAndVisible() {
-        vScroll.max = (nodeCount - nodes.size + 1).toDouble()
-        vScroll.visibleAmount = nodes.size.toDouble()
+        if (nodes.isEmpty()) {
+            // Some default values, just so that nothing goes weird.
+            vScroll.max = 10.0
+            vScroll.visibleAmount = 1.0
+            setVScrollValue(0.0)
+        } else {
+            vScroll.max = (list.size - nodes.size + 1).toDouble()
+            if (vScroll.value > vScroll.max) {
+                setVScrollValue(vScroll.max)
+            }
+            vScroll.visibleAmount = Math.min(1.0, nodes.size.toDouble())
+        }
     }
 
-    protected fun rebuild() {
-        needsRebuild = false
+    private fun rebuild() {
         clear()
         addFirstNode()
         addLeadingNodes()
         addTrailingNodes()
+
+        updateScrollMaxAndVisible()
+        needsRebuild = false
     }
 
     override fun layoutChildren() {
@@ -202,15 +312,15 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
         if (needsRebuild) {
             rebuild()
+        } else {
+            updateScrollMaxAndVisible()
         }
-        updateScrollMaxAndVisible()
 
         clippedView.resizeRelocate(0.0, 0.0, viewportWidth, viewportHeight)
     }
 
-    protected fun layoutScrollBars() {
+    private fun layoutScrollBars() {
 
-        val nodesSize = nodes.size
         val lastNode = nodes.lastOrNull()
         val lastNodePosition = nodePosition(lastNode)
         val lastNodeHeight = nodeHeight(lastNode)
@@ -228,8 +338,8 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
         for (i in 0..1) {
             needVBar = topNodeIndex > 0
-                    || nodeCount > nodesSize
-                    || nodeCount == nodesSize && lastNodePosition + lastNodeHeight > newViewportHeight
+                    || list.size > nodes.size
+                    || list.size == nodes.size && lastNodePosition + lastNodeHeight > newViewportHeight
             needHBar = maxPrefWidth > newViewportWidth
 
             if (needHBar) {
@@ -267,8 +377,8 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
      * It is left to the caller to add it to the [nodes] list, and
      * to update [topNodeIndex] if necessary.
      */
-    protected fun createNode(index: Int, offset: Double): Node {
-        val node = nodeFactory(index)
+    private fun createNode(index: Int, offset: Double): Node {
+        val node = nodeFactory(index, list[index])
         visibleNodes.children.add(node)
         val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
@@ -278,24 +388,23 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         return node
     }
 
-    protected fun addFirstNode() {
-        if (nodeCount == 0) return
+    private fun addFirstNode() {
+        if (list.isEmpty()) return
         if (nodes.isNotEmpty()) throw IllegalStateException("Nodes already exist")
 
         topNodeIndex = vScroll.value.toInt()
+        if (topNodeIndex >= list.size) {
+            topNodeIndex = 0
+        }
 
+        println("Creating topNodeIndex $topNodeIndex from scroll value ${vScroll.value}")
         val node = createNode(topNodeIndex, 0.0)
         // Adjust by the fractional part of vScroll.value
         node.layoutY = (vScroll.value - topNodeIndex) * nodeHeight(node)
         nodes.add(0, node)
     }
 
-    protected fun disposeOfNode(node: Node?) {
-        node ?: return
-        visibleNodes.children.remove(node)
-    }
-
-    protected fun addLeadingNodes() {
+    private fun addLeadingNodes() {
         if (nodes.isEmpty()) return
 
         val firstVisibleNode = nodes.first()
@@ -325,7 +434,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         }
     }
 
-    protected fun addTrailingNodes() {
+    private fun addTrailingNodes() {
         // If nodes is empty then addLeadingNodes bailed for some reason and
         // we're hosed, so just punt
         if (nodes.isEmpty()) return
@@ -336,9 +445,9 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
         val bottom = viewportHeight
 
-        val isMax = vScroll.value >= vScroll.max
+        val isMax = nodes.size > 1 && vScroll.value >= vScroll.max
 
-        while ((offset < bottom && index < nodeCount) || (isMax && topNodeIndex + nodes.size < nodeCount)) {
+        while ((offset < bottom && index < list.size) || (isMax && topNodeIndex + nodes.size < list.size)) {
             val node = createNode(index, offset)
             nodes.add(node)
             offset += nodeHeight(node)
@@ -348,7 +457,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         // Check if we've scrolled too far up
         val lastNode = nodes.last()
         val diff = nodePosition(lastNode) + nodeHeight(lastNode) - viewportHeight
-        if (topNodeIndex + nodes.size == nodeCount && (diff < 0.0 || vScroll.value >= vScroll.max)) {
+        if (topNodeIndex + nodes.size == list.size && (diff < 0.0 || vScroll.value >= vScroll.max) && !needsRebuild) {
             for (node in nodes) {
                 node.layoutY -= diff
             }
@@ -357,14 +466,14 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
     }
 
-    protected fun cull() {
+    private fun cull() {
 
         for (i in nodes.indices) {
             val node = nodes[i]
             if (nodePosition(node) + nodeHeight(node) >= 0.0) {
                 // We've found the first visible node
                 repeat(i) {
-                    disposeOfNode(nodes.removeFirst())
+                    visibleNodes.children.remove(nodes.removeFirst())
                     topNodeIndex++
                 }
                 break
@@ -377,7 +486,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
             if (nodePosition(node) + nodeHeight(node) <= bottom) {
                 // We've found the last visible node
                 repeat(nodes.size - i - 2) {
-                    disposeOfNode(nodes.removeLast())
+                    visibleNodes.children.remove(nodes.removeLast())
                 }
                 break
             }
@@ -403,25 +512,56 @@ class VirtualViewApp : Application() {
 
     class VirtualViewAppWindow(stage: Stage) {
 
-        val virtualFlow = VirtualView { index -> createNode(index) }
+        val tediArea = TediArea()
+
+        val virtualFlow = VirtualView(tediArea.paragraphs) { index, paragraph -> createNode(index, paragraph) }
 
         val scene = Scene(virtualFlow, 600.0, 400.0)
 
-        init {
-            virtualFlow.nodeCount = 250
+        var listenerHelper: ListListenerHelper<StringBuffer>? = null
 
+        init {
             stage.scene = scene
             with(stage) {
                 title = "VirtualScroll Demo Application"
                 show()
             }
+
+            tediArea.text = "123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(50))
         }
 
-        fun createNode(index: Int): Node {
+        fun createNode(index: Int, paragraph: ParagraphList.Paragraph): Node {
             println("Creating node # $index")
-            val str = "This was node #$index abcdefg 123456789"
-            val text = Text(str)
-            return TextFlow(text)
+            val add = Text(" + ")
+            val sub = Text(" - ")
+            val delete = Text(" X ")
+            val insert = Text(" ! ")
+            val text = Text(paragraph.text)
+
+            add.onMouseClicked = EventHandler {
+                val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                val pos = tediArea.positionOfLine(myIndex)
+                tediArea.insertText(pos, ".")
+            }
+            sub.onMouseClicked = EventHandler {
+                val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                val pos = tediArea.positionOfLine(myIndex)
+                tediArea.replaceText(pos, pos + 1, "")
+            }
+            delete.onMouseClicked = EventHandler {
+                val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                if (myIndex != 0) {
+                    val pos = tediArea.positionOfLine(myIndex) - 1
+                    val end = tediArea.positionOfLine(myIndex + 1) - 1
+                    tediArea.replaceText(pos, end, "")
+                }
+            }
+            insert.onMouseClicked = EventHandler {
+                val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                tediArea.insertText(tediArea.positionOfLine(myIndex), "This is a new line\n")
+            }
+
+            return TextFlow(delete, insert, add, sub, text)
         }
     }
 
