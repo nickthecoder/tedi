@@ -6,13 +6,6 @@ Current Work
 
 VirtualView
 
-Make "cells" hold plain Nodes (no indexes, and no Cell class)
-    Rename it visibleNodes
-    Otherwise, when inserting items, I'll have to iterate and change them all.
-    I'm already keeping track of topCellIndex
-
-Use a "regular" listing instead of the barrel list (but don't delete it just yet!)
-
 Use an ObservableList as the data source.
     VirtualScroll, then has generic D for data's type (String for the demo, Paragraph for the real thing).
     The factory takes an index, and the data item

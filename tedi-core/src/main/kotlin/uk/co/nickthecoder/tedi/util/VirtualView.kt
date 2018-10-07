@@ -28,7 +28,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
      * A list of [Node]s. Any of the nodes which go out of the viewport are removed,
      * and only the visible ones remain.
      */
-    internal val nodes = BarrelList<Node>()
+    internal val nodes = mutableListOf<Node>()
 
     protected val hScroll = ScrollBar()
 
@@ -164,7 +164,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
     protected fun layoutScrollBars() {
 
         val nodesSize = nodes.size
-        val lastNode = nodes.lastOrNull
+        val lastNode = nodes.lastOrNull()
         val lastNodePosition = nodePosition(lastNode)
         val lastNodeHeight = nodeHeight(lastNode)
         var needVBar = false
@@ -218,20 +218,20 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
     fun getNode(requiredIndex: Int): Node {
 
-        val firstVisibleNode = nodes.first
+        val firstVisibleNode = nodes.first()
         var offset = nodePosition(firstVisibleNode) - nodeHeight(firstVisibleNode)
 
         for (index in topNodeIndex - 1 downTo requiredIndex) {
             val node = createNode(index, offset)
-            nodes.addFirst(node)
+            nodes.add(0, node)
             offset -= nodeHeight(node)
         }
 
-        val lastVisibleNode = nodes.last
+        val lastVisibleNode = nodes.last()
         offset = nodePosition(lastVisibleNode) + nodeHeight(lastVisibleNode)
         for (index in topNodeIndex + nodes.size..requiredIndex) {
             val node = createNode(index, offset)
-            nodes.addLast(node)
+            nodes.add(node)
             offset += nodeHeight(node)
         }
 
@@ -258,7 +258,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         if (nodeCount == 0) return
         if (nodes.isNotEmpty()) throw IllegalStateException("Nodes already exist")
 
-        nodes.addFirst(createNode(0, 0.0))
+        nodes.add(0, createNode(0, 0.0))
     }
 
     protected fun disposeOfNode(node: Node?) {
@@ -269,20 +269,20 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
     protected fun addLeadingNodes() {
         if (nodes.isEmpty()) return
 
-        val firstVisibleNode = nodes.first
+        val firstVisibleNode = nodes.first()
         var index = topNodeIndex - 1
         var offset = nodePosition(firstVisibleNode) - nodeHeight(firstVisibleNode)
 
         while (index >= 0 && offset > 0) {
             val node = createNode(index, offset)
-            nodes.addFirst(node)
+            nodes.add(0, node)
             offset -= nodeHeight(node)
             index--
         }
 
         // Sometimes, with variable height nodes, the first node can end
         // up not at 0.0, in which case, we need to adjust all visible nodes.
-        val firstNode = nodes.first
+        val firstNode = nodes.first()
         if (topNodeIndex == 0 && nodePosition(firstNode) != 0.0) {
             val diff = nodePosition(firstNode)
             for (node in nodes) {
@@ -296,7 +296,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         // we're hosed, so just punt
         if (nodes.isEmpty()) return
 
-        val startNode = nodes.last
+        val startNode = nodes.last()
         var offset = nodePosition(startNode) + nodeHeight(startNode)
         var index = topNodeIndex + nodes.size
 
@@ -304,7 +304,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
         while (offset < bottom && index < nodeCount) {
             val node = createNode(index, offset)
-            nodes.addLast(node)
+            nodes.add(node)
             offset += nodeHeight(node)
             index++
         }
@@ -342,6 +342,9 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
     fun nodeHeight(node: Node?) = node?.layoutBounds?.height ?: 0.0
 
 }
+
+private fun <T> MutableList<T>.removeLast() = removeAt(size - 1)
+private fun <T> MutableList<T>.removeFirst() = removeAt(0)
 
 /**
  * A demo application using a [VirtualView].

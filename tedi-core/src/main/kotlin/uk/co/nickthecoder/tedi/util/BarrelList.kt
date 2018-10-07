@@ -47,17 +47,13 @@ class BarrelList<T> : AbstractList<T>() {
         }
     }
 
-    val first: T
-        get() = array[firstIndex]!!
+    fun first() = array[firstIndex]!!
 
-    val last: T
-        get() = array[lastIndex]!!
+    fun last() = array[lastIndex]!!
 
-    val firstOrNull: T?
-        get() = if (firstIndex == -1) null else array[firstIndex]
+    fun firstOrNull(): T? = if (firstIndex == -1) null else array[firstIndex]
 
-    val lastOrNull: T?
-        get() = if (lastIndex == -1) null else array[lastIndex]
+    fun lastOrNull() = if (lastIndex == -1) null else array[lastIndex]
 
 
     private fun grow() {
