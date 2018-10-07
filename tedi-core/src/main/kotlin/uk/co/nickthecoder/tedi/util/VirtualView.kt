@@ -52,11 +52,6 @@ class VirtualView<P>(
         val list: ObservableList<P>,
         val nodeFactory: (Int, P) -> Node) : Region() {
 
-    /**
-     * A list of [Node]s. Any of the nodes which go out of the viewport are removed,
-     * and only the visible ones remain.
-     */
-    private val nodes = mutableListOf<Node>()
 
     private val hScroll = ScrollBar()
 
@@ -75,6 +70,8 @@ class VirtualView<P>(
      * viewport are removed, and only the visible ones remain.
      */
     private val visibleNodes = Group()
+
+    private val nodes = visibleNodes.children
 
     private val clippedView = ClippedView(visibleNodes)
 
@@ -123,9 +120,7 @@ class VirtualView<P>(
     }
 
     private fun clear() {
-        visibleNodes.children
         nodes.clear()
-        visibleNodes.children.clear()
     }
 
     private fun listChanged(change: ListChangeListener.Change<out P>) {
@@ -161,11 +156,6 @@ class VirtualView<P>(
             val visibleFrom = Math.max(0, from - topNodeIndex)
             val visibleTo = Math.min(nodes.size - 1, from - topNodeIndex + amount)
 
-            println("$visibleFrom .. $visibleTo")
-            for (i in visibleTo - 1 downTo visibleFrom) {
-                val node = nodes[i]
-                visibleNodes.children.remove(node)
-            }
             adjustFrom = Math.min(adjustFrom, visibleFrom)
             nodes.subList(visibleFrom, visibleTo).clear()
         }
@@ -179,10 +169,6 @@ class VirtualView<P>(
                     val index = i - topNodeIndex
                     // We don't care about the offset at this stage, it will be corrected later.
                     val node = createNode(i, 0.0)
-                    if (!rebuild) {
-                        // Don't bother removing if we are going to rebuild anyway
-                        visibleNodes.children.remove(nodes[index])
-                    }
                     nodes[index] = node
                 }
                 adjustFrom = Math.min(adjustFrom, from - topNodeIndex)
@@ -391,13 +377,12 @@ class VirtualView<P>(
     }
 
     /**
-     * Creates a Node, adding it to the visibleNodes.
+     * Creates a Node.
      * It is left to the caller to add it to the [nodes] list, and
      * to update [topNodeIndex] if necessary.
      */
     private fun createNode(index: Int, offset: Double): Node {
         val node = nodeFactory(index, list[index])
-        visibleNodes.children.add(node)
         val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
         node.resizeRelocate(0.0, offset, prefWidth, prefHeight)
@@ -491,7 +476,7 @@ class VirtualView<P>(
             if (nodePosition(node) + nodeHeight(node) >= 0.0) {
                 // We've found the first visible node
                 repeat(i) {
-                    visibleNodes.children.remove(nodes.removeFirst())
+                    nodes.removeFirst()
                     topNodeIndex++
                 }
                 break
@@ -504,7 +489,7 @@ class VirtualView<P>(
             if (nodePosition(node) + nodeHeight(node) <= bottom) {
                 // We've found the last visible node
                 repeat(nodes.size - i - 2) {
-                    visibleNodes.children.remove(nodes.removeLast())
+                    nodes.removeLast()
                 }
                 break
             }
