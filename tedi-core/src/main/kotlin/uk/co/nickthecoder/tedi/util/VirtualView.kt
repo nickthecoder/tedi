@@ -107,6 +107,7 @@ class VirtualView<P>(
     private var ignoreVScrollChanges = false
 
     init {
+        styleClass.add("virtual-view")
         children.addAll(vScroll, hScroll, corner, clippedView)
 
         hScroll.valueProperty().addListener { _, _, _ ->
@@ -310,6 +311,10 @@ class VirtualView<P>(
 
         layoutScrollBars()
 
+        // If the hScroll visibility changes, we may need to add/remove some nodes
+        addTrailingNodes()
+        cull()
+
         if (needsRebuild) {
             rebuild()
         } else {
@@ -357,7 +362,10 @@ class VirtualView<P>(
         vScroll.isVisible = needVBar
 
         if (needHBar) {
-            hScroll.resizeRelocate(0.0, viewportHeight - hBarHeight, viewportWidth, hBarHeight)
+            hScroll.resizeRelocate(0.0, viewportHeight, viewportWidth, hBarHeight)
+            // For example, maxPrefWidth=100, viewportWidth=80, then max = 20
+            hScroll.max = maxPrefWidth - viewportWidth
+            hScroll.visibleAmount = (viewportWidth / maxPrefWidth) * hScroll.max
         } else {
             clippedView.clipX = 0.0
         }
@@ -521,13 +529,14 @@ class VirtualViewApp : Application() {
         var listenerHelper: ListListenerHelper<StringBuffer>? = null
 
         init {
+            TediArea.style(scene)
             stage.scene = scene
             with(stage) {
                 title = "VirtualScroll Demo Application"
                 show()
             }
 
-            tediArea.text = "123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(50))
+            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(50))
         }
 
         fun createNode(index: Int, paragraph: ParagraphList.Paragraph): Node {

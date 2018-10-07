@@ -24,6 +24,10 @@
     -fx-current-line-fill: #fffae3;
 }
 
+.virtual-view .corner {
+    -fx-background-color: derive(-fx-base,-1%);
+}
+
 /*
  * This is copied from modena.css.
  * I don't know why I need this, but if I leave it out,

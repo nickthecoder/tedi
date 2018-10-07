@@ -8,19 +8,6 @@ Current Work
 
 VirtualView
 
-Use an ObservableList as the data source.
-    VirtualScroll, then has generic D for data's type (String for the demo, Paragraph for the real thing).
-    The factory takes an index, and the data item
-    Listen for changes
-        Inserts BEFORE the topCellIndex just changes topCellIndex (and the count), and adds n to the vSccroll.value
-            (use a flag to ignore the change in value)
-        Inserts AFTER topCellIndex + cells.size only changes the count
-        Other inserts cause insertions into the visible region. If n > 1, then just use needsRebuilding, and requestLayout
-
-        Deletions before after, and other can be handled similarly.
-
-        Changes cause a new Node to be created. If n > 1 use needsRebuilding, otherwise, adjust later node's layoutY
-
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
     When wrapping is enabled. The node's heights are calculated using the viewport width
