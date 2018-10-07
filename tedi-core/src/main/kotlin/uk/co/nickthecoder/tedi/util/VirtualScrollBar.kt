@@ -12,7 +12,7 @@ import javafx.scene.control.ScrollBar
  *
  * The [increment] is 1 (scrolling up by one item in the virtual list)
  */
-class VirtualScrollBar()
+class VirtualScrollBar(val virtualView: VirtualView)
     : ScrollBar() {
 
     init {
@@ -21,12 +21,16 @@ class VirtualScrollBar()
 
     var standardScrolling: Boolean = true
 
+    fun setSaveValue(v: Double) {
+        value = clamp(0.0, v, max)
+    }
+
     override fun decrement() {
-        value -= 1
+        setSaveValue(value - 1)
     }
 
     override fun increment() {
-        value += 1
+        setSaveValue(value + 1)
     }
 
     /**
@@ -36,14 +40,18 @@ class VirtualScrollBar()
      * - Non-standard (and more sensible IMHO) : Jumps to where you clicked [blockIncrement] is ignored.
      */
     override fun adjustValue(position: Double) {
+
         if (standardScrolling) {
-            // TODO This isn't quite right when scrolling UP, because the page above
-            // won't always have the same number of nodes in it (when the node heights vary)
-            // Instead, we should ask VirtualScroll to make the last visible cell the top-most,
-            // or the first visible cell the bottom-most.
-            super.adjustValue(position)
+            if (position * max > value) {
+                virtualView.pageDown()
+            } else {
+                virtualView.pageUp()
+            }
+
         } else {
-            value = clamp(0.0, max * position, max)
+            // Make the scroll bar thumb's center become wherever was clicked.
+            // i.e. Move to where I damn well clicked. The standard way is just stupid.
+            value = clamp(0.0, (max + visibleAmount) * position - visibleAmount / 2, max)
         }
     }
 

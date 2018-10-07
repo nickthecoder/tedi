@@ -11,9 +11,28 @@ import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
 import javafx.stage.Stage
 
+/*
+ * Before writing this class, I looked for alternatives, and found :
+ * - JavaFX has VirtualFlow
+ * - Flowless
+ *
+ * VirtualFlow isn't what I wanted. It requires a specific type of node (a Cell),
+ * and fills the viewport with dummy nodes. Also, it didn't seem particularly
+ * efficient. Scrolling up/down by one causes all visible nodes to be recreated.
+ *
+ * Flowless doesn't share these problems, but I just disliked the code.
+ * It uses a weird (and unnecessary) external library (of his own creation).
+ * Generics a-plenty, and is overly complex in other ways.
+ *
+ * I hate re-inventing the wheel, sigh, but it does let me create something specifically
+ * tailored to my needs.
+ */
+
 /**
  * A scrollable view, where the contents of the view are "virtual",
- * i.e. the Nodes are created only when needed.
+ * i.e. the Nodes are created only when needed (i.e. when they are
+ * visible within the viewport).
+ *
  * This makes it possible to display very long lists efficiently.
  *
  * Only the Y direction is virtual.
@@ -32,7 +51,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
     protected val hScroll = ScrollBar()
 
-    protected val vScroll = VirtualScrollBar()
+    protected val vScroll = VirtualScrollBar(this)
 
     /**
      * The "empty" area in the bottom right when both scroll bars are visible.
@@ -91,19 +110,78 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
             clippedView.clipX = hScroll.value
         }
 
-        vScroll.valueProperty().addListener { _, _, _ ->
-            adjustScroll()
-        }
-
         clippedView.isManaged = false
         visibleNodes.isManaged = false
         standardScrolling = false
+
+        vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
     }
 
     protected fun clear() {
         visibleNodes.children
         nodes.clear()
         visibleNodes.children.clear()
+    }
+
+    private var ignoreVScrollChanges = false
+
+    fun setVScrollValue(newValue: Double) {
+        ignoreVScrollChanges = true
+        vScroll.value = newValue
+        ignoreVScrollChanges = false
+    }
+
+    fun vScrollChanged(oldValue: Double, newValue: Double) {
+        if (ignoreVScrollChanges) return
+
+        val diff = newValue - oldValue
+        if (Math.abs(diff) > nodes.size - 1) {
+            // Clear and start from scratch
+            rebuild()
+        } else {
+            adjustScroll(diff)
+        }
+    }
+
+    /**
+     */
+    fun adjustScroll(delta: Double) {
+        if (nodes.isEmpty()) return
+
+        val pixels = delta * if (delta < 0) nodeHeight(nodes.first()) else nodeHeight(nodes.last())
+        for (node in nodes) {
+            node.layoutY -= pixels
+        }
+        addLeadingNodes()
+        addTrailingNodes()
+        cull()
+    }
+
+    fun pageUp() {
+        if (nodes.isEmpty()) return
+
+        // TODO This could be better, because it assumes that the PREVIOUS page is the
+        // same height as the CURRENT page.
+        vScroll.setSaveValue(vScroll.value - nodes.size)
+    }
+
+    fun pageDown() {
+        if (nodes.isEmpty()) return
+
+        vScroll.setSaveValue(vScroll.value + nodes.size - 1)
+    }
+
+    fun updateScrollMaxAndVisible() {
+        vScroll.max = (nodeCount - nodes.size + 1).toDouble()
+        vScroll.visibleAmount = nodes.size.toDouble()
+    }
+
+    protected fun rebuild() {
+        needsRebuild = false
+        clear()
+        addFirstNode()
+        addLeadingNodes()
+        addTrailingNodes()
     }
 
     override fun layoutChildren() {
@@ -123,43 +201,12 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         layoutScrollBars()
 
         if (needsRebuild) {
-            needsRebuild = false
-            clear()
-            addFirstNode()
-            addLeadingNodes()
-            addTrailingNodes()
+            rebuild()
         }
-
-        vScroll.max = (nodeCount - nodes.size + 1).toDouble()
-        vScroll.blockIncrement = (nodes.size - 1).toDouble()
-        vScroll.visibleAmount = nodes.size.toDouble()
-
-        if (!vScroll.isVisible) {
-            clippedView.layoutY = 0.0
-        }
+        updateScrollMaxAndVisible()
 
         clippedView.resizeRelocate(0.0, 0.0, viewportWidth, viewportHeight)
     }
-
-    protected fun adjustScroll() {
-
-        if (nodes.isEmpty()) {
-            visibleNodes.layoutY = 0.0
-            return
-        }
-
-        val nodeIndex = vScroll.value.toInt()
-
-        // TODO This isn't efficient.
-        // Scrolling from the start to the end (or vise versa) will build ALL nodes.
-        val node = getNode(nodeIndex)
-        val extra = nodeHeight(node) * (vScroll.value - nodeIndex)
-        visibleNodes.layoutY = -nodePosition(node) - extra
-
-        addTrailingNodes()
-        cull()
-    }
-
 
     protected fun layoutScrollBars() {
 
@@ -215,36 +262,13 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         }
     }
 
-
-    fun getNode(requiredIndex: Int): Node {
-
-        val firstVisibleNode = nodes.first()
-        var offset = nodePosition(firstVisibleNode) - nodeHeight(firstVisibleNode)
-
-        for (index in topNodeIndex - 1 downTo requiredIndex) {
-            val node = createNode(index, offset)
-            nodes.add(0, node)
-            offset -= nodeHeight(node)
-        }
-
-        val lastVisibleNode = nodes.last()
-        offset = nodePosition(lastVisibleNode) + nodeHeight(lastVisibleNode)
-        for (index in topNodeIndex + nodes.size..requiredIndex) {
-            val node = createNode(index, offset)
-            nodes.add(node)
-            offset += nodeHeight(node)
-        }
-
-        return nodes[requiredIndex - topNodeIndex]
-    }
-
-
+    /**
+     * Creates a Node, adding it to the visibleNodes.
+     * It is left to the caller to add it to the [nodes] list, and
+     * to update [topNodeIndex] if necessary.
+     */
     protected fun createNode(index: Int, offset: Double): Node {
         val node = nodeFactory(index)
-        // TODO This should probably be replaced by topNodeIndex -- when called in "addLeading" and "getNode"
-        if (index < topNodeIndex) {
-            topNodeIndex = index
-        }
         visibleNodes.children.add(node)
         val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
@@ -258,7 +282,12 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         if (nodeCount == 0) return
         if (nodes.isNotEmpty()) throw IllegalStateException("Nodes already exist")
 
-        nodes.add(0, createNode(0, 0.0))
+        topNodeIndex = vScroll.value.toInt()
+
+        val node = createNode(topNodeIndex, 0.0)
+        // Adjust by the fractional part of vScroll.value
+        node.layoutY = (vScroll.value - topNodeIndex) * nodeHeight(node)
+        nodes.add(0, node)
     }
 
     protected fun disposeOfNode(node: Node?) {
@@ -271,23 +300,28 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
 
         val firstVisibleNode = nodes.first()
         var index = topNodeIndex - 1
-        var offset = nodePosition(firstVisibleNode) - nodeHeight(firstVisibleNode)
+        var offset = nodePosition(firstVisibleNode)
+        var nextPosition = offset - nodeHeight(firstVisibleNode)
 
         while (index >= 0 && offset > 0) {
-            val node = createNode(index, offset)
+            val node = createNode(index, nextPosition)
+            //topNodeIndex--
             nodes.add(0, node)
-            offset -= nodeHeight(node)
+            val nodeHeight = nodeHeight(node)
+            offset -= nodeHeight
+            nextPosition -= nodeHeight
             index--
         }
+        topNodeIndex = index + 1
 
-        // Sometimes, with variable height nodes, the first node can end
-        // up not at 0.0, in which case, we need to adjust all visible nodes.
+        // Check if we've scrolled too far down
         val firstNode = nodes.first()
-        if (topNodeIndex == 0 && nodePosition(firstNode) != 0.0) {
+        if (topNodeIndex == 0 && (nodePosition(firstNode) > 0.0 || vScroll.value <= 0)) {
             val diff = nodePosition(firstNode)
             for (node in nodes) {
                 node.layoutY -= diff
             }
+            setVScrollValue(0.0)
         }
     }
 
@@ -300,22 +334,34 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
         var offset = nodePosition(startNode) + nodeHeight(startNode)
         var index = topNodeIndex + nodes.size
 
-        val bottom = viewportHeight - visibleNodes.layoutY
+        val bottom = viewportHeight
 
-        while (offset < bottom && index < nodeCount) {
+        val isMax = vScroll.value >= vScroll.max
+
+        while ((offset < bottom && index < nodeCount) || (isMax && topNodeIndex + nodes.size < nodeCount)) {
             val node = createNode(index, offset)
             nodes.add(node)
             offset += nodeHeight(node)
             index++
         }
+
+        // Check if we've scrolled too far up
+        val lastNode = nodes.last()
+        val diff = nodePosition(lastNode) + nodeHeight(lastNode) - viewportHeight
+        if (topNodeIndex + nodes.size == nodeCount && (diff < 0.0 || vScroll.value >= vScroll.max)) {
+            for (node in nodes) {
+                node.layoutY -= diff
+            }
+            setVScrollValue(vScroll.max)
+        }
+
     }
 
     protected fun cull() {
 
-        val top = -visibleNodes.layoutY
         for (i in nodes.indices) {
             val node = nodes[i]
-            if (nodePosition(node) + nodeHeight(node) >= top) {
+            if (nodePosition(node) + nodeHeight(node) >= 0.0) {
                 // We've found the first visible node
                 repeat(i) {
                     disposeOfNode(nodes.removeFirst())
@@ -325,7 +371,7 @@ open class VirtualView(val nodeFactory: (Int) -> Node) : Region() {
             }
         }
 
-        val bottom = top + viewportHeight
+        val bottom = viewportHeight
         for (i in nodes.indices.reversed()) {
             val node = nodes[i]
             if (nodePosition(node) + nodeHeight(node) <= bottom) {
@@ -355,7 +401,7 @@ class VirtualViewApp : Application() {
         VirtualViewAppWindow(primaryStage)
     }
 
-    class VirtualViewAppWindow(val stage: Stage) {
+    class VirtualViewAppWindow(stage: Stage) {
 
         val virtualFlow = VirtualView { index -> createNode(index) }
 
