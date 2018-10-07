@@ -19,22 +19,10 @@ Use an ObservableList as the data source.
 
         Changes cause a new Node to be created. If n > 1 use needsRebuilding, otherwise, adjust later node's layoutY
 
-Need adjustScroll to check if the jump is large, and if so, trash the cells list and start from scratch.
-
-Perhaps I should rethink how scrolling takes place.
-    Instead of changing the layoutY of visibleNodes, MOVE the nodes whenever scrolling happens
-    I think this is how VirtualFlow does it.
-    When rebuilding the view, use the fractional part of the scrollbar's value for the initial offset
-
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
     When wrapping is enabled. The node's heights are calculated using the viewport width
         In which case, never show the scrollbar???
-
-Check for scroll events, and forward them to the vScroll
-
-When clicking in the vScroll, it currently does the "sensible", but non-standard thing, of jumping to where you clicked.
-    So add an option to revert to the standard behaviour (or vice versa).
 
 Next
 ----
