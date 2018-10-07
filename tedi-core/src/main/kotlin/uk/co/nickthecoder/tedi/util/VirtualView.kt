@@ -8,6 +8,7 @@ import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.ScrollBar
+import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Region
 import javafx.scene.layout.StackPane
 import javafx.scene.text.Text
@@ -55,7 +56,7 @@ class VirtualView<P>(
      * A list of [Node]s. Any of the nodes which go out of the viewport are removed,
      * and only the visible ones remain.
      */
-    internal val nodes = mutableListOf<Node>()
+    private val nodes = mutableListOf<Node>()
 
     private val hScroll = ScrollBar()
 
@@ -96,7 +97,7 @@ class VirtualView<P>(
      * However, it isn't correct (there may be wider nodes that haven't been created).
      * Also, when nodes are destroyed, we tend to KEEP this value, even though it may now be too big.
      */
-    var maxPrefWidth = 0.0
+    private var maxPrefWidth = 0.0
 
     var standardScrolling: Boolean
         get() = vScroll.standardScrolling
@@ -110,17 +111,15 @@ class VirtualView<P>(
         styleClass.add("virtual-view")
         children.addAll(vScroll, hScroll, corner, clippedView)
 
-        hScroll.valueProperty().addListener { _, _, _ ->
-            clippedView.clipX = hScroll.value
-        }
-
         clippedView.isManaged = false
         visibleNodes.isManaged = false
-        standardScrolling = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
+        hScroll.valueProperty().addListener { _, _, _ -> clippedView.clipX = hScroll.value }
 
         list.addListener { change: ListChangeListener.Change<out P> -> listChanged(change) }
+
+        clippedView.addEventHandler(ScrollEvent.SCROLL) { event -> onScrollEvent(event) }
     }
 
     private fun clear() {
@@ -223,14 +222,27 @@ class VirtualView<P>(
         }
     }
 
+    private fun onScrollEvent(event: ScrollEvent) {
+        if (nodes.isEmpty()) return
 
-    fun setVScrollValue(newValue: Double) {
+        if (event.deltaY != 0.0) {
+            val fromPixels = event.deltaY / nodeHeight(nodes.first())
+            vScroll.setSafeValue(vScroll.value - fromPixels)
+        }
+        // I don't have a horizontal scroll wheel. Is this working ok?
+        if (event.deltaX != 0.0) {
+            hScroll.value = clamp(0.0, hScroll.value - event.deltaX, hScroll.max)
+        }
+        event.consume()
+    }
+
+    private fun setVScrollValue(newValue: Double) {
         ignoreVScrollChanges = true
         vScroll.value = newValue
         ignoreVScrollChanges = false
     }
 
-    fun vScrollChanged(oldValue: Double, newValue: Double) {
+    private fun vScrollChanged(oldValue: Double, newValue: Double) {
         if (ignoreVScrollChanges) return
 
         val diff = newValue - oldValue
@@ -242,9 +254,7 @@ class VirtualView<P>(
         }
     }
 
-    /**
-     */
-    fun adjustScroll(delta: Double) {
+    private fun adjustScroll(delta: Double) {
         if (nodes.isEmpty()) return
 
         val pixels = delta * if (delta < 0) nodeHeight(nodes.first()) else nodeHeight(nodes.last())
@@ -256,21 +266,21 @@ class VirtualView<P>(
         cull()
     }
 
-    fun pageUp() {
+    internal fun pageUp() {
         if (nodes.isEmpty()) return
 
         // TODO This could be better, because it assumes that the PREVIOUS page is the
         // same height as the CURRENT page.
-        vScroll.setSaveValue(vScroll.value - nodes.size)
+        vScroll.setSafeValue(vScroll.value - nodes.size)
     }
 
-    fun pageDown() {
+    internal fun pageDown() {
         if (nodes.isEmpty()) return
 
-        vScroll.setSaveValue(vScroll.value + nodes.size - 1)
+        vScroll.setSafeValue(vScroll.value + nodes.size - 1)
     }
 
-    fun updateScrollMaxAndVisible() {
+    private fun updateScrollMaxAndVisible() {
         if (nodes.isEmpty()) {
             // Some default values, just so that nothing goes weird.
             vScroll.max = 10.0

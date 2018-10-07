@@ -21,16 +21,16 @@ class VirtualScrollBar(val virtualView: VirtualView<*>)
 
     var standardScrolling: Boolean = true
 
-    fun setSaveValue(v: Double) {
+    fun setSafeValue(v: Double) {
         value = clamp(0.0, v, max)
     }
 
     override fun decrement() {
-        setSaveValue(value - 1)
+        setSafeValue(value - 1)
     }
 
     override fun increment() {
-        setSaveValue(value + 1)
+        setSafeValue(value + 1)
     }
 
     /**

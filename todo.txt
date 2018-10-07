@@ -8,6 +8,8 @@ Current Work
 
 VirtualView
 
+Why am I keeping a list of nodes? visibleNodes already does this!
+
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
     When wrapping is enabled. The node's heights are calculated using the viewport width
