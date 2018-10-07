@@ -30,6 +30,12 @@ fun clamp(min: Int, value: Int, max: Int): Int {
     return value
 }
 
+fun clamp(min: Double, value: Double, max: Double): Double{
+    if (value < min) return min
+    if (value > max) return max
+    return value
+}
+
 fun imageResource(klass: Class<*>, name: String): Image? {
     val imageStream = klass.getResourceAsStream(name)
     return if (imageStream == null) null else Image(imageStream)

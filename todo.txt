@@ -4,6 +4,45 @@ Bugs
 Current Work
 ------------
 
+VirtualView
+
+Make "cells" hold plain Nodes (no indexes, and no Cell class)
+    Rename it visibleNodes
+    Otherwise, when inserting items, I'll have to iterate and change them all.
+    I'm already keeping track of topCellIndex
+
+Use a "regular" listing instead of the barrel list (but don't delete it just yet!)
+
+Use an ObservableList as the data source.
+    VirtualScroll, then has generic D for data's type (String for the demo, Paragraph for the real thing).
+    The factory takes an index, and the data item
+    Listen for changes
+        Inserts BEFORE the topCellIndex just changes topCellIndex (and the count), and adds n to the vSccroll.value
+            (use a flag to ignore the change in value)
+        Inserts AFTER topCellIndex + cells.size only changes the count
+        Other inserts cause insertions into the visible region. If n > 1, then just use needsRebuilding, and requestLayout
+
+        Deletions before after, and other can be handled similarly.
+
+        Changes cause a new Node to be created. If n > 1 use needsRebuilding, otherwise, adjust later node's layoutY
+
+Need adjustScroll to check if the jump is large, and if so, trash the cells list and start from scratch.
+
+Perhaps I should rethink how scrolling takes place.
+    Instead of changing the layoutY of visibleNodes, MOVE the nodes whenever scrolling happens
+    I think this is how VirtualFlow does it.
+    When rebuilding the view, use the fractional part of the scrollbar's value for the initial offset
+
+Have two modes for the horizontal scroll :
+    When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
+    When wrapping is enabled. The node's heights are calculated using the viewport width
+        In which case, never show the scrollbar???
+
+Check for scroll events, and forward them to the vScroll
+
+When clicking in the vScroll, it currently does the "sensible", but non-standard thing, of jumping to where you clicked.
+    So add an option to revert to the standard behaviour (or vice versa).
+
 Next
 ----
 
