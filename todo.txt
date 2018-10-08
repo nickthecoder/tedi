@@ -1,12 +1,20 @@
 Bugs
 ----
 
+Demo is sluggish moving the caret position. Is this because of the column/line number at the top?
+    I don't remember it being sluggish before.
+    Maybe because its creating threads for the various extensions. Reuse existing threads?
+
 Current Work
 ------------
 
 VirtualView
 
-Add a gutter
+hscroll isn't taking the gutter's width into account
+
+Gutter isn't being clipped (so overlaps the hScroll)
+
+Off by 1 pixel (gutter to content alignment)
 
 VV to have a "reset" method, which rebuild, and resets the cached width values.
     Is there a GOOD strategy for "guessing" the correct max for the hScroll?

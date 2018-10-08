@@ -264,24 +264,12 @@ class DemoWindow(stage: Stage = Stage()) {
     }
 
     fun undo() {
-        val control = currentArea
-        if (control is TediArea) {
-            // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.undo.
-            control.undoRedo.undo()
-        } else {
-            control.undo()
-        }
+        currentArea.undoRedo.undo()
     }
 
     fun redo() {
-        val control = currentArea
-        if (control is TediArea) {
-            // Note, I'm using BetterUndoRedo, and therefore I cannot use TextInputControl.redo.
-            control.undoRedo.redo()
-        } else {
-            control.redo()
-        }
-        control.requestFocus()
+        currentArea.undoRedo.redo()
+        currentArea.requestFocus()
     }
 
     /**

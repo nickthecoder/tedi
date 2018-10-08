@@ -4,7 +4,7 @@ import javafx.application.Application
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.event.EventHandler
-import javafx.scene.Group
+import javafx.geometry.VPos
 import javafx.scene.Node
 import javafx.scene.Scene
 import javafx.scene.control.ScrollBar
@@ -12,7 +12,6 @@ import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Region
 import javafx.scene.layout.StackPane
 import javafx.scene.text.Text
-import javafx.scene.text.TextFlow
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.TediArea
 
@@ -72,7 +71,7 @@ class VirtualView<P>(
      * Its children are the same nodes as those in [contentList], which means any nodes which go out of the
      * viewport are removed, and only the visible ones remain.
      */
-    private val contentGroup = Group()
+    private val contentGroup = ContentRegion()
 
     private val contentList = contentGroup.children
 
@@ -129,6 +128,7 @@ class VirtualView<P>(
         styleClass.add("virtual-view")
         contentGroup.styleClass.add("content")
         gutterRegion.styleClass.add("gutter")
+        clippedView.styleClass.add("clipped-view")
 
         children.addAll(vScroll, hScroll, corner, gutterRegion, clippedView)
 
@@ -443,6 +443,8 @@ class VirtualView<P>(
         layoutScrollBars()
 
         clippedView.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
+        contentGroup.resizeRelocate(0.0, 0.0, viewportWidth - gutterWidth, viewportHeight)
+        gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
 
         for (child in gutterRegion.children) {
             child.resize(maxGutterPrefWidth, nodeHeight(child))
@@ -519,9 +521,20 @@ class VirtualView<P>(
         val prefHeight = node.prefHeight(-1.0)
         node.resize(prefWidth, prefHeight)
         node.layoutY = offset
+        node.layoutX = contentGroup.snappedLeftInset()
 
         maxPrefWidth = Math.max(maxPrefWidth, node.layoutBounds.width)
         return node
+    }
+
+
+    private fun positionGutterNode(node: Node, x: Double, y: Double, width: Double, height: Double) {
+        node.resizeRelocate(x + gutterRegion.snappedLeftInset(), y, width, height)
+    }
+
+    private fun positionGutterNode(node: Node, x: Double, y: Double) {
+        node.layoutX = x + gutterRegion.snappedLeftInset()
+        node.layoutY = y + gutterRegion.snappedTopInset()
     }
 
     /**
@@ -543,14 +556,12 @@ class VirtualView<P>(
             if (prefWidth > maxGutterPrefWidth) {
                 maxGutterPrefWidth = prefWidth
                 println("Requesting layout")
-                //layoutChildren() // TODO This is VERY bad
                 requestLayout()
             }
             node.isManaged = false
 
             val height = nodeHeight(contentNode)
-            node.resize(maxGutterPrefWidth, height)
-            node.layoutY = contentNode.layoutY
+            positionGutterNode(node, 0.0, contentNode.layoutY, maxGutterPrefWidth, height)
             return node
         }
         throw IllegalStateException("Gutter is null")
@@ -566,7 +577,7 @@ class VirtualView<P>(
             topNodeIndex = 0
         }
 
-        val node = createNode(topNodeIndex, 0.0)
+        val node = createNode(topNodeIndex, contentGroup.snappedTopInset())
         // Adjust by the fractional part of vScroll.value
         node.layoutY = (vScroll.value - topNodeIndex) * nodeHeight(node)
         contentList.add(node)
@@ -602,8 +613,8 @@ class VirtualView<P>(
 
         // Check if we've scrolled too far down
         val firstNode = contentList.first()
-        if (topNodeIndex == 0 && (nodePosition(firstNode) > 0.0 || vScroll.value <= 0)) {
-            val diff = nodePosition(firstNode)
+        if (topNodeIndex == 0 && (nodePosition(firstNode) > contentGroup.snappedTopInset() || vScroll.value <= 0)) {
+            val diff = nodePosition(firstNode) - contentGroup.snappedTopInset()
             for (node in contentList) {
                 node.layoutY -= diff
             }
@@ -696,6 +707,18 @@ class VirtualView<P>(
     fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
 
 
+    private inner class ContentRegion : Region() {
+
+        // Make it public.
+        public override fun getChildren() = super.getChildren()
+
+        // Children are being manually laid out, so do nothing here.
+        override fun layoutChildren() {
+            return
+        }
+
+    }
+
     private inner class GutterRegion : Region() {
 
         // Make it public.
@@ -709,6 +732,7 @@ class VirtualView<P>(
         override fun layoutChildren() {
             return
         }
+
     }
 }
 
@@ -778,13 +802,14 @@ class VirtualViewApp : Application() {
                     val myIndex = tediArea.paragraphs.indexOf(paragraph)
                     tediArea.insertText(tediArea.positionOfLine(myIndex), "This is a new line\n")
                 }
-
-                return TextFlow(delete, insert, add, sub, text)
+                text.textOrigin = VPos.TOP
+                return text
+                //return TextFlow(delete, insert, add, sub, text)
             }
 
             override fun itemChanged(index: Int, node: Node) {
-                println("itemChanged")
-                val text = (node as TextFlow).children[4] as Text
+                //val text = (node as TextFlow).children[4] as Text
+                val text = node as Text
                 text.text = tediArea.paragraphs[index].text
             }
         }

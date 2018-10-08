@@ -35,7 +35,6 @@ import javafx.animation.Timeline
 import javafx.application.Platform
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.binding.DoubleBinding
-import javafx.beans.binding.IntegerBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
@@ -189,17 +188,6 @@ class TediAreaSkin(control: TediArea)
         get() = displayCaretProperty.get()
         set(v) = displayCaretProperty.set(v)
 
-    // TODO What is this here for?
-    private var caretPosition: ObservableIntegerValue = object : IntegerBinding() {
-        init {
-            bind(control.caretPositionProperty())
-        }
-
-        override fun computeValue(): Int {
-            return control.caretPosition
-        }
-    }
-
     /**
      * The caret is visible when the text box is focused AND when the selection
      * is empty. If the selection is non empty or the text box is not focused
@@ -223,7 +211,7 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    private val caretAnimation = CaretAnimation(caretVisible, caretPath, caretPosition)
+    private val caretAnimation = CaretAnimation(caretVisible, caretPath, control.caretPositionProperty())
 
     /***************************************************************************
      *                                                                         *
@@ -337,7 +325,7 @@ class TediAreaSkin(control: TediArea)
         }
 
         // Caret position
-        caretPosition.addListener { _, _, _ -> onCaretMoved() }
+        control.caretPositionProperty().addListener { _, _, _ -> onCaretMoved() }
         onCaretMoved()
 
         // Font
@@ -1019,37 +1007,37 @@ class TediAreaSkin(control: TediArea)
      **************************************************************************/
     companion object {
 
-        private val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
+        val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",
                 StyleConverter.getPaintConverter(), Color.BLACK) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).textFillProperty
         }
 
-        private val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
+        val HIGHLIGHT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-fill",
                 StyleConverter.getPaintConverter(), Color.DODGERBLUE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightFillProperty
         }
 
-        private val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
+        val HIGHLIGHT_TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-highlight-text-fill",
                 StyleConverter.getPaintConverter(), Color.WHITE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).highlightTextFillProperty
         }
 
-        private val CURRENT_LINE_FILL = object : CssMetaData<TediArea, Paint>("-fx-current-line-fill",
+        val CURRENT_LINE_FILL = object : CssMetaData<TediArea, Paint>("-fx-current-line-fill",
                 StyleConverter.getPaintConverter(), null) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).currentLineFillProperty
         }
 
-        private val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
+        val DISPLAY_CARET = object : CssMetaData<TediArea, Boolean>("-fx-display-caret",
                 StyleConverter.getBooleanConverter(), java.lang.Boolean.TRUE) {
             override fun isSettable(n: TediArea) = !getStyleableProperty(n).isBound
             override fun getStyleableProperty(n: TediArea) = (n.skin as TediAreaSkin).displayCaretProperty
         }
 
-        private val STYLEABLES = listOf(
+        val STYLEABLES = listOf(
                 TEXT_FILL, HIGHLIGHT_FILL, HIGHLIGHT_TEXT_FILL, CURRENT_LINE_FILL, DISPLAY_CARET)
 
         fun getClassCssMetaData() = STYLEABLES

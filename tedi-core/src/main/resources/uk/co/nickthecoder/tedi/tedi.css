@@ -15,6 +15,24 @@
     -fx-current-line-text-fill: gray;
 }
 
+.virtual-view {
+}
+
+.virtual-view .content {
+    -fx-padding: 8; /* Note, bottom is ignored. Right is ignored (until word-wrapping is implemented) */
+}
+
+.virtual-view .gutter {
+    -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
+    -fx-background-color: #eeeeee;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 1 0 0;
+}
+
+.virtual-view .gutter .line-number {
+    -fx-fill: gray;
+}
+
 .tedi-area.code {
     -fx-font-family: 'monospace';
     -fx-display-line-numbers: true;

@@ -3,7 +3,6 @@ package uk.co.nickthecoder.tedi.util
 import javafx.geometry.VPos
 import javafx.scene.Node
 import javafx.scene.layout.Region
-import javafx.scene.text.Font
 import javafx.scene.text.Text
 
 /**
@@ -55,7 +54,6 @@ abstract class BoxGutter : VirtualGutter {
         val spacing = 10.0 // TODO Make this styleable
 
         init {
-            style = "-fx-background-color: red;"
             styleClass.add("gutter-node")
         }
 
@@ -73,15 +71,17 @@ abstract class BoxGutter : VirtualGutter {
             val height = height
 
             var x = width - snappedRightInset()
+
             // Lay out from right to left, because the line number is on the left, and this makes it easy
             // to right align it.
-
             for (i in children.size - 1 downTo 0) {
                 val child = children[i]
                 val childWidth = child.prefWidth(height)
                 val childHeight = child.prefHeight(-1.0)
                 x -= childWidth
-                child.resizeRelocate(x, (height - childHeight) / 2, childWidth, childHeight)
+                // TODO The "-1" is a bodge. Without it the gutter doesn't line up with the content
+                // But I couldn't find the reason. So for now, I'm bodging it.
+                child.resizeRelocate(x, (height - childHeight) / 2 - 1, childWidth, childHeight)
                 x -= spacing
             }
         }
@@ -96,10 +96,13 @@ open class LineNumberGutter : BoxGutter() {
 
     open class LineNumberNode(var index: Int) : GutterNode() {
 
-        val lineNumber = Text((index + 1).toString()).apply { textOrigin = VPos.TOP }
+        val lineNumber = Text((index + 1).toString()).apply {
+            styleClass.addAll("text", "line-number")
+            textOrigin = VPos.TOP
+        }
 
         init {
-            children.addAll(lineNumber, Text("Hi").apply { font = Font.font(font.name, 6.0) })
+            children.add(lineNumber)
         }
 
         override fun update(newIndex: Int) {
