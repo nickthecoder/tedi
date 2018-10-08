@@ -1,14 +1,24 @@
 Bugs
 ----
 
-Deleting exactly one line also fires a change for the previous/next paragraph I think!
-
 Current Work
 ------------
 
 VirtualView
 
-Why am I keeping a list of nodes? visibleNodes already does this!
+Add a gutter
+
+Consider creating the content nodes in a similar way as the gutter.
+    (a factory method, rather than a lambda)
+    Then have a "detach" method, so that stuff can be tidied up (and also put on a "pile" for reuse).
+    Then call "update", rather than rebuilding the node when a paragraph CHANGES.
+
+Change how width is handled. Calculate the pref width, and requestLayout if the width > allocated width
+
+VV to have a "reset" method, which rebuild, and resets the cached width values.
+    Is there a GOOD strategy for "guessing" the correct max for the hScroll?
+
+vScroll.visibleAmount isn't correct
 
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)

@@ -16,7 +16,6 @@ import javafx.scene.text.TextFlow
 import javafx.stage.Stage
 import uk.co.nickthecoder.tedi.ParagraphList
 import uk.co.nickthecoder.tedi.TediArea
-import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
 
 /*
  * Before writing this class, I looked for alternatives, and found :
@@ -39,14 +38,19 @@ import uk.co.nickthecoder.tedi.javafx.ListListenerHelper
  * A scrollable view, where the contents of the view are "virtual",
  * i.e. the Nodes are created only when needed (i.e. when they are
  * visible within the viewport).
+ * Nodes are removed from the scene graph when they move outside of the viewport.
+ * Therefore very long lists render quickly (as only the visible nodes need be considered).
+ * Without this class TediArea would be sluggish with 5,000+ line documents, and unbearable
+ * with much larger ones.
  *
  * This makes it possible to display very long lists efficiently.
  *
  * Only the Y direction is virtual.
  *
- * This is NOT a general purpose class, but specially designed to work
- * with TediArea. However, VirtualView know nothing of TediArea's
- * internals, nor its data structures.
+ * This is NOT a general purpose, reusable class. It is specially designed to work
+ * with TediArea. It has many quirks not found in a general-purpose virtual view.
+ *
+ * However, VirtualView know nothing of TediArea's internals, nor its data structures.
  */
 class VirtualView<P>(
         val list: ObservableList<P>,
@@ -63,17 +67,31 @@ class VirtualView<P>(
     private var corner = StackPane().apply { styleClass.setAll("corner") }
 
     /**
-     * The main content. As the scrollbar changes value, [visibleNodes]'s layoutY is adjusted accordingly
+     * The main content. As the scrollbar changes value, [contentGroup]'s layoutY is adjusted accordingly
      * (with a value of 0 or less).
      *
-     * Its children are the same nodes as those in [nodes], which means any nodes which go out of the
+     * Its children are the same nodes as those in [contentList], which means any nodes which go out of the
      * viewport are removed, and only the visible ones remain.
      */
-    private val visibleNodes = Group()
+    private val contentGroup = Group()
 
-    private val nodes = visibleNodes.children
+    private val contentList = contentGroup.children
 
-    private val clippedView = ClippedView(visibleNodes)
+    var gutter: VirtualGutter? = null
+        set(v) {
+            // The existing gutter must have "free" called for existing gutterNodes.
+            clear()
+            field = v
+            gutterGroup.isVisible = v != null
+            needsRebuild = true
+            requestLayout()
+        }
+
+    private val gutterGroup = GutterGroup()
+
+    private val gutterList = gutterGroup.children
+
+    private val clippedView = ClippedView(contentGroup)
 
     private var viewportHeight: Double = 0.0
     private var viewportWidth: Double = 0.0
@@ -86,7 +104,7 @@ class VirtualView<P>(
     private var topNodeIndex = 0
 
     private val bottomNodeIndex
-        get() = topNodeIndex + nodes.size - 1
+        get() = topNodeIndex + contentList.size - 1
 
     /**
      * The maximum preferred width of the nodes.
@@ -95,6 +113,10 @@ class VirtualView<P>(
      * Also, when nodes are destroyed, we tend to KEEP this value, even though it may now be too big.
      */
     private var maxPrefWidth = 0.0
+
+    private var maxGutterPrefWidth = 0.0
+
+    private var gutterWidth = 0.0
 
     var standardScrolling: Boolean
         get() = vScroll.standardScrolling
@@ -106,10 +128,12 @@ class VirtualView<P>(
 
     init {
         styleClass.add("virtual-view")
-        children.addAll(vScroll, hScroll, corner, clippedView)
+        children.addAll(vScroll, hScroll, corner, gutterGroup, clippedView)
 
         clippedView.isManaged = false
-        visibleNodes.isManaged = false
+        contentGroup.isManaged = false
+        gutterGroup.isManaged = false
+        gutterGroup.isVisible = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
         hScroll.valueProperty().addListener { _, _, _ -> clippedView.clipX = hScroll.value }
@@ -119,8 +143,51 @@ class VirtualView<P>(
         clippedView.addEventHandler(ScrollEvent.SCROLL) { event -> onScrollEvent(event) }
     }
 
+    /**
+     * The node for a given index of [list].
+     * @return null if the required node is not visible (and therefore doesn't exist)
+     */
+    fun getContentNode(index: Int): Node? {
+        if (index < topNodeIndex || index > bottomNodeIndex) return null
+        return contentList[index - topNodeIndex]
+    }
+
+    /**
+     * The gutter node for a given index of [list].
+     * @return null if the required node is not visible (and therefore doesn't exist)
+     */
+    fun getGutterNode(index: Int): Node? {
+        if (gutterList.isEmpty()) return null
+        if (index < topNodeIndex || index > bottomNodeIndex) return null
+        return gutterList[index - topNodeIndex]
+    }
+
+    /**
+     * Removes all nodes from the contentList and from gutterList.
+     */
     private fun clear() {
-        nodes.clear()
+        contentList.clear()
+        clearGutterNodes(gutterList, topNodeIndex)
+    }
+
+    /**
+     * Removes the gutter nodes from the list, calling "free"
+     */
+    private fun clearGutterNodes(list: MutableList<Node>, startIndex: Int) {
+        gutter?.let { gutter ->
+            list.forEachIndexed { index, node ->
+                gutter.free(index + startIndex, node)
+            }
+        }
+        list.clear()
+    }
+
+    /**
+     * Removes a single gutter node.
+     */
+    private fun removeGutterNode(visibleIndex: Int) {
+        val removed = gutterList.removeAt(visibleIndex)
+        gutter?.free(visibleIndex + topNodeIndex, removed)
     }
 
     private fun listChanged(change: ListChangeListener.Change<out P>) {
@@ -128,40 +195,51 @@ class VirtualView<P>(
         // Set if a rebuild is needed due to these changes
         var rebuild = false
 
-        // Set to the index into "nodes" of the first node that needs re-jigging
+        var documentChanged = false
+
+        // Set to the index into "contentList" of the first node that needs re-jigging
         var adjustFrom = Int.MAX_VALUE
 
-        val initialOffset = nodes.firstOrNull()?.layoutY ?: 0.0
+        val initialOffset = contentList.firstOrNull()?.layoutY ?: 0.0
 
         fun addedItems(from: Int, to: Int) {
-            println("Add $from .. $to")
-            if (nodes.isEmpty() || (to - from > 1)) {
+            //println("Add $from .. $to")
+            if (contentList.isEmpty() || (to - from > 1)) {
                 rebuild = true
             } else {
+                documentChanged = true
                 if (from >= topNodeIndex && to < bottomNodeIndex) {
                     // We don't care about the offset at this stage, it will be corrected later.
                     val node = createNode(from, 0.0)
                     val index = from - topNodeIndex
-                    nodes.add(index, node)
+                    contentList.add(index, node)
                     adjustFrom = index
+                    if (gutter != null) {
+                        createGutterNode(from, node, index)
+                    }
                 }
             }
         }
 
         fun removedItems(from: Int, amount: Int) {
-            println("Remove $from  ($amount) topNodeIndex=$topNodeIndex")
+            //println("Remove $from  ($amount) topNodeIndex=$topNodeIndex")
+
+            documentChanged = true
 
             if (from < topNodeIndex || from > bottomNodeIndex) return
 
             val visibleFrom = Math.max(0, from - topNodeIndex)
-            val visibleTo = Math.min(nodes.size - 1, from - topNodeIndex + amount)
+            val visibleTo = Math.min(contentList.size - 1, from - topNodeIndex + amount)
 
             adjustFrom = Math.min(adjustFrom, visibleFrom)
-            nodes.subList(visibleFrom, visibleTo).clear()
+            contentList.subList(visibleFrom, visibleTo).clear()
+            if (gutter != null) {
+                clearGutterNodes(gutterList.subList(visibleFrom, visibleTo), visibleFrom + topNodeIndex)
+            }
         }
 
         fun updatedItems(from: Int, to: Int) {
-            println("Update $from .. $to")
+            //println("Update $from .. $to")
             if (from < topNodeIndex || to > bottomNodeIndex) return
 
             for (i in from..to - 1) {
@@ -169,7 +247,10 @@ class VirtualView<P>(
                     val index = i - topNodeIndex
                     // We don't care about the offset at this stage, it will be corrected later.
                     val node = createNode(i, 0.0)
-                    nodes[index] = node
+                    contentList[index] = node
+                    gutter?.let { gutter ->
+                        getGutterNode(i)?.let { gutter.itemChanged(i, it) }
+                    }
                 }
                 adjustFrom = Math.min(adjustFrom, from - topNodeIndex)
             }
@@ -188,31 +269,44 @@ class VirtualView<P>(
         }
 
         if (rebuild) {
-            rebuild()
+            needsRebuild = true
+            requestLayout()
 
         } else {
 
             if (adjustFrom != Int.MAX_VALUE) {
-                var offset = if (adjustFrom == 0) initialOffset else nodePosition(nodes[adjustFrom - 1]) + nodeHeight(nodes[adjustFrom - 1])
+                var offset = if (adjustFrom == 0) initialOffset else nodeBottom(contentList[adjustFrom - 1])
 
-                for (i in adjustFrom..nodes.size - 1) {
-                    val node = nodes[i]
+                for (i in adjustFrom..contentList.size - 1) {
+                    val node = contentList[i]
                     node.layoutY = offset
+                    if (gutter != null) {
+                        gutterList[i].layoutY = offset
+                    }
                     offset += nodeHeight(node)
                 }
 
-                addTrailingNodes()
             }
 
+            addTrailingNodes()
             updateScrollMaxAndVisible()
+
+            if (documentChanged) {
+                gutter?.let { gutter ->
+                    gutterList.forEachIndexed { i, gutterNode ->
+                        val index = topNodeIndex + i
+                        gutter.documentChanged(index, gutterNode)
+                    }
+                }
+            }
         }
     }
 
     private fun onScrollEvent(event: ScrollEvent) {
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
         if (event.deltaY != 0.0) {
-            val fromPixels = event.deltaY / nodeHeight(nodes.first())
+            val fromPixels = event.deltaY / nodeHeight(contentList.first())
             vScroll.setSafeValue(vScroll.value - fromPixels)
         }
         // I don't have a horizontal scroll wheel. Is this working ok?
@@ -232,7 +326,7 @@ class VirtualView<P>(
         if (ignoreVScrollChanges) return
 
         val diff = newValue - oldValue
-        if (Math.abs(diff) > nodes.size - 1) {
+        if (Math.abs(diff) > contentList.size - 1) {
             // Clear and start from scratch
             rebuild()
         } else {
@@ -241,43 +335,50 @@ class VirtualView<P>(
     }
 
     private fun adjustScroll(delta: Double) {
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
-        val pixels = delta * if (delta < 0) nodeHeight(nodes.first()) else nodeHeight(nodes.last())
-        for (node in nodes) {
+        val pixels = delta * if (delta < 0) nodeHeight(contentList.first()) else nodeHeight(contentList.last())
+
+        for (node in contentList) {
             node.layoutY -= pixels
         }
+        if (gutter != null) {
+            for (node in gutterList) {
+                node.layoutY -= pixels
+            }
+        }
+
         addLeadingNodes()
         addTrailingNodes()
         cull()
     }
 
     internal fun pageUp() {
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
         // TODO This could be better, because it assumes that the PREVIOUS page is the
         // same height as the CURRENT page.
-        vScroll.setSafeValue(vScroll.value - nodes.size)
+        vScroll.setSafeValue(vScroll.value - contentList.size)
     }
 
     internal fun pageDown() {
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
-        vScroll.setSafeValue(vScroll.value + nodes.size - 1)
+        vScroll.setSafeValue(vScroll.value + contentList.size - 1)
     }
 
     private fun updateScrollMaxAndVisible() {
-        if (nodes.isEmpty()) {
+        if (contentList.isEmpty()) {
             // Some default values, just so that nothing goes weird.
             vScroll.max = 10.0
             vScroll.visibleAmount = 1.0
             setVScrollValue(0.0)
         } else {
-            vScroll.max = (list.size - nodes.size + 1).toDouble()
+            vScroll.max = (list.size - contentList.size + 1).toDouble()
             if (vScroll.value > vScroll.max) {
                 setVScrollValue(vScroll.max)
             }
-            vScroll.visibleAmount = Math.min(1.0, nodes.size.toDouble())
+            vScroll.visibleAmount = Math.min(1.0, contentList.size.toDouble())
         }
     }
 
@@ -305,8 +406,6 @@ class VirtualView<P>(
             return
         }
 
-        layoutScrollBars()
-
         // If the hScroll visibility changes, we may need to add/remove some nodes
         addTrailingNodes()
         cull()
@@ -317,12 +416,25 @@ class VirtualView<P>(
             updateScrollMaxAndVisible()
         }
 
-        clippedView.resizeRelocate(0.0, 0.0, viewportWidth, viewportHeight)
+        gutterWidth = if (gutterGroup.isVisible) {
+            //gutterGroup.prefWidth(-1.0)
+            maxGutterPrefWidth + gutterGroup.snappedLeftInset() + gutterGroup.snappedRightInset()
+        } else {
+            0.0
+        }
+
+        layoutScrollBars()
+
+        clippedView.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
+
+        for (child in gutterGroup.children) {
+            child.resize(maxGutterPrefWidth, nodeHeight(child))
+        }
     }
 
     private fun layoutScrollBars() {
 
-        val lastNode = nodes.lastOrNull()
+        val lastNode = contentList.lastOrNull()
         val lastNodePosition = nodePosition(lastNode)
         val lastNodeHeight = nodeHeight(lastNode)
         var needVBar = false
@@ -339,8 +451,8 @@ class VirtualView<P>(
 
         for (i in 0..1) {
             needVBar = topNodeIndex > 0
-                    || list.size > nodes.size
-                    || list.size == nodes.size && lastNodePosition + lastNodeHeight > newViewportHeight
+                    || list.size > contentList.size
+                    || list.size == contentList.size && lastNodePosition + lastNodeHeight > newViewportHeight
             needHBar = maxPrefWidth > newViewportWidth
 
             if (needHBar) {
@@ -358,10 +470,13 @@ class VirtualView<P>(
         vScroll.isVisible = needVBar
 
         if (needHBar) {
+
             hScroll.resizeRelocate(0.0, viewportHeight, viewportWidth, hBarHeight)
             // For example, maxPrefWidth=100, viewportWidth=80, then max = 20
-            hScroll.max = maxPrefWidth - viewportWidth
-            hScroll.visibleAmount = (viewportWidth / maxPrefWidth) * hScroll.max
+            val available = if (gutter == null) viewportWidth else viewportWidth - maxGutterPrefWidth
+            hScroll.max = maxPrefWidth - available
+            hScroll.visibleAmount = (available / maxPrefWidth) * hScroll.max
+
         } else {
             clippedView.clipX = 0.0
         }
@@ -378,39 +493,76 @@ class VirtualView<P>(
 
     /**
      * Creates a Node.
-     * It is left to the caller to add it to the [nodes] list, and
+     * It is left to the caller to add it to the [contentList] list, and
      * to update [topNodeIndex] if necessary.
      */
     private fun createNode(index: Int, offset: Double): Node {
         val node = nodeFactory(index, list[index])
         val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
-        node.resizeRelocate(0.0, offset, prefWidth, prefHeight)
+        node.resize(prefWidth, prefHeight)
+        node.layoutY = offset
 
         maxPrefWidth = Math.max(maxPrefWidth, node.layoutBounds.width)
         return node
     }
 
+    /**
+     * Creates a node for a line of the gutter, and adds it to [gutterList].
+     * @param index The position of the item within [list]
+     * @param contentNode The corresponding node, previously createde from [createNode]
+     * @param visibleIndex The index into [gutterList] (or null to add it to the end of the list)
+     */
+    private fun createGutterNode(index: Int, contentNode: Node, visibleIndex: Int?): Node {
+        gutter?.let { gutter ->
+            val node = gutter.createNode(index)
+            if (visibleIndex == null) {
+                gutterList.add(node)
+            } else {
+                gutterList.add(visibleIndex, node)
+            }
+            //println("Create Gutter node ${node.prefWidth(-1.0)} vs $maxGutterPrefWidth")
+            val prefWidth = node.prefWidth(-1.0)
+            if (prefWidth > maxGutterPrefWidth) {
+                maxGutterPrefWidth = prefWidth
+                println("Requesting layout")
+                //layoutChildren() // TODO This is VERY bad
+                requestLayout()
+            }
+            node.isManaged = false
+
+            val height = nodeHeight(contentNode)
+            node.resize(maxGutterPrefWidth, height)
+            node.layoutY = contentNode.layoutY
+            return node
+        }
+        throw IllegalStateException("Gutter is null")
+    }
+
     private fun addFirstNode() {
         if (list.isEmpty()) return
-        if (nodes.isNotEmpty()) throw IllegalStateException("Nodes already exist")
+        if (contentList.isNotEmpty()) throw IllegalStateException("Content List is not empty")
+        if (gutterList.isNotEmpty()) throw IllegalStateException("Gutter List is not empty")
 
         topNodeIndex = vScroll.value.toInt()
         if (topNodeIndex >= list.size) {
             topNodeIndex = 0
         }
 
-        println("Creating topNodeIndex $topNodeIndex from scroll value ${vScroll.value}")
         val node = createNode(topNodeIndex, 0.0)
         // Adjust by the fractional part of vScroll.value
         node.layoutY = (vScroll.value - topNodeIndex) * nodeHeight(node)
-        nodes.add(0, node)
+        contentList.add(node)
+
+        if (gutter != null) {
+            createGutterNode(topNodeIndex, node, null)
+        }
     }
 
     private fun addLeadingNodes() {
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
-        val firstVisibleNode = nodes.first()
+        val firstVisibleNode = contentList.first()
         var index = topNodeIndex - 1
         var offset = nodePosition(firstVisibleNode)
         var nextPosition = offset - nodeHeight(firstVisibleNode)
@@ -418,7 +570,12 @@ class VirtualView<P>(
         while (index >= 0 && offset > 0) {
             val node = createNode(index, nextPosition)
             //topNodeIndex--
-            nodes.add(0, node)
+            contentList.add(0, node)
+
+            if (gutter != null) {
+                createGutterNode(index, node, 0)
+            }
+
             val nodeHeight = nodeHeight(node)
             offset -= nodeHeight
             nextPosition -= nodeHeight
@@ -427,42 +584,57 @@ class VirtualView<P>(
         topNodeIndex = index + 1
 
         // Check if we've scrolled too far down
-        val firstNode = nodes.first()
+        val firstNode = contentList.first()
         if (topNodeIndex == 0 && (nodePosition(firstNode) > 0.0 || vScroll.value <= 0)) {
             val diff = nodePosition(firstNode)
-            for (node in nodes) {
+            for (node in contentList) {
                 node.layoutY -= diff
+            }
+            if (gutter != null) {
+                for (node in gutterList) {
+                    node.layoutY -= diff
+                }
             }
             setVScrollValue(0.0)
         }
     }
 
     private fun addTrailingNodes() {
-        // If nodes is empty then addLeadingNodes bailed for some reason and
+        // If contentList is empty then addLeadingNodes bailed for some reason and
         // we're hosed, so just punt
-        if (nodes.isEmpty()) return
+        if (contentList.isEmpty()) return
 
-        val startNode = nodes.last()
-        var offset = nodePosition(startNode) + nodeHeight(startNode)
-        var index = topNodeIndex + nodes.size
+        val startNode = contentList.last()
+        var offset = nodeBottom(startNode)
+        var index = topNodeIndex + contentList.size
 
         val bottom = viewportHeight
 
-        val isMax = nodes.size > 1 && vScroll.value >= vScroll.max
+        val isMax = contentList.size > 1 && vScroll.value >= vScroll.max
 
-        while ((offset < bottom && index < list.size) || (isMax && topNodeIndex + nodes.size < list.size)) {
+        while ((offset < bottom && index < list.size) || (isMax && topNodeIndex + contentList.size < list.size)) {
             val node = createNode(index, offset)
-            nodes.add(node)
+            contentList.add(node)
+
+            if (gutter != null) {
+                createGutterNode(index, node, null)
+            }
+
             offset += nodeHeight(node)
             index++
         }
 
         // Check if we've scrolled too far up
-        val lastNode = nodes.last()
-        val diff = nodePosition(lastNode) + nodeHeight(lastNode) - viewportHeight
-        if (topNodeIndex + nodes.size == list.size && (diff < 0.0 || vScroll.value >= vScroll.max) && !needsRebuild) {
-            for (node in nodes) {
+        val lastNode = contentList.last()
+        val diff = nodeBottom(lastNode) - viewportHeight
+        if (topNodeIndex + contentList.size == list.size && (diff < 0.0 || vScroll.value >= vScroll.max) && !needsRebuild) {
+            for (node in contentList) {
                 node.layoutY -= diff
+            }
+            if (gutter != null) {
+                for (node in gutterList) {
+                    node.layoutY -= diff
+                }
             }
             setVScrollValue(vScroll.max)
         }
@@ -471,12 +643,15 @@ class VirtualView<P>(
 
     private fun cull() {
 
-        for (i in nodes.indices) {
-            val node = nodes[i]
-            if (nodePosition(node) + nodeHeight(node) >= 0.0) {
+        for (i in contentList.indices) {
+            val node = contentList[i]
+            if (nodeBottom(node) >= 0.0) {
                 // We've found the first visible node
                 repeat(i) {
-                    nodes.removeFirst()
+                    contentList.removeFirst()
+                    if (gutter != null) {
+                        removeGutterNode(0)
+                    }
                     topNodeIndex++
                 }
                 break
@@ -484,12 +659,15 @@ class VirtualView<P>(
         }
 
         val bottom = viewportHeight
-        for (i in nodes.indices.reversed()) {
-            val node = nodes[i]
-            if (nodePosition(node) + nodeHeight(node) <= bottom) {
+        for (i in contentList.indices.reversed()) {
+            val node = contentList[i]
+            if (nodeBottom(node) <= bottom) {
                 // We've found the last visible node
-                repeat(nodes.size - i - 2) {
-                    nodes.removeLast()
+                repeat(contentList.size - i - 2) {
+                    contentList.removeLast()
+                    if (gutter != null) {
+                        removeGutterNode(gutterList.size - 1)
+                    }
                 }
                 break
             }
@@ -498,7 +676,27 @@ class VirtualView<P>(
 
     fun nodePosition(node: Node?) = node?.layoutY ?: 0.0
     fun nodeHeight(node: Node?) = node?.layoutBounds?.height ?: 0.0
+    fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
 
+
+    private inner class GutterGroup : Region() {
+
+        init {
+            styleClass.add("gutter")
+        }
+
+        public override fun getChildren() = super.getChildren()
+
+        override fun computePrefWidth(height: Double): Double {
+            println("GutterGroup.computerPrefWidth")
+            return snappedLeftInset() + snappedRightInset() + maxGutterPrefWidth
+        }
+
+        override fun layoutChildren() {
+            // println("GutterGroup.layoutChildren")
+            return
+        }
+    }
 }
 
 private fun <T> MutableList<T>.removeLast() = removeAt(size - 1)
@@ -517,11 +715,11 @@ class VirtualViewApp : Application() {
 
         val tediArea = TediArea()
 
-        val virtualFlow = VirtualView(tediArea.paragraphs) { index, paragraph -> createNode(index, paragraph) }
+        val virtualFlow = VirtualView(tediArea.paragraphs) { _, paragraph -> createNode(paragraph) }
 
         val scene = Scene(virtualFlow, 600.0, 400.0)
 
-        var listenerHelper: ListListenerHelper<StringBuffer>? = null
+        val gutter = LineNumberGutter()
 
         init {
             TediArea.style(scene)
@@ -530,12 +728,12 @@ class VirtualViewApp : Application() {
                 title = "VirtualScroll Demo Application"
                 show()
             }
-
-            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(50))
+            virtualFlow.gutter = gutter
+            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(100))
         }
 
-        fun createNode(index: Int, paragraph: ParagraphList.Paragraph): Node {
-            println("Creating node # $index")
+        fun createNode(paragraph: ParagraphList.Paragraph): Node {
+            //println("Creating node # $index")
             val add = Text(" + ")
             val sub = Text(" - ")
             val delete = Text(" X ")
@@ -567,6 +765,7 @@ class VirtualViewApp : Application() {
 
             return TextFlow(delete, insert, add, sub, text)
         }
+
     }
 
     companion object {
@@ -577,4 +776,5 @@ class VirtualViewApp : Application() {
         }
 
     }
+
 }
