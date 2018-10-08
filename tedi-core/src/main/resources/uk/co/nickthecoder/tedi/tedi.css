@@ -19,7 +19,11 @@
 }
 
 .virtual-view .content {
-    -fx-padding: 8; /* Note, bottom is ignored. Right is ignored (until word-wrapping is implemented) */
+    -fx-padding: 30;
+}
+
+.virtual-view .clipped-view {
+    -fx-padding: 16; /* TODO Remove */
 }
 
 .virtual-view .gutter {

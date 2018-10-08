@@ -45,15 +45,13 @@ class ClippedView(val node: Node) : Region() {
     var clipX: Double = 0.0
         set(v) {
             field = v
-            layoutX = -v
-            clipRect.layoutX = v
+            node.layoutX = -v
         }
 
     var clipY: Double = 0.0
         set(v) {
             field = v
-            layoutY = -v
-            clipRect.layoutY = v
+            node.layoutY = -v
         }
 
     private val clipRect = Rectangle()
@@ -61,13 +59,11 @@ class ClippedView(val node: Node) : Region() {
     init {
         styleClass.add("clipped-view")
 
-        // clipping
         clipRect.isSmooth = false
         clip = clipRect
-        // --- clipping
 
-        super.widthProperty().addListener { _ -> clipRect.width = width }
-        super.heightProperty().addListener { _ -> clipRect.height = height }
+        widthProperty().addListener { _ -> clipRect.width = width }
+        heightProperty().addListener { _ -> clipRect.height = height }
 
     }
 }
