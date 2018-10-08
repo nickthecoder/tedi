@@ -81,14 +81,14 @@ class VirtualView<P>(
             // The existing gutter must have "free" called for existing gutterNodes.
             clear()
             field = v
-            gutterGroup.isVisible = v != null
+            gutterRegion.isVisible = v != null
             needsRebuild = true
             requestLayout()
         }
 
-    private val gutterGroup = GutterGroup()
+    private val gutterRegion = GutterRegion()
 
-    private val gutterList = gutterGroup.children
+    private val gutterList = gutterRegion.children
 
     private val clippedView = ClippedView(contentGroup)
 
@@ -127,12 +127,15 @@ class VirtualView<P>(
 
     init {
         styleClass.add("virtual-view")
-        children.addAll(vScroll, hScroll, corner, gutterGroup, clippedView)
+        contentGroup.styleClass.add("content")
+        gutterRegion.styleClass.add("gutter")
+
+        children.addAll(vScroll, hScroll, corner, gutterRegion, clippedView)
 
         clippedView.isManaged = false
         contentGroup.isManaged = false
-        gutterGroup.isManaged = false
-        gutterGroup.isVisible = false
+        gutterRegion.isManaged = false
+        gutterRegion.isVisible = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
         hScroll.valueProperty().addListener { _, _, _ -> clippedView.clipX = hScroll.value }
@@ -431,9 +434,8 @@ class VirtualView<P>(
             updateScrollMaxAndVisible()
         }
 
-        gutterWidth = if (gutterGroup.isVisible) {
-            //gutterGroup.prefWidth(-1.0)
-            maxGutterPrefWidth + gutterGroup.snappedLeftInset() + gutterGroup.snappedRightInset()
+        gutterWidth = if (gutterRegion.isVisible) {
+            maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
         } else {
             0.0
         }
@@ -442,7 +444,7 @@ class VirtualView<P>(
 
         clippedView.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
 
-        for (child in gutterGroup.children) {
+        for (child in gutterRegion.children) {
             child.resize(maxGutterPrefWidth, nodeHeight(child))
         }
     }
@@ -694,21 +696,17 @@ class VirtualView<P>(
     fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
 
 
-    private inner class GutterGroup : Region() {
+    private inner class GutterRegion : Region() {
 
-        init {
-            styleClass.add("gutter")
-        }
-
+        // Make it public.
         public override fun getChildren() = super.getChildren()
 
         override fun computePrefWidth(height: Double): Double {
-            println("GutterGroup.computerPrefWidth")
             return snappedLeftInset() + snappedRightInset() + maxGutterPrefWidth
         }
 
+        // Children are being manually laid out, so do nothing here.
         override fun layoutChildren() {
-            // println("GutterGroup.layoutChildren")
             return
         }
     }

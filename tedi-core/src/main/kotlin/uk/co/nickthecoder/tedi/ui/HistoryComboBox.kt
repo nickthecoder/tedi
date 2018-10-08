@@ -34,6 +34,7 @@ class HistoryComboBox(history: ObservableList<String>)
 
     var history: ObservableList<String> = history
         set(v) {
+            field = v
             updateItems()
         }
 

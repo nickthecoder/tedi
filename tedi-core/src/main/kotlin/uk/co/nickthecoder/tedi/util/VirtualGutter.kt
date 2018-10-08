@@ -34,7 +34,7 @@ interface VirtualGutter : VirtualFactory {
      *
      * @param node The corresponding node created earlier via [createNode]
      */
-    fun documentChanged(index: Int, node: Node) {}
+    fun documentChanged(index: Int, node: Node);
 
 }
 
