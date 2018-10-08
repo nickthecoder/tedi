@@ -346,7 +346,7 @@ class VirtualView<P>(
         val diff = newValue - oldValue
         if (Math.abs(diff) > contentList.size - 1) {
             // Clear and start from scratch
-            rebuild()
+            fillViewport()
         } else {
             adjustScroll(diff)
         }
@@ -366,9 +366,7 @@ class VirtualView<P>(
             }
         }
 
-        addLeadingNodes()
-        addTrailingNodes()
-        cull()
+        fillViewport()
     }
 
     internal fun pageUp() {
@@ -392,22 +390,57 @@ class VirtualView<P>(
             vScroll.visibleAmount = 1.0
             setVScrollValue(0.0)
         } else {
-            vScroll.max = (list.size - contentList.size + 1).toDouble()
+            // Imagine 60 items and 40 visible, then max is 20, and visible amount is 40/60 * 20
+            // Note, the "- 1" is a bodge (one or two visible items can be almost completely out of view).
+            // This bodge may cause the vScroll to appear when the content just about fits in, and therefore
+            // isn't really needed. It doesn't cause any other problems, so I think it's good enough.
+            vScroll.max = (list.size - (contentList.size - 1)).toDouble()
             if (vScroll.value > vScroll.max) {
                 setVScrollValue(vScroll.max)
             }
-            vScroll.visibleAmount = Math.min(1.0, contentList.size.toDouble())
+            vScroll.visibleAmount = vScroll.max * (contentList.size - 1) / list.size.toDouble()
         }
     }
 
-    private fun rebuild() {
-        clear()
-        addFirstNode()
+    private fun fillViewport() {
+        if (contentList.isEmpty()) {
+            addFirstNode()
+        }
         addLeadingNodes()
         addTrailingNodes()
+        cull()
+
+        // Is the first node visible, and LOWER than it should be?
+        val firstNode = contentList.first()
+        val topDiff = nodePosition(firstNode) - contentGroup.snappedTopInset()
+        //println("Diff is $topDiff")
+        if (topNodeIndex == 0 && topDiff > 0) {
+            //println("Adjusting top by $topDiff")
+            for (node in contentList) {
+                node.layoutY -= topDiff
+            }
+            for (node in gutterList) {
+                node.layoutY -= topDiff
+            }
+            setVScrollValue(0.0)
+        }
+
+        // Is the last node visible, and too high up? But don't do this when we are at the top of the list
+        val lastNode = contentList.last()
+        val bottomDiff = viewportHeight - contentGroup.snappedBottomInset() - nodeBottom(lastNode)
+        if (bottomNodeIndex == list.size - 1 && bottomDiff > 0 && vScroll.value != 0.0) {
+            for (node in contentList) {
+                node.layoutY += bottomDiff
+            }
+            for (node in gutterList) {
+                node.layoutY += bottomDiff
+            }
+            setVScrollValue(vScroll.max)
+        }
 
         updateScrollMaxAndVisible()
-        needsRebuild = false
+        // TODO For debugging. This shouldn't happen any more!
+        if (vScroll.value < 0 || vScroll.value > vScroll.max) Thread.dumpStack()
     }
 
     override fun layoutChildren() {
@@ -424,15 +457,14 @@ class VirtualView<P>(
             return
         }
 
-        // If the hScroll visibility changes, we may need to add/remove some nodes
-        addTrailingNodes()
-        cull()
-
         if (needsRebuild) {
-            rebuild()
-        } else {
-            updateScrollMaxAndVisible()
+            clear()
+            needsRebuild = false
         }
+        // We need to create the gutter nodes, to find the gutterWidth. Only then can we decide which scroll bars
+        // must be visible. But then we need to fill the viewport AGAIN, because we may need extra items
+        // when the hScroll is removed.
+        fillViewport()
 
         gutterWidth = if (gutterRegion.isVisible) {
             maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
@@ -442,10 +474,14 @@ class VirtualView<P>(
 
         layoutScrollBars()
 
+        // Fill again (see comment above for why this is done twice)
+        fillViewport()
+
         clippedView.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
         contentGroup.resizeRelocate(0.0, 0.0, viewportWidth - gutterWidth, viewportHeight)
         gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
 
+        // Make all gutter nodes the correct width
         for (child in gutterRegion.children) {
             child.resize(maxGutterPrefWidth, nodeHeight(child))
         }
@@ -453,14 +489,14 @@ class VirtualView<P>(
 
     private fun layoutScrollBars() {
 
+        val firstNode = contentList.firstOrNull()
         val lastNode = contentList.lastOrNull()
-        val lastNodePosition = nodePosition(lastNode)
-        val lastNodeHeight = nodeHeight(lastNode)
-        var needVBar = false
-        var needHBar = false
 
         val width = width
         val height = height
+
+        var needVBar = false
+        var needHBar = false
 
         var newViewportWidth = width
         var newViewportHeight = height
@@ -468,10 +504,15 @@ class VirtualView<P>(
         val hBarHeight = hScroll.prefHeight(newViewportWidth)
         val vBarWidth = vScroll.prefWidth(newViewportHeight)
 
-        for (i in 0..1) {
-            needVBar = topNodeIndex > 0
-                    || list.size > contentList.size
-                    || list.size == contentList.size && lastNodePosition + lastNodeHeight > newViewportHeight
+        // We need to loop twice, because adding a scrollbar can make the other one needed as well,
+        // when it previously wasn't needed.
+        repeat(2) {
+            // If not all nodes are visible, or ALL nodes are visible, but don't QUITE fit.
+            needVBar = list.size > contentList.size || (list.size == contentList.size &&
+                    (nodeBottom(lastNode) > newViewportHeight - contentGroup.snappedBottomInset()) ||
+                    (nodePosition(firstNode) < contentGroup.snappedTopInset())
+                    )
+
             needHBar = maxPrefWidth > newViewportWidth
 
             if (needHBar) {
@@ -611,20 +652,6 @@ class VirtualView<P>(
         }
         topNodeIndex = index + 1
 
-        // Check if we've scrolled too far down
-        val firstNode = contentList.first()
-        if (topNodeIndex == 0 && (nodePosition(firstNode) > contentGroup.snappedTopInset() || vScroll.value <= 0)) {
-            val diff = nodePosition(firstNode) - contentGroup.snappedTopInset()
-            for (node in contentList) {
-                node.layoutY -= diff
-            }
-            if (gutter != null) {
-                for (node in gutterList) {
-                    node.layoutY -= diff
-                }
-            }
-            setVScrollValue(0.0)
-        }
     }
 
     private fun addTrailingNodes() {
@@ -650,21 +677,6 @@ class VirtualView<P>(
 
             offset += nodeHeight(node)
             index++
-        }
-
-        // Check if we've scrolled too far up
-        val lastNode = contentList.last()
-        val diff = nodeBottom(lastNode) - viewportHeight
-        if (topNodeIndex + contentList.size == list.size && (diff < 0.0 || vScroll.value >= vScroll.max) && !needsRebuild) {
-            for (node in contentList) {
-                node.layoutY -= diff
-            }
-            if (gutter != null) {
-                for (node in gutterList) {
-                    node.layoutY -= diff
-                }
-            }
-            setVScrollValue(vScroll.max)
         }
 
     }
@@ -766,7 +778,7 @@ class VirtualViewApp : Application() {
                 show()
             }
             virtualFlow.gutter = gutter
-            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(100))
+            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(40))
         }
 
         inner class ParagraphNodeFactory : VirtualFactory {
