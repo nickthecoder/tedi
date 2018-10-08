@@ -14,7 +14,6 @@ import javafx.scene.layout.StackPane
 import javafx.scene.text.Text
 import javafx.scene.text.TextFlow
 import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.ParagraphList
 import uk.co.nickthecoder.tedi.TediArea
 
 /*
@@ -54,7 +53,7 @@ import uk.co.nickthecoder.tedi.TediArea
  */
 class VirtualView<P>(
         val list: ObservableList<P>,
-        val nodeFactory: (Int, P) -> Node) : Region() {
+        val factory: VirtualFactory) : Region() {
 
 
     private val hScroll = ScrollBar()
@@ -171,7 +170,25 @@ class VirtualView<P>(
     }
 
     /**
-     * Removes the gutter nodes from the list, calling "free"
+     * Removes the content nodes from the list, calling "free" on each
+     */
+    private fun clearContentNodes(list: MutableList<Node>, startIndex: Int) {
+        list.forEachIndexed { index, node ->
+            factory.free(index + startIndex, node)
+        }
+        list.clear()
+    }
+
+    /**
+     * Removes a single content node, and calling "free"
+     */
+    private fun removeContentNode(visibleIndex: Int) {
+        val removed = contentList.removeAt(visibleIndex)
+        factory.free(visibleIndex + topNodeIndex, removed)
+    }
+
+    /**
+     * Removes the gutter nodes from the list, calling "free" on each
      */
     private fun clearGutterNodes(list: MutableList<Node>, startIndex: Int) {
         gutter?.let { gutter ->
@@ -183,7 +200,7 @@ class VirtualView<P>(
     }
 
     /**
-     * Removes a single gutter node.
+     * Removes a single gutter node, and calling "free"
      */
     private fun removeGutterNode(visibleIndex: Int) {
         val removed = gutterList.removeAt(visibleIndex)
@@ -244,13 +261,11 @@ class VirtualView<P>(
 
             for (i in from..to - 1) {
                 if (i >= topNodeIndex && i <= bottomNodeIndex) {
-                    val index = i - topNodeIndex
-                    // We don't care about the offset at this stage, it will be corrected later.
-                    val node = createNode(i, 0.0)
-                    contentList[index] = node
+                    getContentNode(i)?.let { factory.itemChanged(i, it) }
                     gutter?.let { gutter ->
                         getGutterNode(i)?.let { gutter.itemChanged(i, it) }
                     }
+                    // Note, this may have changed its height, but we'll deal with that later
                 }
                 adjustFrom = Math.min(adjustFrom, from - topNodeIndex)
             }
@@ -497,7 +512,7 @@ class VirtualView<P>(
      * to update [topNodeIndex] if necessary.
      */
     private fun createNode(index: Int, offset: Double): Node {
-        val node = nodeFactory(index, list[index])
+        val node = factory.createNode(index)
         val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
         node.resize(prefWidth, prefHeight)
@@ -648,7 +663,7 @@ class VirtualView<P>(
             if (nodeBottom(node) >= 0.0) {
                 // We've found the first visible node
                 repeat(i) {
-                    contentList.removeFirst()
+                    removeContentNode(0)
                     if (gutter != null) {
                         removeGutterNode(0)
                     }
@@ -664,7 +679,7 @@ class VirtualView<P>(
             if (nodeBottom(node) <= bottom) {
                 // We've found the last visible node
                 repeat(contentList.size - i - 2) {
-                    contentList.removeLast()
+                    removeContentNode(contentList.size - 1)
                     if (gutter != null) {
                         removeGutterNode(gutterList.size - 1)
                     }
@@ -715,7 +730,7 @@ class VirtualViewApp : Application() {
 
         val tediArea = TediArea()
 
-        val virtualFlow = VirtualView(tediArea.paragraphs) { _, paragraph -> createNode(paragraph) }
+        val virtualFlow = VirtualView(tediArea.paragraphs, ParagraphNodeFactory())
 
         val scene = Scene(virtualFlow, 600.0, 400.0)
 
@@ -732,40 +747,49 @@ class VirtualViewApp : Application() {
             tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(100))
         }
 
-        fun createNode(paragraph: ParagraphList.Paragraph): Node {
-            //println("Creating node # $index")
-            val add = Text(" + ")
-            val sub = Text(" - ")
-            val delete = Text(" X ")
-            val insert = Text(" ! ")
-            val text = Text(paragraph.text)
+        inner class ParagraphNodeFactory : VirtualFactory {
+            override fun createNode(index: Int): Node {
+                val paragraph = tediArea.paragraphs[index]
 
-            add.onMouseClicked = EventHandler {
-                val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                val pos = tediArea.positionOfLine(myIndex)
-                tediArea.insertText(pos, ".")
-            }
-            sub.onMouseClicked = EventHandler {
-                val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                val pos = tediArea.positionOfLine(myIndex)
-                tediArea.replaceText(pos, pos + 1, "")
-            }
-            delete.onMouseClicked = EventHandler {
-                val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                if (myIndex != 0) {
-                    val pos = tediArea.positionOfLine(myIndex) - 1
-                    val end = tediArea.positionOfLine(myIndex + 1) - 1
-                    tediArea.replaceText(pos, end, "")
+                //println("Creating node # $index")
+                val add = Text(" + ")
+                val sub = Text(" - ")
+                val delete = Text(" X ")
+                val insert = Text(" ! ")
+                val text = Text(paragraph.text)
+
+                add.onMouseClicked = EventHandler {
+                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                    val pos = tediArea.positionOfLine(myIndex)
+                    tediArea.insertText(pos, ".")
                 }
-            }
-            insert.onMouseClicked = EventHandler {
-                val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                tediArea.insertText(tediArea.positionOfLine(myIndex), "This is a new line\n")
+                sub.onMouseClicked = EventHandler {
+                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                    val pos = tediArea.positionOfLine(myIndex)
+                    tediArea.replaceText(pos, pos + 1, "")
+                }
+                delete.onMouseClicked = EventHandler {
+                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                    if (myIndex != 0) {
+                        val pos = tediArea.positionOfLine(myIndex) - 1
+                        val end = tediArea.positionOfLine(myIndex + 1) - 1
+                        tediArea.replaceText(pos, end, "")
+                    }
+                }
+                insert.onMouseClicked = EventHandler {
+                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
+                    tediArea.insertText(tediArea.positionOfLine(myIndex), "This is a new line\n")
+                }
+
+                return TextFlow(delete, insert, add, sub, text)
             }
 
-            return TextFlow(delete, insert, add, sub, text)
+            override fun itemChanged(index: Int, node: Node) {
+                println("itemChanged")
+                val text = (node as TextFlow).children[4] as Text
+                text.text = tediArea.paragraphs[index].text
+            }
         }
-
     }
 
     companion object {
