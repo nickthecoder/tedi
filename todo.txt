@@ -19,8 +19,6 @@ Implement the selection using an EXTRA HighlightRange (not in the normal list)
 
 Implement pageUp/down (ignoring selection)
 
-Show/Hide line numbers
-
 Implement current-line highlighting.
     Maybe using another fake highlight range?
         Won't extend across the whole viewport

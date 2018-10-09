@@ -427,31 +427,20 @@ class TediAreaSkin(control: TediArea)
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
-        // TODO
-        /*
+
         val line = skinnable.lineForPosition(skinnable.caretPosition)
-
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
-
         val requiredLine = clamp(0, line + n, skinnable.lineCount - 1)
-        val node = paragraphsGroup.children[requiredLine]
+        val paragraphNode = getParagraphNode(requiredLine)
 
-        var columnIndex = 0
-        if (node is Text) {
-            val hit = node.hitTestChar(requiredX, node.layoutY)
-            columnIndex = hit.getInsertionIndex()
-        } else if (node is Group) {
-            for (child in node.children) {
-                if (child is Text) {
-                    val hit = child.hitTestChar(requiredX, 0.0)
-                    val i = hit.getInsertionIndex()
-                    if (i == 0) break
-                    columnIndex += i
-                }
-            }
+        val column = if (paragraphNode == null) {
+            // Use the same column
+            skinnable.caretColumn
+        } else {
+            paragraphNode.getColumn(requiredX)
         }
 
-        val newPosition = skinnable.positionOfLine(requiredLine, 0) + columnIndex
+        val newPosition = skinnable.positionOfLine(requiredLine, column)
 
         if (select) {
             skinnable.selectRange(skinnable.anchor, newPosition)
@@ -461,7 +450,6 @@ class TediAreaSkin(control: TediArea)
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
-        */
     }
 
     fun previousLine(select: Boolean) {
