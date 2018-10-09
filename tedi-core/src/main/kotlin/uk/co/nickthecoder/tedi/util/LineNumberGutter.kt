@@ -8,9 +8,9 @@ import javafx.scene.layout.Region
 import javafx.scene.text.Text
 
 
-open class LineNumberGutter : VirtualGutter {
+open class LineNumberGutter : ReusableVirtualFactory<LineNumberNode>(), VirtualGutter {
 
-    override fun createNode(index: Int): LineNumberNode {
+    override fun createNewNode(index: Int): LineNumberNode {
         return LineNumberNode(index)
     }
 
@@ -20,26 +20,26 @@ open class LineNumberGutter : VirtualGutter {
         }
     }
 
-    open class LineNumberNode(var index: Int) : HBox() {
+}
 
-        val lineNumber = Text((index + 1).toString()).apply {
-            styleClass.add("line-number")
-            textOrigin = VPos.TOP
+open class LineNumberNode(var index: Int) : HBox(), UpdatableNode {
+
+    val lineNumber = Text((index + 1).toString()).apply {
+        styleClass.add("line-number")
+        textOrigin = VPos.TOP
+    }
+
+    init {
+        val padding = Region()
+        HBox.setHgrow(padding, Priority.ALWAYS)
+        children.addAll(padding, lineNumber)
+    }
+
+    override fun update(newIndex: Int) {
+        if (newIndex != index) {
+            index = newIndex
+            lineNumber.text = (index + 1).toString()
         }
-
-        init {
-            val padding = Region()
-            HBox.setHgrow(padding, Priority.ALWAYS)
-            children.addAll(padding, lineNumber)
-        }
-
-        open fun update(newIndex: Int) {
-            if (newIndex != index) {
-                index = newIndex
-                lineNumber.text = (index + 1).toString()
-            }
-        }
-
     }
 
 }

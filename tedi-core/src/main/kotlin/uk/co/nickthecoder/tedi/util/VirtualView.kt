@@ -360,6 +360,7 @@ class VirtualView<P>(
         val diff = newValue - oldValue
         if (Math.abs(diff) > contentList.size - 1) {
             // Clear and start from scratch
+            clear()
             fillViewport()
         } else {
             adjustScroll(diff)
