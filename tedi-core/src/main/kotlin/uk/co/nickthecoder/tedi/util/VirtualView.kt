@@ -168,6 +168,28 @@ class VirtualView<P>(
     }
 
     /**
+     * Given a Y coordinate, returns the index within [list] that it refers to.
+     * @return Ranges from -1 (above the top) to [list].size (below the bottom)
+     */
+    fun getListIndexAtY(y: Double): Int {
+        if (contentList.isEmpty()) return -1
+        if (y < nodePosition(contentList.first())) {
+            return -1
+        }
+        contentList.forEachIndexed { index, node ->
+            if (y < nodeBottom(node)) return index + topNodeIndex
+        }
+        return contentList.size
+    }
+
+    // TODO Consider the x scroll
+    /**
+     * Given an X coordinate relative to the whole view, returns the X coordinate relative to
+     * the content nodes (including the contentRegion's left inset).
+     */
+    fun getContentX(x: Double) = x - gutterWidth - contentRegion.snappedLeftInset()
+
+    /**
      * Rebuilds the nodes from scratch. Also resets the cached "max" values for the gutter and content.
      */
     fun reset() {
@@ -181,7 +203,6 @@ class VirtualView<P>(
      * Removes all nodes from the contentList and from gutterList.
      */
     private fun clear() {
-        println("Clear")
         contentList.clear()
         clearGutterNodes(gutterList, topNodeIndex)
     }
@@ -237,7 +258,6 @@ class VirtualView<P>(
         val initialOffset = contentList.firstOrNull()?.layoutY ?: 0.0
 
         fun addedItems(from: Int, to: Int) {
-            //println("Add $from .. $to")
             if (contentList.isEmpty() || (to - from > 1)) {
                 rebuild = true
             } else {
@@ -256,7 +276,6 @@ class VirtualView<P>(
         }
 
         fun removedItems(from: Int, amount: Int) {
-            //println("Remove $from  ($amount) topNodeIndex=$topNodeIndex")
 
             documentChanged = true
 
@@ -273,7 +292,6 @@ class VirtualView<P>(
         }
 
         fun updatedItems(from: Int, to: Int) {
-            //println("Update $from .. $to")
             if (from < topNodeIndex || to > bottomNodeIndex) return
 
             for (i in from..to - 1) {
@@ -433,8 +451,6 @@ class VirtualView<P>(
 
             val total = list.size + topInsetItems + bottomInsetItems
 
-            //println("$visible = ${contentList.size} + ${nodePosition(firstNode) / nodeHeight(firstNode)} - ${Math.max(0.0, (nodeBottom(lastNode) - viewportHeight) / nodeHeight(lastNode))}")
-
             vScroll.max = total - visible
 
             if (vScroll.max < 0.0) {
@@ -490,7 +506,6 @@ class VirtualView<P>(
     }
 
     override fun layoutChildren() {
-        println("Laying out")
 
         val width = width
         val height = height
@@ -803,13 +818,13 @@ class VirtualViewApp : Application() {
 
     class VirtualViewAppWindow(stage: Stage) {
 
-        val tediArea = TediArea()
+        private val tediArea = TediArea()
 
-        val virtualFlow = VirtualView(tediArea.paragraphs, ParagraphNodeFactory())
+        private val virtualView = VirtualView(tediArea.paragraphs, ParagraphNodeFactory())
 
-        val scene = Scene(virtualFlow, 600.0, 400.0)
+        private val scene = Scene(virtualView, 600.0, 400.0)
 
-        val gutter = LineNumberGutter()
+        private val gutter = LineNumberGutter()
 
         init {
             TediArea.style(scene)
@@ -818,7 +833,7 @@ class VirtualViewApp : Application() {
                 title = "VirtualScroll Demo Application"
                 show()
             }
-            virtualFlow.gutter = gutter
+            virtualView.gutter = gutter
             tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" +
                     ("extra lines\n".repeat(140))
         }
@@ -827,7 +842,6 @@ class VirtualViewApp : Application() {
             override fun createNode(index: Int): Node {
                 val paragraph = tediArea.paragraphs[index]
 
-                //println("Creating node # $index")
                 val add = Text(" + ")
                 val sub = Text(" - ")
                 val delete = Text(" X ")

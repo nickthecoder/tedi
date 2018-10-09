@@ -32,24 +32,20 @@ package uk.co.nickthecoder.tedi
 
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
-import javafx.application.Platform
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.property.SimpleBooleanProperty
 import javafx.beans.value.ObservableBooleanValue
 import javafx.beans.value.ObservableIntegerValue
-import javafx.collections.ListChangeListener.Change
-import javafx.collections.ObservableList
 import javafx.css.*
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
-import javafx.geometry.*
+import javafx.geometry.BoundingBox
+import javafx.geometry.Bounds
+import javafx.geometry.Rectangle2D
+import javafx.geometry.VPos
 import javafx.scene.Group
 import javafx.scene.Node
-import javafx.scene.control.ScrollPane
-import javafx.scene.input.MouseEvent
-import javafx.scene.layout.BorderPane
-import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.LineTo
@@ -58,54 +54,15 @@ import javafx.scene.shape.Path
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Text
 import javafx.util.Duration
-import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
-import uk.co.nickthecoder.tedi.util.clamp
-import uk.co.nickthecoder.tedi.util.hitTestChar
+import uk.co.nickthecoder.tedi.util.*
 
 class TediAreaSkin(control: TediArea)
 
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
 
-    /**
-     * There is a 1:1 mapping between the groups children and [Paragraph]s.
-     * i.e.
-     *
-     *     paragraphsGroup.children[n] corresponds to ParagraphsList.paragraphs[n]
-     *
-     * For a paragraph without highlights, this will be a simple Text object.
-     * For those with highlights, it will be a ??Group/TextFlow?? of Text objects.
-     */
-    private val paragraphsGroup = Group()
 
-    /**
-     * A Region containing line numbers, to the left of the main content.
-     */
-    private val gutter = Gutter(control)
-
-    /**
-     * A rectangle to highlight the line that the caret is sitting on.
-     */
-    private val currentLineRect = Rectangle()
-
-    /**
-     * A simple BorderPane with left=[gutter], center=[contentView]
-     */
-    private val guttersAndContentView = BorderPane()
-
-    /**
-     * The main content responsible for displaying the text, the caret and the selection.
-     *
-     * Internal, as Gutter uses this to sync its top margin with the contentView's top margin to
-     * ensure the line numbers line up with the main text.
-     */
-    internal val contentView = ContentView()
-    // TODO Why internal?
-
-    /**
-     * Takes care of the contentView's borders, so that all ancestors don't need to bother.
-     */
-    private val insideGroup = Group()
+    private val virtualView = VirtualView(control.paragraphs, ParagraphFactory())
 
     /**
      * A path, used to display the caret.
@@ -113,8 +70,6 @@ class TediAreaSkin(control: TediArea)
     private val caretPath = Path()
 
     private val selectionHighlightGroup = Group()
-
-    private val scrollPane = ScrollPane()
 
     private var oldViewportBounds: Bounds = BoundingBox(0.0, 0.0, 0.0, 0.0)
 
@@ -184,7 +139,7 @@ class TediAreaSkin(control: TediArea)
         override fun getName() = "displayCaret"
         override fun getCssMetaData() = DISPLAY_CARET
     }
-    var displayCaret : Boolean
+    var displayCaret: Boolean
         get() = displayCaretProperty.get()
         set(v) = displayCaretProperty.set(v)
 
@@ -213,62 +168,19 @@ class TediAreaSkin(control: TediArea)
 
     private val caretAnimation = CaretAnimation(caretVisible, caretPath, control.caretPositionProperty())
 
-    /***************************************************************************
-     *                                                                         *
-     * init                                                                    *
-     *                                                                         *
-     **************************************************************************/
+    //--------------------------------------------------------------------------
+    // init
+    //--------------------------------------------------------------------------
 
     init {
 
         // Initialize content
-        with(scrollPane) {
-            isFitToWidth = true
-            isFitToHeight = true
-            content = guttersAndContentView
-            hvalueProperty().addListener { _, _, newValue -> skinnable.scrollLeft = newValue.toDouble() * getScrollLeftMax() }
-            vvalueProperty().addListener { _, _, newValue -> skinnable.scrollTop = newValue.toDouble() * getScrollTopMax() }
-
-            viewportBoundsProperty().addListener { _ ->
-                if (scrollPane.viewportBounds != null) {
-                    // ScrollPane creates a new Bounds instance for each
-                    // layout pass, so we need to check if the width/height
-                    // have really changed to avoid infinite layout requests.
-                    val newViewportBounds = scrollPane.viewportBounds
-                    if (oldViewportBounds.width != newViewportBounds.width || oldViewportBounds.height != newViewportBounds.height) {
-                        oldViewportBounds = newViewportBounds
-                        contentView.requestLayout()
-                    }
-                }
-            }
-        }
-        children.add(scrollPane)
-
-        // Create nodes for each paragraph.
-        with(paragraphsGroup) {
-            skinnable.paragraphs.forEach { p ->
-                children.add(createParagraphNode(p))
-            }
-            isManaged = false
-        }
+        children.addAll(virtualView, caretPath)
+        // TODO children.addAll(currentLineRect, paragraphsGroup, selectionHighlightGroup, caretPath)
 
         // selection
         with(selectionHighlightGroup) {
             isManaged = false
-        }
-
-        // gutter
-        gutter.updateLines()
-        with(guttersAndContentView) {
-            left = if (gutter.isVisible) gutter else null
-            center = contentView
-        }
-        control.displayLineNumbersProperty().addListener { _, _, newValue ->
-            if (newValue) {
-                guttersAndContentView.left = gutter
-            } else {
-                guttersAndContentView.left = null
-            }
         }
 
         // caretPath
@@ -278,47 +190,9 @@ class TediAreaSkin(control: TediArea)
             //strokeProperty().bind(textFillProperty)
         }
 
-        // currentLineRect
-        with(currentLineRect) {
-            isManaged = false
-            fillProperty().bind(currentLineFillProperty)
-            skinnable.caretLineProperty().addListener { _, _, _ ->
-                currentLineRect.layoutY = lineHeight() * skinnable.caretLine
-            }
-        }
-
         // tmpText
         tmpText.fontProperty().bind(control.fontProperty())
 
-        // insideGroup
-        with(insideGroup) {
-            isManaged = false
-            children.addAll(currentLineRect, paragraphsGroup, selectionHighlightGroup, caretPath)
-        }
-
-        // contentView
-        contentView.children.addAll(insideGroup)
-
-        // control
-        control.scrollTopProperty().addListener { _, _, newValue ->
-            scrollPane.vvalue = if (newValue.toDouble() < getScrollTopMax()) {
-                newValue.toDouble() / getScrollTopMax()
-            } else {
-                1.0
-            }
-        }
-
-        control.scrollLeftProperty().addListener { _, _, newValue ->
-            scrollPane.hvalue = if (newValue.toDouble() < getScrollLeftMax()) {
-                newValue.toDouble() / getScrollLeftMax()
-            } else {
-                1.0
-            }
-        }
-
-        control.paragraphs.addListener { change: Change<out Paragraph> ->
-            onParagraphsChange(change)
-        }
 
         control.selectionProperty().addListener { _, _, _ ->
             onSelectionChanged()
@@ -326,7 +200,6 @@ class TediAreaSkin(control: TediArea)
 
         // Caret position
         control.caretPositionProperty().addListener { _, _, _ -> onCaretMoved() }
-        onCaretMoved()
 
         // Font
         control.fontProperty().addListener { _, _, _ -> onFontChanged() }
@@ -334,88 +207,9 @@ class TediAreaSkin(control: TediArea)
     }
 
 
-    /***************************************************************************
-     *                                                                         *
-     * Methods                                                                 *
-     *                                                                         *
-     **************************************************************************/
-
-    /**
-     * Creates a simple Text object if the paragraph has no highlights,
-     * otherwise it creates a set of Text objects, each with their own styles.
-     */
-    private fun createParagraphNode(paragraph: Paragraph): Node {
-
-        fun createText(str: String): Text {
-            return Text(str).apply {
-                styleClass.add("text")
-                textOrigin = VPos.TOP
-                wrappingWidth = 0.0
-                isManaged = false
-                font = skinnable.font
-                fill = textFillProperty.get()
-            }
-        }
-
-        if (paragraph.highlights.isEmpty()) {
-            return createText(paragraph.text)
-
-        } else {
-
-            // Find all the boundaries between highlights.
-            // Using a set, because if two highlights start at the same column, we only want that column
-            // in the set once.
-            val splits = mutableSetOf<Int>(0, paragraph.length)
-            for (highlight in paragraph.highlights) {
-                splits.add(highlight.startColumn)
-                splits.add(highlight.endColumn)
-            }
-            val splitsList = splits.sorted()
-            // Now we have a sorted list of column indices where the highlights change.
-
-            // The paragraph will be made up of a Group containing Text and Rectangles (for background colours).
-            val group = Group()
-            group.isManaged = false
-
-            // Create a Text object between each consecutive column indices in the list.
-            var x = 0.0
-            for (i in 0..splitsList.size - 2) {
-                val from = clamp(0, splitsList[i], paragraph.charSequence.length)
-                val to = clamp(0, splitsList[i + 1], paragraph.charSequence.length)
-
-                val text = createText(paragraph.charSequence.substring(from, to))
-                text.layoutX = x
-                val textBounds = text.boundsInLocal
-
-                // We may not need a background color, so don't create a Rectangle yet.
-                var rectangle: Rectangle? = null
-
-                // Find which highlight ranges apply to this part of the paragraph,
-                // and apply them to the Text object. This means that each part could be
-                // styled in more than one way.
-                for (phr in paragraph.highlights) {
-                    val highlight = phr.cause.highlight
-                    if (phr.intersects(from, to)) {
-                        highlight.style(text)
-
-                        if (highlight is FillHighlight) {
-                            if (rectangle == null) {
-                                rectangle = Rectangle(textBounds.width, textBounds.height)
-                                rectangle.styleClass.add("rectangle")
-                                rectangle.layoutX = text.layoutX
-                            }
-                            highlight.style(rectangle)
-                        }
-                    }
-                }
-                rectangle?.let { group.children.add(it) }
-                group.children.add(text)
-                x += textBounds.width
-            }
-
-            return group
-        }
-    }
+    //---------------------------------------------------------------------------
+    // Methods
+    //---------------------------------------------------------------------------
 
     /**
      * Builds a selection, by creating Text objects (one per line) of the selection,
@@ -494,119 +288,65 @@ class TediAreaSkin(control: TediArea)
             }
 
         }
-        contentView.requestLayout() // TODO Remove this?
     }
 
-    /**
-     * Called whenever a [Paragraph] is changed. The change could be an insertion/deletion of text,
-     * or just a highlight change (in which case the Paragraph's text will be the same).
-     */
-    fun onParagraphsChange(change: Change<out Paragraph>) {
-        while (change.next()) {
-            if (change.wasAdded()) {
-                for (i in change.from..change.to - 1) {
-                    paragraphsGroup.children.add(i, createParagraphNode(change.list[i]))
-                }
-            }
-            if (change.wasRemoved()) {
-                val from = change.from
-                for (n in 1..change.removedSize) {
-                    paragraphsGroup.children.removeAt(from)
-                }
-            }
-            if (change.wasUpdated()) {
-                for (i in change.from..change.to - 1) {
-                    rebuildParagraph(i)
-                }
-            }
-            contentView.requestLayout()
-        }
-    }
-
-    fun rebuildParagraph(i: Int) {
-        val child = paragraphsGroup.children[i]
-        val paragraph = skinnable.paragraphs[i]
-        // A simple text change without highlights before and after?
-        if (child is Text && paragraph.highlights.isEmpty()) {
-            // We can reuse the existing Text object
-            child.text = paragraph.text
-            child.font = skinnable.font
-        } else {
-            paragraphsGroup.children[i] = createParagraphNode(paragraph)
-        }
-    }
-
-    fun onCaretMoved() {
+    private fun onCaretMoved() {
         targetCaretX = -1.0
 
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
-        caretPath.layoutY = line * lineHeight()
-        tmpText.text = skinnable.paragraphs[line].charSequence.substring(0, column)
-        caretPath.layoutX = tmpText.boundsInLocal.width
+        val paragraphNode = getParagraphNode(line)
+        if (paragraphNode == null) {
+            // caret isn't visible
+        } else {
+            caretPath.layoutY = paragraphNode.layoutY
+            tmpText.text = skinnable.paragraphs[line].charSequence.substring(0, column)
+            caretPath.layoutX = paragraphNode.layoutX + tmpText.boundsInLocal.width
 
-        // TODO Should the view scroll even when not focused?
-        //if (skinnable.isFocused) {
-        scrollCaretToVisible()
-        //}
+            scrollCaretToVisible()
+        }
     }
 
-    fun onFontChanged() {
+    private fun onFontChanged() {
         cachedLineHeight = 0.0
         caretPath.elements.clear()
         caretPath.elements.add(MoveTo(0.0, 0.0))
         caretPath.elements.add(LineTo(0.0, lineHeight()))
         caretPath.fillProperty().bind(textFillProperty)
         caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
-        for (i in 0..skinnable.paragraphs.size - 1) {
-            rebuildParagraph(i)
-        }
-        contentView.requestLayout()
+        virtualView.reset()
     }
 
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
-        scrollPane.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
+        virtualView.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
+        // Position the caret.
+        onCaretMoved()
     }
 
+    internal fun previousPage(select: Boolean) {
+        // TODO
+    }
+
+    internal fun nextPage(select: Boolean) {
+        // TODO
+    }
+
+    /**
+     * Given a point within the tedi area, work out the position within the document.
+     */
     fun positionForPoint(x: Double, y: Double): Int {
-        val point = Point2D(0.0, 0.0)
-        val contentViewBounds = contentView.localToScene(point)
-        val controlBounds = skinnable.localToScene(point)
-        return positionForContentPoint(
-                x + controlBounds.x - contentViewBounds.x,
-                y + controlBounds.y - contentViewBounds.y)
-    }
-
-    fun positionForContentPoint(x: Double, y: Double): Int {
-        val normX = x - insideGroup.layoutX
-        val normY = y - insideGroup.layoutY
-        if (normY < 0) return 0 // Beyond the top
-        val line = (normY / lineHeight()).toInt()
-
-        if (line >= paragraphsGroup.children.size) {
-            return skinnable.length // Beyond the bottom. End of document.
+        val line = virtualView.getListIndexAtY(y)
+        if (line < 0) {
+            return 0
         }
-
-        val node = paragraphsGroup.children[line]
-        if (node is Text) {
-            return skinnable.positionOfLine(line) + node.hitTestChar(normX, normY).getInsertionIndex()
-        } else if (node is Group) {
-            var soFar = skinnable.positionOfLine(line)
-            node.children.forEach { text ->
-                if (text is Text) { // Ignore any Rectangles which may also be in the group.
-                    if (normX < text.layoutX) {
-                        return soFar
-                    }
-                    val insertion = text.hitTestChar(normX, normY - node.layoutY).getInsertionIndex()
-                    if (insertion < text.text.length) {
-                        return soFar + insertion
-                    }
-                    soFar += text.text.length
-                }
-            }
-            return soFar
-        } else {
-            throw IllegalStateException("Unexpected Node type : ${node::class.java.simpleName}")
+        if (line >= skinnable.lineCount) {
+            return skinnable.length
         }
+        val paragraphNode = getParagraphNode(line)
+        paragraphNode ?: throw IllegalStateException("Couldn't find paragraph node")
+
+        val column = paragraphNode.getColumn(x)
+        return skinnable.positionOfLine(line, column)
+
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
@@ -621,28 +361,23 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    private fun getScrollTopMax(): Double {
-        return Math.max(0.0, contentView.height - scrollPane.viewportBounds.height)
-    }
-
-    private fun getScrollLeftMax(): Double {
-        return Math.max(0.0, contentView.width - scrollPane.viewportBounds.width)
-    }
-
     private fun scrollCaretToVisible() {
+        // TODO
         val textArea = skinnable
         val bounds = caretPath.layoutBounds
-        val x = bounds.minX - textArea.scrollLeft + caretPath.layoutX
-        val y = bounds.minY - textArea.scrollTop + caretPath.layoutY
+        //val x = bounds.minX - textArea.scrollLeft + caretPath.layoutX
+        //val y = bounds.minY - textArea.scrollTop + caretPath.layoutY
         val w = bounds.width
         val h = bounds.height
 
         if (w > 0 && h > 0) {
-            scrollBoundsToVisible(Rectangle2D(x, y, w, h))
+            //    scrollBoundsToVisible(Rectangle2D(x, y, w, h))
         }
     }
 
     private fun scrollBoundsToVisible(bounds: Rectangle2D) {
+        // TODO
+        /*
         val textArea = skinnable
         val viewportBounds = scrollPane.viewportBounds
 
@@ -680,6 +415,7 @@ class TediAreaSkin(control: TediArea)
             }
             textArea.scrollLeft = x
         }
+        */
     }
 
     /**
@@ -687,6 +423,8 @@ class TediAreaSkin(control: TediArea)
      * The desired X coordinate is stored in [targetCaretX], which is reset whenever the selection changes.
      */
     private fun changeLine(n: Int, select: Boolean) {
+        // TODO
+        /*
         val line = skinnable.lineForPosition(skinnable.caretPosition)
 
         val requiredX = if (targetCaretX < 0) caretPath.layoutX else targetCaretX
@@ -719,6 +457,7 @@ class TediAreaSkin(control: TediArea)
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
+        */
     }
 
     fun previousLine(select: Boolean) {
@@ -738,27 +477,6 @@ class TediAreaSkin(control: TediArea)
         return cachedLineHeight
     }
 
-    /**
-     * Returns the number of lines to scroll up/down by.
-     */
-    private fun pageSizeInLines(): Int {
-        val result = scrollPane.viewportBounds.height / lineHeight()
-        return result.toInt() - 1
-    }
-
-    fun previousPage(select: Boolean) {
-        val lines = pageSizeInLines()
-        // This calculation is a little off, and the caret tends to wander upwards as you scroll up
-        scrollPane.vvalue -= lines * lineHeight() / contentView.height
-        changeLine(-lines, select)
-    }
-
-    fun nextPage(select: Boolean) {
-        val lines = pageSizeInLines()
-        // This calculation is a little off, and the caret tends to wander downwards as you scroll down.
-        scrollPane.vvalue += lines * lineHeight() / contentView.height
-        changeLine(lines, select)
-    }
 
     fun lineStart(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
@@ -845,11 +563,10 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * CaretAnimation class                                                    *
-     *                                                                         *
-     **************************************************************************/
+    //--------------------------------------------------------------------------
+    // CaretAnimation
+    //--------------------------------------------------------------------------
+
     /**
      * [caretVisible] determines if the caret should be seen at all
      * (irrespective of the animation's on/off state).
@@ -907,104 +624,150 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * Content View class                                                      *
-     *                                                                         *
-     **************************************************************************/
-    inner class ContentView : Region() {
-
-        init {
-            styleClass.add("content")
-
-            addEventHandler(MouseEvent.MOUSE_PRESSED) { event ->
-                behavior.mousePressed(event)
-                event.consume()
-            }
-
-            addEventHandler(MouseEvent.MOUSE_RELEASED) { event ->
-                behavior.mouseReleased(event)
-                event.consume()
-            }
-
-            addEventHandler(MouseEvent.MOUSE_DRAGGED) { event ->
-                behavior.mouseDragged(event)
-                event.consume()
-            }
-
-        }
-
-        // TODO do we can children to be public?
-        public override fun getChildren(): ObservableList<Node> {
-            return super.getChildren()
-        }
-
-        override fun getContentBias() = Orientation.HORIZONTAL
-
-        override fun computePrefWidth(height: Double): Double {
-            var maxWidth = 0.0
-            paragraphsGroup.children.forEach { text ->
-                maxWidth = Math.max(maxWidth, text.prefWidth(height))
-            }
-            return maxWidth + snappedLeftInset() + snappedRightInset()
-        }
-
-        override fun computePrefHeight(width: Double): Double {
-            var total = 0.0
-            paragraphsGroup.children.forEach { text ->
-                total += text.prefHeight(width)
-            }
-            return total + snappedTopInset() + snappedBottomInset()
-        }
-
-        public override fun layoutChildren() {
-            val width = width
-            val lineHeight = lineHeight()
-
-            // currentLineRect
-            currentLineRect.layoutX = -snappedLeftInset()
-            currentLineRect.width = width
-            currentLineRect.height = lineHeight
-
-            // insideGroup
-            insideGroup.layoutX = snappedLeftInset()
-            insideGroup.layoutY = snappedTopInset()
-
-            // paragraphsGroup
-            var textY = 0.0
-            paragraphsGroup.children.forEach { text ->
-                text.layoutY = textY
-                textY += lineHeight
-            }
-
-            // Fit to width/height only if smaller than viewport.
-            // That is, grow to fit but don't shrink to fit.
-            val viewportBounds = scrollPane.viewportBounds
-            val wasFitToWidth = scrollPane.isFitToWidth
-            val wasFitToHeight = scrollPane.isFitToHeight
-            val setFitToWidth = computePrefWidth(-1.0) <= viewportBounds.width
-            val setFitToHeight = computePrefHeight(width) <= viewportBounds.height
-
-            if (wasFitToWidth != setFitToWidth || wasFitToHeight != setFitToHeight) {
-                Platform.runLater {
-                    scrollPane.isFitToWidth = setFitToWidth
-                    scrollPane.isFitToHeight = setFitToHeight
-                    parent.requestLayout()
-                }
-            }
-        }
-    }
-
-
     override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
         return getClassCssMetaData()
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * Companion Object                                                        *
-     *                                                                         *
-     **************************************************************************/
+
+    //--------------------------------------------------------------------------
+    // ParagraphFactory
+    //--------------------------------------------------------------------------
+
+    // TODO Reuse nodes (I got scrambled text when reusing)
+    inner class ParagraphFactory : VirtualFactory {
+        override fun createNode(index: Int): ParagraphNode {
+            return ParagraphNode(index)
+        }
+
+        override fun itemChanged(index: Int, node: Node) {
+            if (node is ParagraphNode) {
+                node.update(index)
+            }
+        }
+    }
+
+    //--------------------------------------------------------------------------
+    // ParagraphNode
+    //--------------------------------------------------------------------------
+
+    private fun getParagraphNode(line: Int) = virtualView.getContentNode(line) as ParagraphNode?
+
+    inner class ParagraphNode(index: Int) : Group(), UpdatableNode {
+
+        /**
+         * If true, then the group contains a single, un-highlighted Text object.
+         */
+        private var isSimple = false
+
+        init {
+            update(index)
+        }
+
+        private fun createText(str: String): Text {
+            return Text(str).apply {
+                styleClass.add("text")
+                textOrigin = VPos.TOP
+                wrappingWidth = 0.0
+                isManaged = false
+                font = skinnable.font
+                fill = textFillProperty.get()
+            }
+        }
+
+        override fun update(newIndex: Int) {
+            val paragraph = skinnable.paragraphs[newIndex]
+
+            if (isSimple && paragraph.highlights.isEmpty()) {
+                (children[0] as Text).text = paragraph.text
+                return
+            }
+
+            children.clear()
+
+            if (paragraph.highlights.isEmpty()) {
+
+                isSimple = true
+                children.add(createText(paragraph.text))
+
+            } else {
+
+                // Find all the boundaries between highlights.
+                // Using a set, because if two highlights start at the same column, we only want that column
+                // in the set once.
+                val splits = mutableSetOf<Int>(0, paragraph.length)
+                for (highlight in paragraph.highlights) {
+                    splits.add(highlight.startColumn)
+                    splits.add(highlight.endColumn)
+                }
+                val splitsList = splits.sorted()
+                // Now we have a sorted list of column indices where the highlights change.
+
+                // Create a Text object between each consecutive column indices in the list.
+                var x = 0.0
+                for (i in 0..splitsList.size - 2) {
+                    val from = clamp(0, splitsList[i], paragraph.charSequence.length)
+                    val to = clamp(0, splitsList[i + 1], paragraph.charSequence.length)
+
+                    val text = createText(paragraph.charSequence.substring(from, to))
+                    text.layoutX = x
+                    val textBounds = text.boundsInLocal
+
+                    // We may not need a background color, so don't create a Rectangle yet.
+                    var rectangle: Rectangle? = null
+
+                    // Find which highlight ranges apply to this part of the paragraph,
+                    // and apply them to the Text object. This means that each part could be
+                    // styled in more than one way.
+                    for (phr in paragraph.highlights) {
+                        val highlight = phr.cause.highlight
+                        if (phr.intersects(from, to)) {
+                            highlight.style(text)
+
+                            if (highlight is FillHighlight) {
+                                if (rectangle == null) {
+                                    rectangle = Rectangle(textBounds.width, textBounds.height)
+                                    rectangle.styleClass.add("rectangle")
+                                    rectangle.layoutX = text.layoutX
+                                }
+                                highlight.style(rectangle)
+                            }
+                        }
+                    }
+                    rectangle?.let { children.add(it) }
+                    children.add(text)
+                    x += textBounds.width
+                }
+            }
+        }
+
+        /**
+         * Returns the column given the x coordinate (which is relative to the tedi area, not the node)
+         */
+        fun getColumn(x: Double): Int {
+            val normX = virtualView.getContentX(x)
+
+            var soFar = 0
+            children.forEach { text ->
+                if (text is Text) { // Ignore any Rectangles which may also be in the group.
+                    if (normX <= text.layoutX) {
+                        return soFar
+                    }
+                    val insertion = text.hitTestChar(normX, 1.0).getInsertionIndex()
+                    if (insertion < text.text.length) {
+                        return soFar + insertion
+                    }
+                    soFar += text.text.length
+                }
+            }
+            return soFar
+        }
+
+    }
+
+    //--------------------------------------------------------------------------
+    // Companion Object
+    //--------------------------------------------------------------------------
+
     companion object {
 
         val TEXT_FILL = object : CssMetaData<TediArea, Paint>("-fx-text-fill",

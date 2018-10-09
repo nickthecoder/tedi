@@ -210,34 +210,6 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         set(v) = displayLineNumbersProperty.set(v)
 
 
-    // *** Scroll Top ***
-    private val scrollTopProperty = SimpleDoubleProperty(this, "scrollTop", 0.0)
-
-    fun scrollTopProperty(): DoubleProperty = scrollTopProperty
-
-    /**
-     * The number of pixels by which the content is vertically scrolled.
-     */
-    var scrollTop: Double
-        get() = scrollTopProperty.get()
-        set(v) = scrollTopProperty.set(v)
-
-
-    // *** Scroll Left ***
-    private val scrollLeftProperty = SimpleDoubleProperty(this, "scrollLeft", 0.0)
-
-    fun scrollLeftProperty(): DoubleProperty = scrollLeftProperty
-
-    /**
-     * The number of pixels by which the content is horizontally scrolled.
-     */
-    var scrollLeft: Double
-        get() = scrollLeftProperty.get()
-        set(v) {
-            scrollLeftProperty.set(v)
-        }
-
-
     // *** Tab Inserts Spaces ***
     private val tabInsertsSpacesProperty = SimpleBooleanProperty(this, "tabInsertsSpaces", true)
 

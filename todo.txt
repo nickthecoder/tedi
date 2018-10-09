@@ -8,14 +8,26 @@ Demo is sluggish moving the caret position. Is this because of the column/line n
 Current Work
 ------------
 
-VirtualView
+Use VirtualView within TediArea
 
-Off by 1 pixel (gutter to content alignment)
+Bind/change fonts
 
-spacing of LineNumberBox from css?
+Implement pageUp/down (ignoring selection)
 
-VV to have a "reset" method, which rebuild, and resets the cached width values.
-    Is there a GOOD strategy for "guessing" the correct max for the hScroll?
+Implement the selection using an EXTRA HighlightRange (not in the normal list)
+    Fire changes to paragraphs that have moved in/out of the selection.
+
+Implement current-line highlighting.
+    Maybe using another fake highlight range?
+        Won't extend across the whole viewport
+    Or a Rectangle :
+        get the node for the current line, and bind the rectangle's properties to it???
+        What happens when it goes out of view?
+            Listen to its Scene proeprty, (or visible property).
+            Hmm. tricky.
+    Extra code in the factory :
+        If index == current line, then add the rectangle
+        Fire 2 paragraph changes whenever the current line changes
 
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)

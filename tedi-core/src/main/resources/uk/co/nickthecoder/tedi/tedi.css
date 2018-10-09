@@ -19,7 +19,7 @@
 }
 
 .virtual-view .content {
-    -fx-padding: 4 10;
+    -fx-padding: 20 30;
 }
 
 .virtual-view .gutter {

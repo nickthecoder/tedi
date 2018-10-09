@@ -78,9 +78,9 @@ class TediAreaBehavior(val control: TediArea)
         super.dispose()
     }
 
-    /**************************************************************************
-     * Key handling implementation                                            *
-     *************************************************************************/
+    //-------------------------------------------------------------------------
+    // Key Events
+    //-------------------------------------------------------------------------
 
     /**
      * Records the last KeyEvent we saw.
@@ -193,6 +193,11 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
+
+    //-------------------------------------------------------------------------
+    // Mouse Events
+    //-------------------------------------------------------------------------
+
     override fun mousePressed(e: MouseEvent?) {
         super.mousePressed(e)
 
@@ -206,7 +211,7 @@ class TediAreaBehavior(val control: TediArea)
 
         // if the primary button was pressed
         if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown)) {
-            val mousePosition = skin.positionForContentPoint(e.x, e.y)
+            val mousePosition = skin.positionForPoint(e.x, e.y)
 
             val anchor = control.anchor
             val caretPosition = control.caretPosition
@@ -250,8 +255,8 @@ class TediAreaBehavior(val control: TediArea)
         // event listeners on the control
         if (!textArea.isDisabled && !e!!.isSynthesized) {
             if (e.button == MouseButton.PRIMARY && !(e.isMiddleButtonDown || e.isSecondaryButtonDown ||
-                    e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown)) {
-                skin.positionCaret(skin.positionForContentPoint(e.x, e.y), true, false)
+                            e.isControlDown || e.isAltDown || e.isShiftDown || e.isMetaDown)) {
+                skin.positionCaret(skin.positionForPoint(e.x, e.y), true, false)
             }
         }
         deferClick = false
@@ -265,7 +270,7 @@ class TediAreaBehavior(val control: TediArea)
         if (!textArea.isDisabled) {
             if (deferClick) {
                 deferClick = false
-                skin.positionCaret(skin.positionForContentPoint(e!!.x, e.y), shiftDown, false)
+                skin.positionCaret(skin.positionForPoint(e!!.x, e.y), shiftDown, false)
                 shiftDown = false
             }
         }
