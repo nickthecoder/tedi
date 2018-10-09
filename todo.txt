@@ -10,16 +10,12 @@ Current Work
 
 VirtualView
 
-hscroll isn't taking the gutter's width into account
-
-Gutter isn't being clipped (so overlaps the hScroll)
-
 Off by 1 pixel (gutter to content alignment)
+
+spacing of LineNumberBox from css?
 
 VV to have a "reset" method, which rebuild, and resets the cached width values.
     Is there a GOOD strategy for "guessing" the correct max for the hScroll?
-
-vScroll.visibleAmount isn't correct
 
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)

@@ -1,9 +1,6 @@
 package uk.co.nickthecoder.tedi.util
 
-import javafx.geometry.VPos
 import javafx.scene.Node
-import javafx.scene.layout.Region
-import javafx.scene.text.Text
 
 /**
  * Creates [Node]s to the left of [VirtualView], typically used to display line numbers.
@@ -34,84 +31,5 @@ interface VirtualGutter : VirtualFactory {
      * @param node The corresponding node created earlier via [createNode]
      */
     fun documentChanged(index: Int, node: Node);
-
-}
-
-/**
- * An implementation of [VirtualGutter], whose nodes can contain many pieces of information, layed out
- * horizontally, with each part vertically centered.
- */
-abstract class BoxGutter : VirtualGutter {
-
-    override fun documentChanged(index: Int, node: Node) {
-        if (node is GutterNode) {
-            node.update(index)
-        }
-    }
-
-    abstract class GutterNode : Region() {
-
-        val spacing = 10.0 // TODO Make this styleable
-
-        init {
-            styleClass.add("gutter-node")
-        }
-
-        abstract fun update(newIndex: Int)
-
-        override fun computePrefWidth(height: Double): Double {
-            var total = snappedLeftInset() + snappedRightInset() - spacing
-            for (child in children) {
-                total += child.prefWidth(height) + spacing
-            }
-            return total
-        }
-
-        override fun layoutChildren() {
-            val height = height
-
-            var x = width - snappedRightInset()
-
-            // Lay out from right to left, because the line number is on the left, and this makes it easy
-            // to right align it.
-            for (i in children.size - 1 downTo 0) {
-                val child = children[i]
-                val childWidth = child.prefWidth(height)
-                val childHeight = child.prefHeight(-1.0)
-                x -= childWidth
-                // TODO The "-1" is a bodge. Without it the gutter doesn't line up with the content
-                // But I couldn't find the reason. So for now, I'm bodging it.
-                child.resizeRelocate(x, (height - childHeight) / 2 - 1, childWidth, childHeight)
-                x -= spacing
-            }
-        }
-    }
-}
-
-open class LineNumberGutter : BoxGutter() {
-
-    override fun createNode(index: Int): Node {
-        return LineNumberNode(index)
-    }
-
-    open class LineNumberNode(var index: Int) : GutterNode() {
-
-        val lineNumber = Text((index + 1).toString()).apply {
-            styleClass.addAll("text", "line-number")
-            textOrigin = VPos.TOP
-        }
-
-        init {
-            children.add(lineNumber)
-        }
-
-        override fun update(newIndex: Int) {
-            if (newIndex != index) {
-                index = newIndex
-                lineNumber.text = (index + 1).toString()
-            }
-        }
-
-    }
 
 }

@@ -81,8 +81,7 @@ class VirtualView<P>(
             clear()
             field = v
             gutterRegion.isVisible = v != null
-            needsRebuild = true
-            requestLayout()
+            reset()
         }
 
     private val gutterRegion = GutterRegion()
@@ -169,9 +168,20 @@ class VirtualView<P>(
     }
 
     /**
+     * Rebuilds the nodes from scratch. Also resets the cached "max" values for the gutter and content.
+     */
+    fun reset() {
+        maxPrefWidth = 0.0
+        maxGutterPrefWidth = 0.0
+        needsRebuild
+        requestLayout()
+    }
+
+    /**
      * Removes all nodes from the contentList and from gutterList.
      */
     private fun clear() {
+        println("Clear")
         contentList.clear()
         clearGutterNodes(gutterList, topNodeIndex)
     }
@@ -808,7 +818,8 @@ class VirtualViewApp : Application() {
                 show()
             }
             virtualFlow.gutter = gutter
-            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" + ("extra lines\n".repeat(40))
+            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" +
+                    ("extra lines\n".repeat(140))
         }
 
         inner class ParagraphNodeFactory : VirtualFactory {
