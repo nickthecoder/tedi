@@ -345,7 +345,7 @@ class VirtualView<P>(
     }
 
     private fun vScrollChanged(oldValue: Double, newValue: Double) {
-        if (ignoreVScrollChanges) return
+        if (ignoreVScrollChanges || !vScroll.isVisible) return
 
         val diff = newValue - oldValue
         if (Math.abs(diff) > contentList.size - 1) {
@@ -387,22 +387,55 @@ class VirtualView<P>(
         vScroll.setSafeValue(vScroll.value + contentList.size - 1)
     }
 
+    /**
+     * Update vScroll.max and vScroll.visibleAmount
+     *
+     * vScroll is measured in "items", so a value of 10 means the 10th item should be at the top of the viewport.
+     * However, insets really complicate things, because they are measured in pixels.
+     * A close-enough solution is to use the first & last visible nodes' heights to convert from pixels to "items".
+     *
+     * The insets cause another problem.
+     *
+     * Total required = list.size + topInset (in items) + bottomInset (in items)
+     * Total visible = contentList.size - hiddenTop - hiddenBottom
+     * Where hiddenTop is the amount the 1st visible item is away from the top edge (not the inset) (can be +ve or -ve),
+     * and hiddenBottom is the amount the last visible item is below the bottom edge (but not -ve)
+     */
     private fun updateScrollMaxAndVisible() {
         if (contentList.isEmpty()) {
             // Some default values, just so that nothing goes weird.
-            vScroll.max = 10.0
+            vScroll.max = 1.0
             vScroll.visibleAmount = 1.0
             setVScrollValue(0.0)
         } else {
-            // Imagine 60 items and 40 visible, then max is 20, and visible amount is 40/60 * 20
-            // Note, the "- 1" is a bodge (one or two visible items can be almost completely out of view).
-            // This bodge may cause the vScroll to appear when the content just about fits in, and therefore
-            // isn't really needed. It doesn't cause any other problems, so I think it's good enough.
-            vScroll.max = (list.size - (contentList.size - 1)).toDouble()
+
+            val firstNode = contentList.first()
+            val lastNode = contentList.last()
+
+            // The insets measure in "items"
+            val topInsetItems = contentRegion.snappedTopInset() / nodeHeight(firstNode)
+            val bottomInsetItems = contentRegion.snappedBottomInset() / nodeHeight(lastNode)
+
+            val visible = contentList.size +
+                    nodePosition(firstNode) / nodeHeight(firstNode) -
+                    Math.max(-bottomInsetItems, (nodeBottom(lastNode) - viewportHeight) / nodeHeight(lastNode))
+
+            val total = list.size + topInsetItems + bottomInsetItems
+
+            //println("$visible = ${contentList.size} + ${nodePosition(firstNode) / nodeHeight(firstNode)} - ${Math.max(0.0, (nodeBottom(lastNode) - viewportHeight) / nodeHeight(lastNode))}")
+
+            vScroll.max = total - visible
+
+            if (vScroll.max < 0.0) {
+                vScroll.max = 1.0
+                vScroll.visibleAmount = 1.0
+            } else {
+                vScroll.visibleAmount = vScroll.max * visible / total
+            }
             if (vScroll.value > vScroll.max) {
                 setVScrollValue(vScroll.max)
             }
-            vScroll.visibleAmount = vScroll.max * (contentList.size - 1) / list.size.toDouble()
+
         }
     }
 
@@ -417,9 +450,7 @@ class VirtualView<P>(
         // Is the first node visible, and LOWER than it should be?
         val firstNode = contentList.first()
         val topDiff = nodePosition(firstNode) - contentRegion.snappedTopInset()
-        //println("Diff is $topDiff")
         if (topNodeIndex == 0 && topDiff > 0) {
-            //println("Adjusting top by $topDiff")
             for (node in contentList) {
                 node.layoutY -= topDiff
             }
@@ -468,6 +499,7 @@ class VirtualView<P>(
         // We need to create the gutter nodes, to find the gutterWidth. Only then can we decide which scroll bars
         // must be visible. But then we need to fill the viewport AGAIN, because we may need extra items
         // when the hScroll is removed.
+        viewportHeight = height // (Assume hScroll is NOT visible for now)
         fillViewport()
 
         gutterWidth = if (gutterRegion.isVisible) {
@@ -513,9 +545,11 @@ class VirtualView<P>(
         // when it previously wasn't needed.
         repeat(2) {
             // If not all nodes are visible, or ALL nodes are visible, but don't QUITE fit.
-            needVBar = list.size > contentList.size || (list.size == contentList.size &&
-                    (nodeBottom(lastNode) > newViewportHeight - contentRegion.snappedBottomInset()) ||
-                    (nodePosition(firstNode) < contentRegion.snappedTopInset())
+            needVBar = list.size > contentList.size || (
+                    list.size == contentList.size && (
+                            nodeBottom(lastNode) > newViewportHeight - contentRegion.snappedBottomInset() ||
+                                    nodePosition(firstNode) < contentRegion.snappedTopInset()
+                            )
                     )
 
             needHBar = maxPrefWidth > newViewportWidth - gutterWidth - contentRegion.snappedLeftInset() - contentRegion.snappedRightInset()
@@ -597,11 +631,9 @@ class VirtualView<P>(
             } else {
                 gutterList.add(visibleIndex, node)
             }
-            //println("Create Gutter node ${node.prefWidth(-1.0)} vs $maxGutterPrefWidth")
             val prefWidth = node.prefWidth(-1.0)
             if (prefWidth > maxGutterPrefWidth) {
                 maxGutterPrefWidth = prefWidth
-                println("Requesting layout")
                 requestLayout()
             }
             node.isManaged = false
@@ -624,7 +656,7 @@ class VirtualView<P>(
         }
         val node = createNode(topNodeIndex, contentRegion.snappedTopInset())
         // Adjust by the fractional part of vScroll.value
-        node.layoutY = (vScroll.value - topNodeIndex) * nodeHeight(node)
+        node.layoutY += (vScroll.value - topNodeIndex) * nodeHeight(node)
         contentList.add(node)
 
         if (gutter != null) {
@@ -659,19 +691,13 @@ class VirtualView<P>(
     }
 
     private fun addTrailingNodes() {
-        // If contentList is empty then addLeadingNodes bailed for some reason and
-        // we're hosed, so just punt
         if (contentList.isEmpty()) return
 
         val startNode = contentList.last()
         var offset = nodeBottom(startNode)
         var index = topNodeIndex + contentList.size
 
-        val bottom = viewportHeight
-
-        val isMax = contentList.size > 1 && vScroll.value >= vScroll.max
-
-        while ((offset < bottom && index < list.size) || (isMax && topNodeIndex + contentList.size < list.size)) {
+        while (index < list.size && offset < viewportHeight) {
             val node = createNode(index, offset)
             contentList.add(node)
 

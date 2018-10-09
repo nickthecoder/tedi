@@ -19,11 +19,7 @@
 }
 
 .virtual-view .content {
-    -fx-padding: 30;
-}
-
-.virtual-view .clipped-view {
-    -fx-padding: 16; /* TODO Remove */
+    -fx-padding: 4 10;
 }
 
 .virtual-view .gutter {
