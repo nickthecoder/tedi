@@ -48,6 +48,8 @@ import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
+import uk.co.nickthecoder.tedi.util.LineNumberGutter
+import uk.co.nickthecoder.tedi.util.VirtualGutter
 import uk.co.nickthecoder.tedi.util.clamp
 import uk.co.nickthecoder.tedi.util.extendList
 import java.text.BreakIterator
@@ -209,6 +211,15 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         get() = displayLineNumbersProperty.get()
         set(v) = displayLineNumbersProperty.set(v)
 
+
+    // Gutter
+    private val gutterProperty: SimpleObjectProperty<VirtualGutter> = SimpleObjectProperty<VirtualGutter>(this, "gutter", LineNumberGutter())
+
+    fun gutterProperty(): ObjectProperty<VirtualGutter> = gutterProperty
+
+    var gutter: VirtualGutter
+        get() = gutterProperty.get()
+        set(v) = gutterProperty.set(v)
 
     // *** Tab Inserts Spaces ***
     private val tabInsertsSpacesProperty = SimpleBooleanProperty(this, "tabInsertsSpaces", true)
@@ -609,7 +620,8 @@ open class TediArea private constructor(protected val content: TediAreaContent)
         fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
 
 
-        @JvmStatic fun style(scene: Scene) {
+        @JvmStatic
+        fun style(scene: Scene) {
             val url = TediArea::class.java.getResource("tedi.css")
             scene.stylesheets.add(url.toExternalForm())
         }

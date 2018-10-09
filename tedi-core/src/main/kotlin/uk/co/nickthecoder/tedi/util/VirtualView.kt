@@ -186,8 +186,17 @@ class VirtualView<P>(
     /**
      * Given an X coordinate relative to the whole view, returns the X coordinate relative to
      * the content nodes (including the contentRegion's left inset).
+     *
+     * This is the opposite of [fromContentX].
      */
-    fun getContentX(x: Double) = x - gutterWidth - contentRegion.snappedLeftInset()
+    fun toContentX(x: Double) = x - gutterWidth - contentRegion.snappedLeftInset()
+
+    /**
+     * Given a coordinate relative to a content node, returns the value relative to the whole view.
+     *
+     * This is the opposite of [toContentX].
+     */
+    fun fromContentX(x: Double) = x + gutterWidth + contentRegion.snappedLeftInset()
 
     /**
      * Rebuilds the nodes from scratch. Also resets the cached "max" values for the gutter and content.

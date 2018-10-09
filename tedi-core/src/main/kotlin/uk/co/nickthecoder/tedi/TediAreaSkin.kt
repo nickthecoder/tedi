@@ -204,6 +204,11 @@ class TediAreaSkin(control: TediArea)
         // Font
         control.fontProperty().addListener { _, _, _ -> onFontChanged() }
         onFontChanged()
+
+        // Gutter
+        control.gutterProperty().addListener { _, _, newValue -> if (control.displayLineNumbers) virtualView.gutter = newValue }
+        control.displayLineNumbersProperty().addListener { _, _, newValue -> if (newValue) virtualView.gutter = control.gutter }
+
     }
 
 
@@ -296,11 +301,10 @@ class TediAreaSkin(control: TediArea)
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
         val paragraphNode = getParagraphNode(line)
         if (paragraphNode == null) {
-            // caret isn't visible
+            caretPath.layoutX = -100.0 // Off screen
         } else {
             caretPath.layoutY = paragraphNode.layoutY
-            tmpText.text = skinnable.paragraphs[line].charSequence.substring(0, column)
-            caretPath.layoutX = paragraphNode.layoutX + tmpText.boundsInLocal.width
+            caretPath.layoutX = paragraphNode.xForColumn(column)
 
             scrollCaretToVisible()
         }
@@ -744,7 +748,7 @@ class TediAreaSkin(control: TediArea)
          * Returns the column given the x coordinate (which is relative to the tedi area, not the node)
          */
         fun getColumn(x: Double): Int {
-            val normX = virtualView.getContentX(x)
+            val normX = virtualView.toContentX(x)
 
             var soFar = 0
             children.forEach { text ->
@@ -762,6 +766,42 @@ class TediAreaSkin(control: TediArea)
             return soFar
         }
 
+        /**
+         * Returns an X coordinate in pixels (relative to the TediArea), corresponding to a column.
+         */
+        fun xForColumn(column: Int): Double {
+            //println("xForColumn $column")
+            if (column == 0) return virtualView.fromContentX(0.0)
+
+            var columnsEaten = 0
+            children.forEach { text ->
+                if (text is Text) { // Ignore any Rectangles which may also be in the group
+                    columnsEaten += text.text.length
+
+                    if (column == columnsEaten) {
+                        // At the end of this piece of text.
+                        //println("At the end of a segment ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
+                        return virtualView.fromContentX(text.boundsInParent.maxX)
+                    } else if (column < columnsEaten) {
+                        // In the middle of the text. Let's change the text, find the new bounds, then
+                        // change it back
+                        val oldText = text.text
+                        try {
+                            text.text = oldText.substring(0, column - columnsEaten + oldText.length)
+                            //println("Middle of a segment $oldText ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
+                            return virtualView.fromContentX(text.boundsInParent.maxX)
+                        } finally {
+                            text.text = oldText
+                        }
+
+                    } else {
+                        //println("Skipping ${text.text} eaten $columnsEaten")
+                    }
+                }
+            }
+            //println("At the end of loop ${boundsInLocal.maxX} -> ${virtualView.fromContentX(boundsInLocal.maxX)}")
+            return virtualView.fromContentX(boundsInLocal.maxX)
+        }
     }
 
     //--------------------------------------------------------------------------
