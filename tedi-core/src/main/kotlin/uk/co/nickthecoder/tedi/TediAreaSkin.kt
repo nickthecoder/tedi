@@ -41,7 +41,6 @@ import javafx.beans.value.ObservableIntegerValue
 import javafx.css.*
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
-import javafx.geometry.Rectangle2D
 import javafx.geometry.VPos
 import javafx.scene.Group
 import javafx.scene.Node
@@ -201,9 +200,13 @@ class TediAreaSkin(control: TediArea)
         onFontChanged()
 
         // Gutter
-        control.gutterProperty().addListener { _, _, newValue -> if (control.displayLineNumbers) virtualView.gutter = newValue }
-        control.displayLineNumbersProperty().addListener { _, _, newValue -> if (newValue) virtualView.gutter = control.gutter }
-
+        control.gutterProperty().addListener { _, _, newValue ->
+            if (control.displayLineNumbers) virtualView.gutter = newValue
+        }
+        control.displayLineNumbersProperty().addListener { _, _, newValue ->
+            virtualView.gutter = if (newValue) control.gutter else null
+        }
+        virtualView.gutter = if (control.displayLineNumbers) control.gutter else null
     }
 
 
@@ -305,49 +308,6 @@ class TediAreaSkin(control: TediArea)
         if (x < 0) {
             virtualView.hScroll.value += x
         }
-    }
-
-    private fun scrollBoundsToVisible(bounds: Rectangle2D) {
-        // TODO
-        /*
-        val textArea = skinnable
-        val viewportBounds = scrollPane.viewportBounds
-
-        val viewportWidth = viewportBounds.width
-        val viewportHeight = viewportBounds.height
-        val scrollTop = textArea.scrollTop
-        val scrollLeft = textArea.scrollLeft
-        val slop = 6.0
-
-        if (bounds.minY < 0) {
-            var y = scrollTop + bounds.minY
-            if (y <= contentView.snappedTopInset()) {
-                y = 0.0
-            }
-            textArea.scrollTop = y
-        } else if (contentView.snappedTopInset() + bounds.maxY > viewportHeight) {
-            var y = scrollTop + contentView.snappedTopInset() + bounds.maxY - viewportHeight
-            if (y >= getScrollTopMax() - contentView.snappedBottomInset()) {
-                y = getScrollTopMax()
-            }
-            textArea.scrollTop = y
-        }
-
-
-        if (bounds.minX < 0) {
-            var x = scrollLeft + bounds.minX - slop
-            if (x <= contentView.snappedLeftInset() + slop) {
-                x = 0.0
-            }
-            textArea.scrollLeft = x
-        } else if (contentView.snappedLeftInset() + bounds.maxX > viewportWidth) {
-            var x = scrollLeft + contentView.snappedLeftInset() + bounds.maxX - viewportWidth + slop
-            if (x >= getScrollLeftMax() - contentView.snappedRightInset() - slop) {
-                x = getScrollLeftMax()
-            }
-            textArea.scrollLeft = x
-        }
-        */
     }
 
     /**

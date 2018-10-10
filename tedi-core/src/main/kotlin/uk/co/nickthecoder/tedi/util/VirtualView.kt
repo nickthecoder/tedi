@@ -353,7 +353,7 @@ class VirtualView<P>(
                     if (gutter != null) {
                         gutterList[i].layoutY = offset
                     }
-                    offset += nodeHeight(node)
+                    offset += Math.ceil(nodeHeight(node))
                 }
 
             }
@@ -642,13 +642,12 @@ class VirtualView<P>(
 
     /**
      * Creates a Node.
-     * It is left to the caller to add it to the [contentList] list, and
-     * to update [topNodeIndex] if necessary.
+     * It is left to the caller to update [topNodeIndex] if necessary.
      */
     private fun createNode(index: Int, offset: Double): Node {
         val node = factory.createNode(index)
         val prefWidth = node.prefWidth(-1.0)
-        val prefHeight = node.prefHeight(-1.0)
+        val prefHeight = Math.ceil(node.prefHeight(-1.0))
         node.resize(prefWidth, prefHeight)
         node.layoutY = offset
         node.layoutX = clippedContent.snappedLeftInset()

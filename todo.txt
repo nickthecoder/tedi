@@ -10,12 +10,7 @@ Current Work
 
 Use VirtualView within TediArea
 
-Bind/change fonts
-
 Get rid of skin.tmpText
-
-Implement the selection using an EXTRA HighlightRange (not in the normal list)
-    Fire changes to paragraphs that have moved in/out of the selection.
 
 Implement pageUp/down (ignoring selection)
 
