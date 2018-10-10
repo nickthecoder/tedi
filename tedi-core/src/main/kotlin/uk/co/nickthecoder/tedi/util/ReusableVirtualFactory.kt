@@ -14,24 +14,26 @@ interface UpdatableNode {
  * [maxSize] is the maximum number of nodes to store in the freed list.
  * If it is smaller than the number of visible nodes, then new nodes will still be created on a regular
  * basis (evey time the viewport is paged up or down).
+ *
  */
-abstract class ReusableVirtualFactory<N>(val maxSize: Int = 100)
-    : VirtualFactory where N : Node, N : UpdatableNode {
+abstract class ReusableVirtualFactory(private val wrapped: VirtualFactory, val maxSize: Int = 100)
+    : VirtualFactory {
 
-    val reusableList = mutableListOf<N>()
+    private val reusableList = mutableListOf<Node>()
 
-    override fun createNode(index: Int): N = if (reusableList.isEmpty()) {
-        createNewNode(index)
+    override fun createNode(index: Int): Node = if (reusableList.isEmpty()) {
+        wrapped.createNode(index)
     } else {
-        reusableList.removeAt(reusableList.size - 1).apply { update(index) }
+        reusableList.removeAt(reusableList.size - 1).apply {
+            if (this is UpdatableNode) {
+                update(index)
+            }
+        }
     }
-
-    abstract fun createNewNode(index: Int): N
 
     override fun free(index: Int, node: Node) {
         if (reusableList.size < maxSize) {
-            @Suppress("UNCHECKED_CAST")
-            reusableList.add(node as N)
+            reusableList.add(node)
         }
     }
 }

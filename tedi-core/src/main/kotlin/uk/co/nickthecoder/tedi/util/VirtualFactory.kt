@@ -12,11 +12,7 @@ interface VirtualFactory {
      * (i.e. a node for a Paragraphs when used by TediArea)
      * The node contains a single line number (or whatever data is required by your gutter).
      *
-     * NOTE. The nodes should be simple. Have not focusable nodes, such as Button.
-     * Also, the node must return a valid value from prefWidth( height ) as soon as it is created, and
-     * added to the scene (BEFORE a layout it performed).
-     * I think this means that the use of HBox and similar controls cannot be used. Sorry.
-     * [BoxGutter] creates a HBox-like nodes, so that may be a good place to start.
+     * NOTE. The nodes should have no focusable items.
      */
     fun createNode(index: Int): Node
 

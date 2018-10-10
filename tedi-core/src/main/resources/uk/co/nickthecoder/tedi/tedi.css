@@ -11,14 +11,9 @@
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
-}
-
-.tedi-area .gutter .line-number {
-    -fx-fill: gray;
+    -fx-text-fill: gray;
+    -fx-current-line-fill: #fffae3; /* TODO Not fully implemented yet */
     -fx-current-line-text-fill: gray; /* TODO Not implemented */
-}
-.tedi-area.code .gutter {
-    -fx-current-line-fill: #fffae3; /* TODO Not implemented */
 }
 
 .tedi-area.code {

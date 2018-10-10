@@ -80,13 +80,23 @@ class VirtualView<P>(
             // The existing gutter must have "free" called for existing gutterNodes.
             clear()
             field = v
-            gutterRegion.isVisible = v != null
+            if (v == null) {
+                gutterRegion = EmptyGutter()
+            } else {
+                gutterRegion = v
+            }
+            gutterList = gutterRegion.children
+            clippedGutter.node = gutterRegion
             reset()
         }
 
-    private val gutterRegion = GutterRegion()
+    /**
+     * When [gutter] is null, this is an [EmptyGutter], so that we don't continually have to
+     * special-case a null value.
+     */
+    private var gutterRegion: VirtualGutter = EmptyGutter()
 
-    private val gutterList = gutterRegion.children
+    private var gutterList: MutableList<Node> = gutterRegion.children
 
     private val clippedContent = ClippedView(contentRegion)
     private val clippedGutter = ClippedView(gutterRegion)
@@ -127,7 +137,6 @@ class VirtualView<P>(
     init {
         styleClass.add("virtual-view")
         clippedContent.styleClass.add("content")
-        gutterRegion.styleClass.add("gutter")
         corner.styleClass.setAll("corner")
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
@@ -135,8 +144,6 @@ class VirtualView<P>(
         clippedContent.isManaged = false
         clippedGutter.isManaged = false
         contentRegion.isManaged = false
-        gutterRegion.isManaged = false
-        gutterRegion.isVisible = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
         hScroll.valueProperty().addListener { _, _, _ -> clippedContent.clipX = hScroll.value }
@@ -180,7 +187,6 @@ class VirtualView<P>(
         return contentList.size
     }
 
-    // TODO Consider the x scroll
     /**
      * Given an X coordinate relative to the whole view, returns the X coordinate relative to
      * the content nodes (including the contentRegion's left inset).
@@ -565,9 +571,9 @@ class VirtualView<P>(
 
         clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
         contentRegion.resizeRelocate(0.0, 0.0, viewportWidth - gutterWidth, viewportHeight)
-        gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
         clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
 
+        gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
         // Make all gutter nodes the correct width
         for (child in gutterRegion.children) {
             child.resize(maxGutterPrefWidth, nodeHeight(child))
@@ -810,20 +816,19 @@ class VirtualView<P>(
 
     }
 
-    private inner class GutterRegion : Region() {
+    private inner class EmptyGutter : VirtualGutter() {
 
-        // Make it public.
-        public override fun getChildren() = super.getChildren()
-
-        override fun computePrefWidth(height: Double): Double {
-            return snappedLeftInset() + snappedRightInset() + maxGutterPrefWidth
+        init {
+            styleClass.clear()
         }
 
-        // Children are being manually laid out, so do nothing here.
-        override fun layoutChildren() {
-            return
+        override fun createNode(index: Int): Node {
+            throw NotImplementedError()
         }
 
+        override fun documentChanged(index: Int, node: Node) {
+            throw NotImplementedError()
+        }
     }
 }
 

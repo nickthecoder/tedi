@@ -8,23 +8,25 @@ Demo is sluggish moving the caret position. Is this because of the column/line n
 Current Work
 ------------
 
-Use VirtualView within TediArea
+Remove delegatedObsList
 
-Get rid of skin.tmpText
+pageUp/down
 
-Implement pageUp/down (ignoring selection)
+Sort out vScroll value with large padding
 
-Implement current-line highlighting.
-    Maybe using another fake highlight range?
-        Won't extend across the whole viewport
-    Or a Rectangle :
-        get the node for the current line, and bind the rectangle's properties to it???
-        What happens when it goes out of view?
-            Listen to its Scene proeprty, (or visible property).
-            Hmm. tricky.
+Current-line highlighting.
     Extra code in the factory :
         If index == current line, then add the rectangle
         Fire 2 paragraph changes whenever the current line changes
+
+Current line highlighting in the gutter
+
+Get rid of skin.tmpText
+
+Use TextFlow?
+    May need to perform layout() with vv to get its true height.
+
+Get rid of the jittery text (hopefully TextFlow will help)
 
 Have two modes for the horizontal scroll :
     When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)

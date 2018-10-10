@@ -248,7 +248,6 @@ class TediAreaSkin(control: TediArea)
         caretPath.fillProperty().bind(textFillProperty)
         caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
         virtualView.reset()
-        skinnable.gutter.font = skinnable.font
         Platform.runLater { repositionCaret() }
     }
 
@@ -256,14 +255,6 @@ class TediAreaSkin(control: TediArea)
         virtualView.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
         // Position the caret.
         repositionCaret()
-    }
-
-    internal fun previousPage(select: Boolean) {
-        // TODO
-    }
-
-    internal fun nextPage(select: Boolean) {
-        // TODO
     }
 
     /**
@@ -338,6 +329,14 @@ class TediAreaSkin(control: TediArea)
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
+    }
+
+    fun previousPage(select: Boolean) {
+        // TODO
+    }
+
+    fun nextPage(select: Boolean) {
+        // TODO
     }
 
     fun previousLine(select: Boolean) {

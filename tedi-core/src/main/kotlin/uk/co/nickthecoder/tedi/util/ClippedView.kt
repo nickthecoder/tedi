@@ -36,11 +36,17 @@ import javafx.scene.shape.Rectangle
  * A simple extension to Region that ensures that anything wanting to render
  * outside of the bounds of the Region is clipped.
  */
-class ClippedView(val node: Node) : Region() {
+class ClippedView(node: Node) : Region() {
 
-    init {
-        children.add(node)
-    }
+
+    var node: Node = node
+        set(v) {
+            field = v
+            children.clear()
+            children.add(v)
+            v.layoutX = -clipX
+            v.layoutY = -clipY
+        }
 
     var clipX: Double = 0.0
         set(v) {
@@ -57,6 +63,7 @@ class ClippedView(val node: Node) : Region() {
     private val clipRect = Rectangle()
 
     init {
+        children.add(node)
         styleClass.add("clipped-view")
 
         clipRect.isSmooth = false
