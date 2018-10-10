@@ -1,6 +1,7 @@
 package uk.co.nickthecoder.tedi.util
 
 import javafx.scene.Node
+import javafx.scene.text.Font
 
 /**
  * Creates [Node]s to the left of [VirtualView], typically used to display line numbers.
@@ -23,6 +24,8 @@ import javafx.scene.Node
  */
 interface VirtualGutter : VirtualFactory {
 
+    var font: Font?
+
     /**
      * Called whenever ANY changes are made to VirtualView's list, i.e.,
      * insertions, deletions and updates.
@@ -36,5 +39,6 @@ interface VirtualGutter : VirtualFactory {
      * @param node The corresponding node created earlier via [createNode]
      */
     fun documentChanged(index: Int, node: Node);
+
 
 }

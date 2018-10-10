@@ -119,7 +119,7 @@ import java.text.BreakIterator
  * - Avoid frequent use of [text], and instead use [getSequence] where possible,
  *   as [text] converts the whole document to a String, which is expensive for large documents.
  */
-open class TediArea private constructor(protected val content: TediAreaContent)
+open class TediArea private constructor(internal val content: TediAreaContent)
 
     : TextInputControl(content) {
 
@@ -523,9 +523,9 @@ open class TediArea private constructor(protected val content: TediAreaContent)
      *
      * This is a thin wrapper around [ParagraphList], which does most of the hard work.
      */
-    protected class TediAreaContent : TextInputControl.Content {
+    internal class TediAreaContent : TextInputControl.Content {
 
-        private val paragraphList = ParagraphList()
+        internal val paragraphList = ParagraphList()
 
         /**
          * As part of TextIntputControl's API, we need to fire events to listeners when the content changes.
@@ -601,11 +601,9 @@ open class TediArea private constructor(protected val content: TediAreaContent)
 
     override fun getControlCssMetaData(): List<CssMetaData<out Styleable, *>> = getClassCssMetaData()
 
-    /***************************************************************************
-     *                                                                         *
-     * Companion Object                                                        *
-     *                                                                         *
-     **************************************************************************/
+    //--------------------------------------------------------------------------
+    // Companion Object
+    //--------------------------------------------------------------------------
     companion object {
 
         private val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",

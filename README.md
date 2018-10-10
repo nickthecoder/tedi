@@ -90,7 +90,6 @@ and therefore do not understand the grammar of the languages.
 
 ## Known Bugs/Issues
 
-- Line numbers do not respect horizontal scroll bars (they get scrolled out of the viewport to the left)
 - Applying highlights, which change the font weight or style, only work
   correctly with mono-spaced fonts.
 - Highlights won't work correctly if they change the font size or font family
@@ -163,20 +162,12 @@ If you don't want that then :
 As with TextArea, you can style :
 - .tedi-area
 - .tedi-area .content
-- .tedi-area .scroll-pane
 
 TediArea has similar styleable properties as TextArea, with the addition of :
 **-fx-display-line-numbers** (boolean)
 
 You can also style **.tedi-area .gutter** (a Region),
 which is where the line numbers appear.
-
-e.g. To change the color of the line numbers :
-
-    .tedi-area .gutter { -fx-text-fill: xxx }
-
-Note, for correct alignment, the top padding of .gutter
-must be the same as .content
 
 I have included a style sheet as a resource in package
 **uk.co.nickthecoder.tedi** called **tedi.css**.
@@ -266,6 +257,6 @@ RichTextFX handles 10,000+ line documents with ease.
 
 ## License
 
-Tedi is a fork of JavaFX's TextArea,
+TediArea is a fork of JavaFX's TextArea,
 and therefore the license is the same :
 GPL version 2 (with no option to move to a later version).

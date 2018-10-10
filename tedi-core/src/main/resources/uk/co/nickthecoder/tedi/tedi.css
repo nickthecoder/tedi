@@ -3,34 +3,22 @@
 }
 
 .tedi-area .content {
-    -fx-padding: 4 10;
+    -fx-padding: 20 30; /* TODO 4 10 */
 }
 
 .tedi-area .gutter {
-    -fx-padding: 4 4 4 10; /* Note the top MUST be the same as .tedi-area .content for correct alignment. */
-    -fx-background-color: #eeeeee;
-    -fx-border-color: #cccccc;
-    -fx-border-width: 0 1 0 0;
-    -fx-text-fill: gray;
-    -fx-current-line-text-fill: gray;
-}
-
-.virtual-view {
-}
-
-.virtual-view .content {
-    -fx-padding: 20 30;
-}
-
-.virtual-view .gutter {
     -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
 }
 
-.virtual-view .gutter .line-number {
+.tedi-area .gutter .line-number {
     -fx-fill: gray;
+    -fx-current-line-text-fill: gray; /* TODO Not implemented */
+}
+.tedi-area.code .gutter {
+    -fx-current-line-fill: #fffae3; /* TODO Not implemented */
 }
 
 .tedi-area.code {
@@ -38,31 +26,9 @@
     -fx-display-line-numbers: true;
     -fx-current-line-fill: #fffae3;
 }
-.tedi-area.code .gutter {
-    -fx-current-line-fill: #fffae3;
-}
 
 .virtual-view .corner {
     -fx-background-color: derive(-fx-base,-1%);
-}
-
-/*
- * This is copied from modena.css.
- * I don't know why I need this, but if I leave it out,
- * then the dark blue outline does not appear around TediArea.
- * Only the faint blue outline of the .content appears.
- * Maybe the theme that I'm using doesn't have that, as TextArea doesn't seem to show it either. Hmm.
- */
-.tedi-area:focused {
-    -fx-highlight-fill: -fx-accent;
-    -fx-highlight-text-fill: white;
-    -fx-background-color:
-        -fx-focus-color,
-        -fx-control-inner-background,
-        -fx-faint-focus-color,
-        linear-gradient(from 0px 0px to 0px 5px, derive(-fx-control-inner-background, -9%), -fx-control-inner-background);
-    -fx-background-insets: -0.2, 1, -1.4, 3;
-    -fx-background-radius: 3, 2, 4, 0;
 }
 
 /***** A default colour scene for syntax highlighting *****/

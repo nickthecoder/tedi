@@ -32,6 +32,7 @@ package uk.co.nickthecoder.tedi
 
 import javafx.animation.KeyFrame
 import javafx.animation.Timeline
+import javafx.application.Platform
 import javafx.beans.binding.BooleanBinding
 import javafx.beans.binding.DoubleBinding
 import javafx.beans.property.SimpleBooleanProperty
@@ -40,12 +41,11 @@ import javafx.beans.value.ObservableIntegerValue
 import javafx.css.*
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
-import javafx.geometry.BoundingBox
-import javafx.geometry.Bounds
 import javafx.geometry.Rectangle2D
 import javafx.geometry.VPos
 import javafx.scene.Group
 import javafx.scene.Node
+import javafx.scene.control.IndexRange
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.LineTo
@@ -69,10 +69,6 @@ class TediAreaSkin(control: TediArea)
      */
     private val caretPath = Path()
 
-    private val selectionHighlightGroup = Group()
-
-    private var oldViewportBounds: Bounds = BoundingBox(0.0, 0.0, 0.0, 0.0)
-
     /**
      * Remembers horizontal position when traversing up / down.
      */
@@ -80,11 +76,9 @@ class TediAreaSkin(control: TediArea)
 
     private val tmpText = Text()
 
-    /***************************************************************************
-     *                                                                         *
-     * Properties                                                              *
-     *                                                                         *
-     **************************************************************************/
+    //---------------------------------------------------------------------------
+    // Properties
+    //---------------------------------------------------------------------------
 
     /**
      * The fill to use for the text under normal conditions
@@ -168,6 +162,8 @@ class TediAreaSkin(control: TediArea)
 
     private val caretAnimation = CaretAnimation(caretVisible, caretPath, control.caretPositionProperty())
 
+    private var selectionHighlightRange: HighlightRange? = null
+
     //--------------------------------------------------------------------------
     // init
     //--------------------------------------------------------------------------
@@ -176,12 +172,6 @@ class TediAreaSkin(control: TediArea)
 
         // Initialize content
         children.addAll(virtualView, caretPath)
-        // TODO children.addAll(currentLineRect, paragraphsGroup, selectionHighlightGroup, caretPath)
-
-        // selection
-        with(selectionHighlightGroup) {
-            isManaged = false
-        }
 
         // caretPath
         with(caretPath) {
@@ -194,12 +184,17 @@ class TediAreaSkin(control: TediArea)
         tmpText.fontProperty().bind(control.fontProperty())
 
 
-        control.selectionProperty().addListener { _, _, _ ->
-            onSelectionChanged()
+        control.selectionProperty().addListener { _, oldValue, newValue ->
+            onSelectionChanged(oldValue, newValue)
         }
 
         // Caret position
-        control.caretPositionProperty().addListener { _, _, _ -> onCaretMoved() }
+        control.caretPositionProperty().addListener { _, _, _ ->
+            repositionCaret()
+            scrollToCaret()
+        }
+        virtualView.hScroll.valueProperty().addListener { _, _, _ -> repositionCaret() }
+        virtualView.vScroll.valueProperty().addListener { _, _, _ -> repositionCaret() }
 
         // Font
         control.fontProperty().addListener { _, _, _ -> onFontChanged() }
@@ -217,85 +212,19 @@ class TediAreaSkin(control: TediArea)
     //---------------------------------------------------------------------------
 
     /**
-     * Builds a selection, by creating Text objects (one per line) of the selection,
-     * as well as a Rectangle for each of them.
-     * This isn't efficient, as it clears the selection and rebuilds it every time.
-     * This is expensive, when the selection is large.
-     * Such as Select All, then ctrl+shift+Right lots of times!
+     * Uses a [HighlightRange]
      */
-    private fun onSelectionChanged() {
+    private fun onSelectionChanged(oldValue: IndexRange, newValue: IndexRange) {
 
-        fun createText(str: String, x: Double, y: Double): Pair<Text, Rectangle> {
-            val text = Text(str).apply {
-                textOrigin = VPos.TOP
-                wrappingWidth = 0.0
-                styleClass.add("text")
-                isManaged = false
-                layoutX = x
-                layoutY = y
-                fontProperty().bind(skinnable.fontProperty())
-                fillProperty().bind(highlightTextFillProperty)
-            }
+        if (oldValue.length == 0 && newValue.length == 0) return
 
-            val bounds = text.boundsInLocal
-            val rectangle = Rectangle(bounds.width, bounds.height).apply {
-                layoutX = text.layoutX
-                layoutY = text.layoutY
-                fillProperty().bind(highlightFillProperty)
-            }
-            return Pair(text, rectangle)
-        }
+        selectionHighlightRange?.let { skinnable.highlightRanges().remove(it) }
+        selectionHighlightRange = if (newValue.length == 0) null else HighlightRange(newValue.start, newValue.end, selectionHighlight)
+        selectionHighlightRange?.let { skinnable.highlightRanges().add(it) }
 
-        selectionHighlightGroup.children.forEach { child ->
-            if (child is Text) {
-                child.fontProperty().unbind()
-                child.fillProperty().unbind()
-            }
-            if (child is Rectangle) {
-                child.fillProperty().unbind()
-            }
-        }
-        selectionHighlightGroup.children.clear()
-
-        if (skinnable.selection.length != 0) {
-            val (fromLine, fromColumn) = skinnable.lineColumnForPosition(skinnable.selection.start)
-            val (toLine, toColumn) = skinnable.lineColumnForPosition(skinnable.selection.end)
-
-            val firstLineText = skinnable.paragraphs[fromLine].charSequence
-            tmpText.text = firstLineText.substring(0, fromColumn)
-
-            if (fromLine == toLine) {
-
-                val (text, background) = createText(firstLineText.substring(fromColumn, toColumn), tmpText.boundsInLocal.width, fromLine * lineHeight())
-                selectionHighlightGroup.children.addAll(background, text)
-
-            } else {
-
-                // First line
-                val firstLineTrailingText = firstLineText.substring(fromColumn)
-                if (firstLineTrailingText.isNotEmpty()) {
-                    val (text, background) = createText(firstLineTrailingText, tmpText.boundsInLocal.width, fromLine * lineHeight())
-                    selectionHighlightGroup.children.addAll(background, text)
-                }
-
-                // Whole lines
-                for (i in fromLine + 1..toLine - 1) { // Don't include the last line
-                    val (text, background) = createText(skinnable.paragraphs[i].text, 0.0, i * lineHeight())
-                    selectionHighlightGroup.children.addAll(background, text)
-                }
-
-                // Last line
-                val lastLineLeadingText = skinnable.paragraphs[toLine].charSequence.substring(0, toColumn)
-                if (lastLineLeadingText.isNotEmpty()) {
-                    val (text, background) = createText(lastLineLeadingText, 0.0, toLine * lineHeight())
-                    selectionHighlightGroup.children.addAll(background, text)
-                }
-            }
-
-        }
     }
 
-    private fun onCaretMoved() {
+    private fun repositionCaret() {
         targetCaretX = -1.0
 
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
@@ -305,8 +234,6 @@ class TediAreaSkin(control: TediArea)
         } else {
             caretPath.layoutY = paragraphNode.layoutY
             caretPath.layoutX = paragraphNode.xForColumn(column)
-
-            scrollCaretToVisible()
         }
     }
 
@@ -318,12 +245,14 @@ class TediAreaSkin(control: TediArea)
         caretPath.fillProperty().bind(textFillProperty)
         caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
         virtualView.reset()
+        skinnable.gutter.font = skinnable.font
+        Platform.runLater { repositionCaret() }
     }
 
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
         virtualView.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
         // Position the caret.
-        onCaretMoved()
+        repositionCaret()
     }
 
     internal fun previousPage(select: Boolean) {
@@ -365,17 +294,16 @@ class TediAreaSkin(control: TediArea)
         }
     }
 
-    private fun scrollCaretToVisible() {
-        // TODO
-        val textArea = skinnable
-        val bounds = caretPath.layoutBounds
-        //val x = bounds.minX - textArea.scrollLeft + caretPath.layoutX
-        //val y = bounds.minY - textArea.scrollTop + caretPath.layoutY
-        val w = bounds.width
-        val h = bounds.height
+    /**
+     * Ensures that the caret is visible, by altering the horizontal and vertical scroll bars
+     */
+    private fun scrollToCaret() {
+        val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
+        virtualView.ensureItemVisible(line)
 
-        if (w > 0 && h > 0) {
-            //    scrollBoundsToVisible(Rectangle2D(x, y, w, h))
+        val x = virtualView.fromContentX(caretPath.layoutX)
+        if (x < 0) {
+            virtualView.hScroll.value += x
         }
     }
 
@@ -669,7 +597,7 @@ class TediAreaSkin(control: TediArea)
         override fun update(newIndex: Int) {
             val paragraph = skinnable.paragraphs[newIndex]
 
-            if (isSimple && paragraph.highlights.isEmpty()) {
+            if (isSimple && children.size == 1 && paragraph.highlights.isEmpty()) {
                 (children[0] as Text).text = paragraph.text
                 return
             }
@@ -686,12 +614,19 @@ class TediAreaSkin(control: TediArea)
                 // Find all the boundaries between highlights.
                 // Using a set, because if two highlights start at the same column, we only want that column
                 // in the set once.
-                val splits = mutableSetOf<Int>(0, paragraph.length)
+                val splits = mutableSetOf(0, paragraph.length)
                 for (highlight in paragraph.highlights) {
                     splits.add(highlight.startColumn)
                     splits.add(highlight.endColumn)
                 }
-                val splitsList = splits.sorted()
+                var splitsList = splits.sorted()
+
+                // Edge case : A blank line will cause there to be only 1 split, but we need to force an
+                // empty Text object to be created, so add and extra split.
+                if (splitsList.size == 1) {
+                    splitsList = listOf(0, splitsList[0])
+                }
+
                 // Now we have a sorted list of column indices where the highlights change.
 
                 // Create a Text object between each consecutive column indices in the list.
@@ -789,6 +724,26 @@ class TediAreaSkin(control: TediArea)
             }
             //println("At the end of loop ${boundsInLocal.maxX} -> ${virtualView.fromContentX(boundsInLocal.maxX)}")
             return virtualView.fromContentX(boundsInLocal.maxX)
+        }
+    }
+    //--------------------------------------------------------------------------
+    // SelectionHighlight
+    //--------------------------------------------------------------------------
+
+    /**
+     * A Highlight used by [selectionHighlightRange] to highlight the selected text.
+     */
+    private val selectionHighlight = object : FillHighlight {
+        override fun style(rect: Rectangle) {
+            rect.style = null
+            rect.styleClass.clear()
+            rect.fill = highlightFill
+        }
+
+        override fun style(text: Text) {
+            text.style = null
+            text.styleClass.clear()
+            text.fill = highlightTextFill
         }
     }
 

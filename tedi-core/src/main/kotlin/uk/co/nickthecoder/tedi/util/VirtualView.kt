@@ -55,9 +55,9 @@ class VirtualView<P>(
         val factory: VirtualFactory) : Region() {
 
 
-    private val hScroll = ScrollBar()
+    internal val hScroll = ScrollBar()
 
-    private val vScroll = VirtualScrollBar(this)
+    internal val vScroll = VirtualScrollBar(this)
 
     /**
      * The "empty" area in the bottom right when both scroll bars are visible.
@@ -126,11 +126,9 @@ class VirtualView<P>(
 
     init {
         styleClass.add("virtual-view")
-        contentRegion.styleClass.add("content")
+        clippedContent.styleClass.add("content")
         gutterRegion.styleClass.add("gutter")
         corner.styleClass.setAll("corner")
-        clippedContent.styleClass.add("clipped-view")
-        clippedGutter.styleClass.add("clipped-view")
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
 
@@ -189,14 +187,26 @@ class VirtualView<P>(
      *
      * This is the opposite of [fromContentX].
      */
-    fun toContentX(x: Double) = x - gutterWidth - contentRegion.snappedLeftInset()
+    fun toContentX(x: Double) = x - gutterWidth - clippedContent.snappedLeftInset() + hScroll.value
 
     /**
      * Given a coordinate relative to a content node, returns the value relative to the whole view.
      *
      * This is the opposite of [toContentX].
      */
-    fun fromContentX(x: Double) = x + gutterWidth + contentRegion.snappedLeftInset()
+    fun fromContentX(x: Double) = x + gutterWidth + clippedContent.snappedLeftInset() - hScroll.value
+
+    fun ensureItemVisible(index: Int) {
+        if (contentList.isEmpty()) return
+
+        if (index <= topNodeIndex) {
+            scrollToItem(index)
+            // TODO Ensure it is aligned with the top
+        } else if (index >= bottomNodeIndex) {
+            // TODO Scroll so that the bottom item is index
+            // TODO Ensure it is aligned with the bottom
+        }
+    }
 
     /**
      * Rebuilds the nodes from scratch. Also resets the cached "max" values for the gutter and content.
@@ -204,7 +214,8 @@ class VirtualView<P>(
     fun reset() {
         maxPrefWidth = 0.0
         maxGutterPrefWidth = 0.0
-        needsRebuild
+        clear()
+        fillViewport()
         requestLayout()
     }
 
@@ -375,6 +386,10 @@ class VirtualView<P>(
         event.consume()
     }
 
+    private fun scrollToItem(index: Int) {
+        vScroll.value = index.toDouble()
+    }
+
     private fun setVScrollValue(newValue: Double) {
         ignoreVScrollChanges = true
         vScroll.value = newValue
@@ -451,8 +466,8 @@ class VirtualView<P>(
             val lastNode = contentList.last()
 
             // The insets measure in "items"
-            val topInsetItems = contentRegion.snappedTopInset() / nodeHeight(firstNode)
-            val bottomInsetItems = contentRegion.snappedBottomInset() / nodeHeight(lastNode)
+            val topInsetItems = clippedContent.snappedTopInset() / nodeHeight(firstNode)
+            val bottomInsetItems = clippedContent.snappedBottomInset() / nodeHeight(lastNode)
 
             val visible = contentList.size +
                     nodePosition(firstNode) / nodeHeight(firstNode) -
@@ -485,7 +500,7 @@ class VirtualView<P>(
 
         // Is the first node visible, and LOWER than it should be?
         val firstNode = contentList.first()
-        val topDiff = nodePosition(firstNode) - contentRegion.snappedTopInset()
+        val topDiff = nodePosition(firstNode) - clippedContent.snappedTopInset()
         if (topNodeIndex == 0 && topDiff > 0) {
             for (node in contentList) {
                 node.layoutY -= topDiff
@@ -498,7 +513,7 @@ class VirtualView<P>(
 
         // Is the last node visible, and too high up? But don't do this when we are at the top of the list
         val lastNode = contentList.last()
-        val bottomDiff = viewportHeight - contentRegion.snappedBottomInset() - nodeBottom(lastNode)
+        val bottomDiff = viewportHeight - clippedContent.snappedBottomInset() - nodeBottom(lastNode)
         if (bottomNodeIndex == list.size - 1 && bottomDiff > 0 && vScroll.value != 0.0) {
             for (node in contentList) {
                 node.layoutY += bottomDiff
@@ -515,7 +530,7 @@ class VirtualView<P>(
     }
 
     override fun layoutChildren() {
-
+        // println("VirtualView.layoutChildren")
         val width = width
         val height = height
 
@@ -582,12 +597,12 @@ class VirtualView<P>(
             // If not all nodes are visible, or ALL nodes are visible, but don't QUITE fit.
             needVBar = list.size > contentList.size || (
                     list.size == contentList.size && (
-                            nodeBottom(lastNode) > newViewportHeight - contentRegion.snappedBottomInset() ||
-                                    nodePosition(firstNode) < contentRegion.snappedTopInset()
+                            nodeBottom(lastNode) > newViewportHeight - clippedContent.snappedBottomInset() ||
+                                    nodePosition(firstNode) < clippedContent.snappedTopInset()
                             )
                     )
 
-            needHBar = maxPrefWidth > newViewportWidth - gutterWidth - contentRegion.snappedLeftInset() - contentRegion.snappedRightInset()
+            needHBar = maxPrefWidth > newViewportWidth - gutterWidth - clippedContent.snappedLeftInset() - clippedContent.snappedRightInset()
 
             if (needHBar) {
                 newViewportHeight = height - hBarHeight
@@ -607,7 +622,7 @@ class VirtualView<P>(
 
             hScroll.resizeRelocate(0.0, viewportHeight, viewportWidth, hBarHeight)
             // For example, maxPrefWidth=100, viewportWidth=80, then max = 20
-            val available = viewportWidth - gutterWidth - contentRegion.snappedLeftInset() - contentRegion.snappedRightInset()
+            val available = viewportWidth - gutterWidth - clippedContent.snappedLeftInset() - clippedContent.snappedRightInset()
             hScroll.max = maxPrefWidth - available
             hScroll.visibleAmount = (available / maxPrefWidth) * hScroll.max
 
@@ -636,7 +651,7 @@ class VirtualView<P>(
         val prefHeight = node.prefHeight(-1.0)
         node.resize(prefWidth, prefHeight)
         node.layoutY = offset
-        node.layoutX = contentRegion.snappedLeftInset()
+        node.layoutX = clippedContent.snappedLeftInset()
 
         maxPrefWidth = Math.max(maxPrefWidth, node.layoutBounds.width)
         return node
@@ -689,7 +704,7 @@ class VirtualView<P>(
         if (topNodeIndex >= list.size) {
             topNodeIndex = 0
         }
-        val node = createNode(topNodeIndex, contentRegion.snappedTopInset())
+        val node = createNode(topNodeIndex, clippedContent.snappedTopInset())
         // Adjust by the fractional part of vScroll.value
         node.layoutY += (vScroll.value - topNodeIndex) * nodeHeight(node)
         contentList.add(node)

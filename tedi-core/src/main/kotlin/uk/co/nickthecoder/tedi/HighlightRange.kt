@@ -9,7 +9,7 @@ package uk.co.nickthecoder.tedi
  * Ranges can be used for syntax highlighting of source code, to highlight search matches and also
  * to style text in arbitrary ways.
  *
- * It is NOT used for highlighting the currently selected area.
+ * It is also used to highlight selected text.
  *
  * Add [HighlightRange]s to [TediArea.highlightRanges].
  *

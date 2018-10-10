@@ -332,7 +332,7 @@ class ParagraphList
 
     }
 
-    private fun fireParagraphUpdate(from: Int, to: Int = from + 1) {
+    internal fun fireParagraphUpdate(from: Int, to: Int = from + 1) {
         ListListenerHelper.fireValueChangedEvent(listenerHelper, SimpleUpdateChange(this, from, to))
     }
 
