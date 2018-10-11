@@ -1,6 +1,7 @@
 package uk.co.nickthecoder.tedi
 
 import javafx.beans.InvalidationListener
+import javafx.collections.FXCollections
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
@@ -23,7 +24,7 @@ class ParagraphList
 
     internal val paragraphs = mutableListOf(Paragraph(""))
 
-    private val highlightRanges = DelegatedObservableList<HighlightRange>()
+    private val highlightRanges = FXCollections.observableList(mutableListOf<HighlightRange>())
 
     internal var contentLength = 0
 

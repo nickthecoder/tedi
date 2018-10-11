@@ -3,6 +3,7 @@ package uk.co.nickthecoder.tedi.util
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
 import javafx.scene.Node
+import javafx.scene.Parent
 import javafx.scene.control.ScrollBar
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Region
@@ -72,7 +73,6 @@ class VirtualView<P>(
         set(v) {
             if (field === v) return
 
-            println("Changing gutter from $field to $v")
             // The existing gutter must have "free" called for existing gutterNodes.
             clear()
             field = v
@@ -81,7 +81,6 @@ class VirtualView<P>(
 
             clippedGutter.node = gutterRegion
             clippedGutter.isVisible = v != null
-
             reset()
         }
 
@@ -129,13 +128,14 @@ class VirtualView<P>(
         styleClass.add("virtual-view")
         clippedContent.styleClass.add("content")
         corner.styleClass.setAll("corner")
+        clippedGutter.styleClass.add("gutter-area")
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
         clippedGutter.isVisible = gutter != null
 
         clippedContent.isManaged = false
-        clippedGutter.isManaged = false
         contentRegion.isManaged = false
+        clippedGutter.isManaged = false
         gutterRegion.isManaged = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
@@ -677,11 +677,15 @@ class VirtualView<P>(
     private fun createGutterNode(index: Int, contentNode: Node, visibleIndex: Int?): Node {
         gutter?.let { gutter ->
             val node = gutter.createNode(index)
+
             if (visibleIndex == null) {
                 gutterList.add(node)
             } else {
                 gutterList.add(visibleIndex, node)
             }
+            node.applyCss()
+            if (node is Parent) node.layout()
+
             val prefWidth = node.prefWidth(-1.0)
             if (prefWidth > maxGutterPrefWidth) {
                 maxGutterPrefWidth = prefWidth

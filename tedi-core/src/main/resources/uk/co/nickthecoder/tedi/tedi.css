@@ -1,26 +1,25 @@
 .tedi-area {
-    -fx-current-line-fill: none;
 }
 
 .tedi-area .content {
     -fx-padding: 4 10;
 }
 
-.tedi-area .gutter {
-    -fx-font-family: 'monospace';
-    -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
+.tedi-area .gutter-area {
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
-    -fx-text-fill: green;
-    -fx-current-line-fill: #fffae3; /* TODO Not fully implemented yet */
-    -fx-current-line-text-fill: red;
+}
+
+.tedi-area .gutter {
+    -fx-font-family: 'monospace';
+    -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
+    -fx-text-fill: #a0a0a0; /* BUG. Sometimes not picked up (the default gray is seen) */
 }
 
 .tedi-area.code {
     -fx-font-family: 'monospace';
     -fx-display-line-numbers: true;
-    -fx-current-line-fill: #fffae3;
 }
 
 .virtual-view .corner {

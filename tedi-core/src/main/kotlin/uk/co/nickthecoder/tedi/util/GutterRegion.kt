@@ -20,13 +20,17 @@ class GutterRegion(val gutter: VirtualGutter?) : Region() {
         styleClass.add("gutter")
     }
 
-    override fun getCssMetaData(): MutableList<CssMetaData<out Styleable, *>> {
-        if (styleableProperties == null) {
-            styleableProperties = mutableListOf()
-            styleableProperties!!.addAll(super.getCssMetaData())
-            if (gutter != null) styleableProperties!!.addAll(gutter.getCssMetaData())
-            println("Gutter styles ${styleableProperties!!.map { it.property }}")
+    override fun getCssMetaData(): List<CssMetaData<out Styleable, *>> {
+        if (gutter == null) {
+            return super.getCssMetaData()
+        } else {
+            if (styleableProperties == null) {
+                styleableProperties = mutableListOf()
+                styleableProperties!!.addAll(super.getCssMetaData())
+                styleableProperties!!.addAll(gutter.getCssMetaData())
+            }
+            return styleableProperties!!
         }
-        return styleableProperties!!
     }
+
 }
