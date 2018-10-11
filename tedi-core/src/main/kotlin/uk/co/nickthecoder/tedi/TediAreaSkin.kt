@@ -44,8 +44,6 @@ import javafx.css.StyleableBooleanProperty
 import javafx.css.StyleableObjectProperty
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
-import javafx.geometry.VPos
-import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.control.IndexRange
 import javafx.scene.paint.Color
@@ -64,7 +62,7 @@ class TediAreaSkin(control: TediArea)
     : BehaviorSkinBase<TediArea, TediAreaBehavior>(control, TediAreaBehavior(control)) {
 
 
-    internal val virtualView = VirtualView(control.paragraphs, ParagraphFactory())
+    internal val virtualView = VirtualView(control.paragraphs, ParagraphFactory(this))
 
     /**
      * A path, used to display the caret.
@@ -489,189 +487,8 @@ class TediAreaSkin(control: TediArea)
         return getClassCssMetaData()
     }
 
+    private fun getParagraphNode(line: Int) = virtualView.getContentNode(line) as ParagraphFactory.ParagraphNode?
 
-    //--------------------------------------------------------------------------
-    // ParagraphFactory
-    //--------------------------------------------------------------------------
-
-    // TODO Reuse nodes (I got scrambled text when reusing)
-    inner class ParagraphFactory : VirtualFactory {
-        override fun createNode(index: Int): ParagraphNode {
-            return ParagraphNode(index)
-        }
-
-        override fun itemChanged(index: Int, node: Node) {
-            if (node is ParagraphNode) {
-                node.update(index)
-            }
-        }
-    }
-
-    //--------------------------------------------------------------------------
-    // ParagraphNode
-    //--------------------------------------------------------------------------
-
-    private fun getParagraphNode(line: Int) = virtualView.getContentNode(line) as ParagraphNode?
-
-    inner class ParagraphNode(index: Int) : Group(), UpdatableNode {
-
-        /**
-         * If true, then the group contains a single, un-highlighted Text object.
-         */
-        private var isSimple = false
-
-        init {
-            update(index)
-            //prefWidth = Region.USE_COMPUTED_SIZE
-        }
-
-        override fun computePrefHeight(width: Double): Double {
-            return super.computePrefHeight(width)
-        }
-
-        private fun createText(str: String): Text {
-            return Text(str).apply {
-                styleClass.add("text")
-                textOrigin = VPos.TOP
-                wrappingWidth = 0.0
-                isManaged = false
-                font = skinnable.font
-                fill = textFillProperty.get()
-            }
-        }
-
-        override fun update(newIndex: Int) {
-            val paragraph = skinnable.paragraphs[newIndex]
-
-            if (isSimple && children.size == 1 && paragraph.highlights.isEmpty()) {
-                (children[0] as Text).text = paragraph.text
-                return
-            }
-
-            children.clear()
-
-            if (paragraph.highlights.isEmpty()) {
-
-                isSimple = true
-                children.add(createText(paragraph.text))
-
-            } else {
-
-                // Find all the boundaries between highlights.
-                // Using a set, because if two highlights start at the same column, we only want that column
-                // in the set once.
-                val splits = mutableSetOf(0, paragraph.length)
-                for (highlight in paragraph.highlights) {
-                    splits.add(highlight.startColumn)
-                    splits.add(highlight.endColumn)
-                }
-                var splitsList = splits.sorted()
-
-                // Edge case : A blank line will cause there to be only 1 split, but we need to force an
-                // empty Text object to be created, so add and extra split.
-                if (splitsList.size == 1) {
-                    splitsList = listOf(0, splitsList[0])
-                }
-
-                // Now we have a sorted list of column indices where the highlights change.
-
-                // Create a Text object between each consecutive column indices in the list.
-                var x = 0.0
-                for (i in 0..splitsList.size - 2) {
-                    val from = clamp(0, splitsList[i], paragraph.charSequence.length)
-                    val to = clamp(0, splitsList[i + 1], paragraph.charSequence.length)
-
-                    val text = createText(paragraph.charSequence.substring(from, to))
-                    text.layoutX = x
-                    val textBounds = text.boundsInLocal
-
-                    // We may not need a background color, so don't create a Rectangle yet.
-                    var rectangle: Rectangle? = null
-
-                    // Find which highlight ranges apply to this part of the paragraph,
-                    // and apply them to the Text object. This means that each part could be
-                    // styled in more than one way.
-                    for (phr in paragraph.highlights) {
-                        val highlight = phr.cause.highlight
-                        if (phr.intersects(from, to)) {
-                            highlight.style(text)
-
-                            if (highlight is FillHighlight) {
-                                if (rectangle == null) {
-                                    rectangle = Rectangle(textBounds.width, textBounds.height)
-                                    rectangle.styleClass.add("rectangle")
-                                    rectangle.layoutX = text.layoutX
-                                }
-                                highlight.style(rectangle)
-                            }
-                        }
-                    }
-                    rectangle?.let { children.add(it) }
-                    children.add(text)
-                    x += textBounds.width
-                }
-            }
-        }
-
-        /**
-         * Returns the column given the x coordinate (which is relative to the tedi area, not the node)
-         */
-        fun getColumn(x: Double): Int {
-            val normX = virtualView.toContentX(x)
-
-            var soFar = 0
-            children.forEach { text ->
-                if (text is Text) { // Ignore any Rectangles which may also be in the group.
-                    if (normX <= text.layoutX) {
-                        return soFar
-                    }
-                    val insertion = text.hitTestChar(normX, 1.0).getInsertionIndex()
-                    if (insertion < text.text.length) {
-                        return soFar + insertion
-                    }
-                    soFar += text.text.length
-                }
-            }
-            return soFar
-        }
-
-        /**
-         * Returns an X coordinate in pixels (relative to the TediArea), corresponding to a column.
-         */
-        fun xForColumn(column: Int): Double {
-            //println("xForColumn $column")
-            if (column == 0) return virtualView.fromContentX(0.0)
-
-            var columnsEaten = 0
-            children.forEach { text ->
-                if (text is Text) { // Ignore any Rectangles which may also be in the group
-                    columnsEaten += text.text.length
-
-                    if (column == columnsEaten) {
-                        // At the end of this piece of text.
-                        //println("At the end of a segment ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
-                        return virtualView.fromContentX(text.boundsInParent.maxX)
-                    } else if (column < columnsEaten) {
-                        // In the middle of the text. Let's change the text, find the new bounds, then
-                        // change it back
-                        val oldText = text.text
-                        try {
-                            text.text = oldText.substring(0, column - columnsEaten + oldText.length)
-                            //println("Middle of a segment $oldText ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
-                            return virtualView.fromContentX(text.boundsInParent.maxX)
-                        } finally {
-                            text.text = oldText
-                        }
-
-                    } else {
-                        //println("Skipping ${text.text} eaten $columnsEaten")
-                    }
-                }
-            }
-            //println("At the end of loop ${boundsInLocal.maxX} -> ${virtualView.fromContentX(boundsInLocal.maxX)}")
-            return virtualView.fromContentX(boundsInLocal.maxX)
-        }
-    }
     //--------------------------------------------------------------------------
     // SelectionHighlight
     //--------------------------------------------------------------------------

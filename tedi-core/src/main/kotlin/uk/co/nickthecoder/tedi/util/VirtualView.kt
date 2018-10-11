@@ -344,14 +344,13 @@ class VirtualView<P>(
 
             if (adjustFrom != Int.MAX_VALUE) {
                 var offset = if (adjustFrom == 0) initialOffset else nodeBottom(contentList[adjustFrom - 1])
-
                 for (i in adjustFrom..contentList.size - 1) {
                     val node = contentList[i]
                     node.layoutY = offset
                     if (gutter != null) {
                         gutterList[i].layoutY = offset
                     }
-                    offset += Math.ceil(nodeHeight(node))
+                    offset += nodeHeight(node)
                 }
 
             }
@@ -653,7 +652,6 @@ class VirtualView<P>(
             contentList.add(visibleIndex, node)
         }
 
-        //val prefWidth = node.prefWidth(-1.0)
         val prefHeight = node.prefHeight(-1.0)
         node.resize(prefWidth, prefHeight)
         node.layoutY = offset
@@ -797,8 +795,8 @@ class VirtualView<P>(
     }
 
     private fun nodePosition(node: Node?) = node?.layoutY ?: 0.0
-    private fun nodeHeight(node: Node?) = node?.layoutBounds?.height ?: 0.0
-    private fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
+    private fun nodeHeight(node: Node?) = node?.prefHeight(-1.0) ?: 0.0//node?.layoutBounds?.height ?: 0.0
+    private fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.prefHeight(-1.0)//node.layoutY + node.layoutBounds.height
 
 
     private inner class ContentRegion : Region() {
