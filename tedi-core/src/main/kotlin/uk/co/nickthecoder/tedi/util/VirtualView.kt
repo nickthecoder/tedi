@@ -282,10 +282,9 @@ class VirtualView<P>(
             } else {
                 documentChanged = true
                 if (from >= topNodeIndex && to < bottomNodeIndex) {
-                    // We don't care about the offset at this stage, it will be corrected later.
-                    val node = createNode(from, 0.0)
                     val index = from - topNodeIndex
-                    contentList.add(index, node)
+                    // We don't care about the offset at this stage, it will be corrected later.
+                    val node = createNode(from, 0.0, index)
                     adjustFrom = index
                     if (gutter != null) {
                         createGutterNode(from, node, index)
@@ -646,10 +645,16 @@ class VirtualView<P>(
      * Creates a Node.
      * It is left to the caller to update [topNodeIndex] if necessary.
      */
-    private fun createNode(index: Int, offset: Double): Node {
+    private fun createNode(index: Int, offset: Double, visibleIndex: Int?): Node {
         val node = factory.createNode(index)
-        val prefWidth = node.prefWidth(-1.0)
-        val prefHeight = Math.ceil(node.prefHeight(-1.0))
+        if (visibleIndex == null) {
+            contentList.add(node)
+        } else {
+            contentList.add(visibleIndex, node)
+        }
+
+        //val prefWidth = node.prefWidth(-1.0)
+        val prefHeight = node.prefHeight(-1.0)
         node.resize(prefWidth, prefHeight)
         node.layoutY = offset
         node.layoutX = clippedContent.snappedLeftInset()
@@ -661,11 +666,6 @@ class VirtualView<P>(
 
     private fun positionGutterNode(node: Node, x: Double, y: Double, width: Double, height: Double) {
         node.resizeRelocate(x + gutterRegion.snappedLeftInset(), y, width, height)
-    }
-
-    private fun positionGutterNode(node: Node, x: Double, y: Double) {
-        node.layoutX = x + gutterRegion.snappedLeftInset()
-        node.layoutY = y + gutterRegion.snappedTopInset()
     }
 
     /**
@@ -709,10 +709,9 @@ class VirtualView<P>(
         if (topNodeIndex >= list.size) {
             topNodeIndex = 0
         }
-        val node = createNode(topNodeIndex, clippedContent.snappedTopInset())
+        val node = createNode(topNodeIndex, clippedContent.snappedTopInset(), null)
         // Adjust by the fractional part of vScroll.value
         node.layoutY += (vScroll.value - topNodeIndex) * nodeHeight(node)
-        contentList.add(node)
 
         if (gutter != null) {
             createGutterNode(topNodeIndex, node, null)
@@ -728,9 +727,8 @@ class VirtualView<P>(
         var nextPosition = offset - nodeHeight(firstVisibleNode)
 
         while (index >= 0 && offset > 0) {
-            val node = createNode(index, nextPosition)
+            val node = createNode(index, nextPosition, 0)
             //topNodeIndex--
-            contentList.add(0, node)
 
             if (gutter != null) {
                 createGutterNode(index, node, 0)
@@ -753,8 +751,7 @@ class VirtualView<P>(
         var index = topNodeIndex + contentList.size
 
         while (index < list.size && offset < viewportHeight) {
-            val node = createNode(index, offset)
-            contentList.add(node)
+            val node = createNode(index, offset, null)
 
             if (gutter != null) {
                 createGutterNode(index, node, null)

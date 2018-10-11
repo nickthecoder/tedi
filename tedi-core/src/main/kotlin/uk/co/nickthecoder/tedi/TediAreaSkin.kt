@@ -522,6 +522,11 @@ class TediAreaSkin(control: TediArea)
 
         init {
             update(index)
+            //prefWidth = Region.USE_COMPUTED_SIZE
+        }
+
+        override fun computePrefHeight(width: Double): Double {
+            return super.computePrefHeight(width)
         }
 
         private fun createText(str: String): Text {
