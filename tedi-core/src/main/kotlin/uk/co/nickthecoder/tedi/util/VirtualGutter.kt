@@ -1,7 +1,8 @@
 package uk.co.nickthecoder.tedi.util
 
+import javafx.css.CssMetaData
+import javafx.css.Styleable
 import javafx.scene.Node
-import javafx.scene.layout.Region
 
 /**
  * Creates [Node]s to the left of [VirtualView], typically used to display line numbers.
@@ -22,9 +23,8 @@ import javafx.scene.layout.Region
  *
  * I suggest extending [LineNumberGutter], if you want to add extra features to your gutters.
  *
- * I'm not happy that this is a class, and not an interface. However, I want it to be styleable
  */
-abstract class VirtualGutter : Region(), VirtualFactory {
+interface VirtualGutter : VirtualFactory {
 
     /**
      * Called whenever ANY changes are made to VirtualView's list, i.e.,
@@ -38,41 +38,10 @@ abstract class VirtualGutter : Region(), VirtualFactory {
      *
      * @param node The corresponding node created earlier via [createNode]
      */
-    abstract fun documentChanged(index: Int, node: Node)
+    fun documentChanged(index: Int, node: Node)
 
-    public override fun getChildren() = super.getChildren()
-
-    init {
-        styleClass.add("gutter")
-        isManaged = false
-    }
-
-    // Children are being manually laid out, so do nothing here.
-    override fun layoutChildren() {
-        return
-    }
-}
-
-abstract class ReusableVirtualGutter(private val maxSize: Int = 100) : VirtualGutter() {
-
-    private val reusableList = mutableListOf<Node>()
-
-    override fun createNode(index: Int): Node = if (reusableList.isEmpty()) {
-        createNewNode(index)
-    } else {
-        reusableList.removeAt(reusableList.size - 1).apply {
-            if (this is UpdatableNode) {
-                update(index)
-            }
-        }
-    }
-
-    abstract fun createNewNode(index: Int): Node
-
-    override fun free(index: Int, node: Node) {
-        if (reusableList.size < maxSize) {
-            reusableList.add(node)
-        }
-    }
-
+    //---------------------------------------------------------------------------
+    // Styleable
+    //---------------------------------------------------------------------------
+    fun getCssMetaData(): List<CssMetaData<out Styleable, *>> = emptyList()
 }

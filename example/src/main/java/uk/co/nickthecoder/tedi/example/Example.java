@@ -152,7 +152,7 @@ public class Example extends Application {
 
             // Bind the line number toggle button to tediArea's property.
             // That's all we have to do to hide/show line numbers.
-            toggleLineNumbers.selectedProperty().bindBidirectional(tediArea.displayLineNumbersProperty());
+            toggleLineNumbers.selectedProperty().bindBidirectional(tediArea.displayLineNumbers());
 
             // Undo redo button states and actions
             tediArea.setUndoRedo(new BetterUndoRedo(tediArea));

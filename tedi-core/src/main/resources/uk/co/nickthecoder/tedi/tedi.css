@@ -3,17 +3,18 @@
 }
 
 .tedi-area .content {
-    -fx-padding: 20 30; /* TODO 4 10 */
+    -fx-padding: 4 10;
 }
 
 .tedi-area .gutter {
+    -fx-font-family: 'monospace';
     -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
     -fx-background-color: #eeeeee;
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
-    -fx-text-fill: gray;
+    -fx-text-fill: green;
     -fx-current-line-fill: #fffae3; /* TODO Not fully implemented yet */
-    -fx-current-line-text-fill: gray; /* TODO Not implemented */
+    -fx-current-line-text-fill: red;
 }
 
 .tedi-area.code {

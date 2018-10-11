@@ -38,7 +38,6 @@ import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableIntegerValue
 import javafx.collections.ObservableList
 import javafx.css.CssMetaData
-import javafx.css.StyleConverter
 import javafx.css.Styleable
 import javafx.css.StyleableBooleanProperty
 import javafx.scene.AccessibleRole
@@ -48,10 +47,7 @@ import javafx.scene.control.TextInputControl
 import javafx.scene.input.MouseEvent
 import uk.co.nickthecoder.tedi.ParagraphList.Paragraph
 import uk.co.nickthecoder.tedi.javafx.ExpressionHelper
-import uk.co.nickthecoder.tedi.util.LineNumberGutter
-import uk.co.nickthecoder.tedi.util.VirtualGutter
-import uk.co.nickthecoder.tedi.util.clamp
-import uk.co.nickthecoder.tedi.util.extendList
+import uk.co.nickthecoder.tedi.util.*
 import java.text.BreakIterator
 
 /**
@@ -195,14 +191,9 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
 
     // *** Display Line Numbers ***
-    private val displayLineNumbersProperty: StyleableBooleanProperty = object : StyleableBooleanProperty(false) {
-        override fun getBean() = this@TediArea
-        override fun getName() = "displayLineNumbers"
-        override fun getCssMetaData() = DISPLAY_LINE_NUMBERS
-    }
+    private val displayLineNumbersProperty: StyleableBooleanProperty = createStyleable("displayLineNumbers", false, DISPLAY_LINE_NUMBERS)
 
-    fun displayLineNumbersProperty(): StyleableBooleanProperty = displayLineNumbersProperty
-
+    fun displayLineNumbers(): StyleableBooleanProperty = displayLineNumbersProperty
     /**
      * Determines if line numbers are displayed.
      * This can also be set using the css : -fx-display-line-numbers
@@ -213,19 +204,18 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
 
     // Gutter
-    private val gutterProperty: SimpleObjectProperty<VirtualGutter> = SimpleObjectProperty<VirtualGutter>(this, "gutter", LineNumberGutter())
+    private val gutterProperty = SimpleObjectProperty<VirtualGutter>(this, "gutter", LineNumberGutter(this))
 
-    fun gutterProperty(): ObjectProperty<VirtualGutter> = gutterProperty
-
+    fun gutter(): ObjectProperty<VirtualGutter> = gutterProperty
     var gutter: VirtualGutter
         get() = gutterProperty.get()
         set(v) = gutterProperty.set(v)
 
+
     // *** Tab Inserts Spaces ***
     private val tabInsertsSpacesProperty = SimpleBooleanProperty(this, "tabInsertsSpaces", true)
 
-    fun tabInsertsSpacesProperty(): BooleanProperty = tabInsertsSpacesProperty
-
+    fun tabInsertsSpaces(): BooleanProperty = tabInsertsSpacesProperty
     /**
      * If true, then the TAB key will insert spaces, rather than a tab-character.
      * The number of spaces is determined by the [indentSize] property.
@@ -238,8 +228,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
     // *** Indent Size ***
     private val indentSizeProperty = SimpleIntegerProperty(this, "indentSize", 4)
 
-    fun indentSizeProperty(): IntegerProperty = indentSizeProperty
-
+    fun indentSize(): IntegerProperty = indentSizeProperty
     var indentSize: Int
         get() = indentSizeProperty.get()
         set(v) = indentSizeProperty.set(v)
@@ -248,8 +237,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
     // *** wordIterator ***
     private val wordIteratorProperty = SimpleObjectProperty(this, "wordIterator", BreakIterator.getWordInstance())
 
-    fun wordIteratorProperty(): Property<BreakIterator> = wordIteratorProperty
-
+    fun wordIterator(): Property<BreakIterator> = wordIteratorProperty
     /**
      * The Break Iterator to use, when double clicking, and also when using Shift + Left/Right Arrow.
      * The default value is :
@@ -290,6 +278,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
             override fun computeValue() = lineColumnForPosition(caretPosition).second
         })
+
     }
 
     /***************************************************************************
@@ -604,19 +593,15 @@ open class TediArea private constructor(internal val content: TediAreaContent)
     //--------------------------------------------------------------------------
     // Companion Object
     //--------------------------------------------------------------------------
+
     companion object {
 
-        private val DISPLAY_LINE_NUMBERS = object : CssMetaData<TediArea, Boolean>("-fx-display-line-numbers",
-                StyleConverter.getBooleanConverter(), false) {
-            override fun isSettable(n: TediArea) = !n.displayLineNumbersProperty().isBound
-            override fun getStyleableProperty(n: TediArea) = n.displayLineNumbersProperty()
-        }
+        private val DISPLAY_LINE_NUMBERS = createBooleanCssMetaData<TediArea>("-fx-display-line-numbers") { it.displayLineNumbers() }
 
         private val STYLEABLES: List<CssMetaData<out Styleable, *>> = extendList(TextInputControl.getClassCssMetaData(),
                 DISPLAY_LINE_NUMBERS)
 
         fun getClassCssMetaData(): List<CssMetaData<out Styleable, *>> = STYLEABLES
-
 
         @JvmStatic
         fun style(scene: Scene) {
@@ -625,6 +610,5 @@ open class TediArea private constructor(internal val content: TediAreaContent)
         }
 
     }
-    // End Companion Object
 
 }

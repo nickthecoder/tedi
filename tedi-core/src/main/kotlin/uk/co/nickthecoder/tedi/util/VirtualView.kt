@@ -1,19 +1,12 @@
 package uk.co.nickthecoder.tedi.util
 
-import javafx.application.Application
 import javafx.collections.ListChangeListener
 import javafx.collections.ObservableList
-import javafx.event.EventHandler
-import javafx.geometry.VPos
 import javafx.scene.Node
-import javafx.scene.Scene
 import javafx.scene.control.ScrollBar
 import javafx.scene.input.ScrollEvent
 import javafx.scene.layout.Region
 import javafx.scene.layout.StackPane
-import javafx.scene.text.Text
-import javafx.stage.Stage
-import uk.co.nickthecoder.tedi.TediArea
 
 /*
  * Before writing this class, I looked for alternatives, and found :
@@ -77,24 +70,22 @@ class VirtualView<P>(
 
     var gutter: VirtualGutter? = null
         set(v) {
+            if (field === v) return
+
+            println("Changing gutter from $field to $v")
             // The existing gutter must have "free" called for existing gutterNodes.
             clear()
             field = v
-            if (v == null) {
-                gutterRegion = EmptyGutter()
-            } else {
-                gutterRegion = v
-            }
+            gutterRegion = GutterRegion(v)
             gutterList = gutterRegion.children
+
             clippedGutter.node = gutterRegion
+            clippedGutter.isVisible = v != null
+
             reset()
         }
 
-    /**
-     * When [gutter] is null, this is an [EmptyGutter], so that we don't continually have to
-     * special-case a null value.
-     */
-    private var gutterRegion: VirtualGutter = EmptyGutter()
+    internal var gutterRegion = GutterRegion(gutter)
 
     private var gutterList: MutableList<Node> = gutterRegion.children
 
@@ -140,10 +131,12 @@ class VirtualView<P>(
         corner.styleClass.setAll("corner")
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
+        clippedGutter.isVisible = gutter != null
 
         clippedContent.isManaged = false
         clippedGutter.isManaged = false
         contentRegion.isManaged = false
+        gutterRegion.isManaged = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
         hScroll.valueProperty().addListener { _, _, _ -> clippedContent.clipX = hScroll.value }
@@ -558,7 +551,7 @@ class VirtualView<P>(
         viewportHeight = height // (Assume hScroll is NOT visible for now)
         fillViewport()
 
-        gutterWidth = if (gutterRegion.isVisible) {
+        gutterWidth = if (clippedGutter.isVisible) {
             maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
         } else {
             0.0
@@ -571,13 +564,16 @@ class VirtualView<P>(
 
         clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
         contentRegion.resizeRelocate(0.0, 0.0, viewportWidth - gutterWidth, viewportHeight)
-        clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
 
-        gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
-        // Make all gutter nodes the correct width
-        for (child in gutterRegion.children) {
-            child.resize(maxGutterPrefWidth, nodeHeight(child))
+        if (clippedGutter.isVisible) {
+            clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
+            gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
+            // Make all gutter nodes the correct width
+            for (child in gutterRegion.children) {
+                child.resize(maxGutterPrefWidth, nodeHeight(child))
+            }
         }
+
     }
 
     private fun layoutScrollBars() {
@@ -799,9 +795,9 @@ class VirtualView<P>(
         }
     }
 
-    fun nodePosition(node: Node?) = node?.layoutY ?: 0.0
-    fun nodeHeight(node: Node?) = node?.layoutBounds?.height ?: 0.0
-    fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
+    private fun nodePosition(node: Node?) = node?.layoutY ?: 0.0
+    private fun nodeHeight(node: Node?) = node?.layoutBounds?.height ?: 0.0
+    private fun nodeBottom(node: Node?) = if (node == null) 0.0 else node.layoutY + node.layoutBounds.height
 
 
     private inner class ContentRegion : Region() {
@@ -816,108 +812,7 @@ class VirtualView<P>(
 
     }
 
-    private inner class EmptyGutter : VirtualGutter() {
-
-        init {
-            styleClass.clear()
-        }
-
-        override fun createNode(index: Int): Node {
-            throw NotImplementedError()
-        }
-
-        override fun documentChanged(index: Int, node: Node) {
-            throw NotImplementedError()
-        }
-    }
-}
-
-private fun <T> MutableList<T>.removeLast() = removeAt(size - 1)
-private fun <T> MutableList<T>.removeFirst() = removeAt(0)
-
-/**
- * A demo application using a [VirtualView].
- */
-class VirtualViewApp : Application() {
-
-    override fun start(primaryStage: Stage) {
-        VirtualViewAppWindow(primaryStage)
-    }
-
-    class VirtualViewAppWindow(stage: Stage) {
-
-        private val tediArea = TediArea()
-
-        private val virtualView = VirtualView(tediArea.paragraphs, ParagraphNodeFactory())
-
-        private val scene = Scene(virtualView, 600.0, 400.0)
-
-        private val gutter = LineNumberGutter()
-
-        init {
-            TediArea.style(scene)
-            stage.scene = scene
-            with(stage) {
-                title = "VirtualScroll Demo Application"
-                show()
-            }
-            virtualView.gutter = gutter
-            tediArea.text = "A really, really, really, really, really, really, really, long line.\n123\n456\n789\nabcde\nfghj\n" +
-                    ("extra lines\n".repeat(140))
-        }
-
-        inner class ParagraphNodeFactory : VirtualFactory {
-            override fun createNode(index: Int): Node {
-                val paragraph = tediArea.paragraphs[index]
-
-                val add = Text(" + ")
-                val sub = Text(" - ")
-                val delete = Text(" X ")
-                val insert = Text(" ! ")
-                val text = Text(paragraph.text)
-
-                add.onMouseClicked = EventHandler {
-                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                    val pos = tediArea.positionOfLine(myIndex)
-                    tediArea.insertText(pos, ".")
-                }
-                sub.onMouseClicked = EventHandler {
-                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                    val pos = tediArea.positionOfLine(myIndex)
-                    tediArea.replaceText(pos, pos + 1, "")
-                }
-                delete.onMouseClicked = EventHandler {
-                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                    if (myIndex != 0) {
-                        val pos = tediArea.positionOfLine(myIndex) - 1
-                        val end = tediArea.positionOfLine(myIndex + 1) - 1
-                        tediArea.replaceText(pos, end, "")
-                    }
-                }
-                insert.onMouseClicked = EventHandler {
-                    val myIndex = tediArea.paragraphs.indexOf(paragraph)
-                    tediArea.insertText(tediArea.positionOfLine(myIndex), "This is a new line\n")
-                }
-                text.textOrigin = VPos.TOP
-                return text
-                //return TextFlow(delete, insert, add, sub, text)
-            }
-
-            override fun itemChanged(index: Int, node: Node) {
-                //val text = (node as TextFlow).children[4] as Text
-                val text = node as Text
-                text.text = tediArea.paragraphs[index].text
-            }
-        }
-    }
-
-    companion object {
-
-        @JvmStatic
-        fun main(args: Array<String>) {
-            Application.launch(VirtualViewApp::class.java, * args)
-        }
-
-    }
+    private fun <T> MutableList<T>.removeLast() = removeAt(size - 1)
+    private fun <T> MutableList<T>.removeFirst() = removeAt(0)
 
 }

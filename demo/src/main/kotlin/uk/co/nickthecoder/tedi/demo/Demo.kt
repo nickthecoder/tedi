@@ -239,11 +239,11 @@ class DemoWindow(stage: Stage = Stage()) {
      */
     fun tediAreaChanged(oldValue: TediArea?, newValue: TediArea) {
 
-        oldValue?.displayLineNumbersProperty()?.unbindBidirectional(toggleLineNumbers.selectedProperty())
+        oldValue?.displayLineNumbers()?.unbindBidirectional(toggleLineNumbers.selectedProperty())
 
         currentArea = newValue
 
-        toggleLineNumbers.selectedProperty().bindBidirectional(newValue.displayLineNumbersProperty())
+        toggleLineNumbers.selectedProperty().bindBidirectional(newValue.displayLineNumbers())
         toggleLineNumbers.isDisable = false
 
         // Note, I will be using BetterUndoRedo, and therefore I am NOT using TextInputControl.undoableProperty().
