@@ -38,26 +38,25 @@ import javafx.scene.shape.Rectangle
  */
 class ClippedView(node: Node) : Region() {
 
-
     var node: Node = node
         set(v) {
             field = v
             children.clear()
             children.add(v)
-            v.layoutX = -clipX
-            v.layoutY = -clipY
+            v.layoutX = snappedLeftInset() - clipX
+            v.layoutY = snappedTopInset() - clipY
         }
 
     var clipX: Double = 0.0
         set(v) {
             field = v
-            node.layoutX = -v
+            node.layoutX = snappedLeftInset() -v
         }
 
     var clipY: Double = 0.0
         set(v) {
             field = v
-            node.layoutY = -v
+            node.layoutY = snappedTopInset() -v
         }
 
     private val clipRect = Rectangle()

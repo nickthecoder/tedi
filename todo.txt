@@ -14,12 +14,6 @@ Sort out vScroll value with large padding
 
 Display Line numbers isn't being picked up from tedi.css (is for "code" tabs, but not others)
 
-Use TextFlow?
-    May need to perform layout() with vv to get its true height.
-
-Get rid of the jittery text (hopefully TextFlow will help)
-
-
 Next
 ----
 

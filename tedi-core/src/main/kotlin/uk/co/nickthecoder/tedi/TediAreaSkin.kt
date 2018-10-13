@@ -215,7 +215,7 @@ class TediAreaSkin(control: TediArea)
         if (paragraphNode == null) {
             caretPath.layoutX = -100.0 // Off screen
         } else {
-            caretPath.layoutY = paragraphNode.layoutY
+            caretPath.layoutY = paragraphNode.layoutY + paragraphNode.parent.layoutY
             caretPath.layoutX = paragraphNode.xForColumn(column)
         }
     }

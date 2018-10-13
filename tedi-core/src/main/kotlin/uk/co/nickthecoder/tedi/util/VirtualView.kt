@@ -94,8 +94,6 @@ class VirtualView<P>(
     private var viewportHeight: Double = 0.0
     private var viewportWidth: Double = 0.0
 
-    private var needsRebuild = true
-
     /**
      * The index of the first visible node.
      */
@@ -132,11 +130,6 @@ class VirtualView<P>(
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
         clippedGutter.isVisible = gutter != null
-
-        clippedContent.isManaged = false
-        contentRegion.isManaged = false
-        clippedGutter.isManaged = false
-        gutterRegion.isManaged = false
 
         vScroll.valueProperty().addListener { _, oldValue, newValue -> vScrollChanged(oldValue.toDouble(), newValue.toDouble()) }
         hScroll.valueProperty().addListener { _, _, _ -> clippedContent.clipX = hScroll.value }
@@ -276,6 +269,7 @@ class VirtualView<P>(
 
         val initialOffset = contentList.firstOrNull()?.layoutY ?: 0.0
 
+
         fun addedItems(from: Int, to: Int) {
             if (contentList.isEmpty() || (to - from > 1)) {
                 rebuild = true
@@ -284,7 +278,7 @@ class VirtualView<P>(
                 if (from >= topNodeIndex && to < bottomNodeIndex) {
                     val index = from - topNodeIndex
                     // We don't care about the offset at this stage, it will be corrected later.
-                    val node = createNode(from, 0.0, index)
+                    val node = createNode(from, index)
                     adjustFrom = index
                     if (gutter != null) {
                         createGutterNode(from, node, index)
@@ -312,7 +306,7 @@ class VirtualView<P>(
         fun updatedItems(from: Int, to: Int) {
             if (from < topNodeIndex || to > bottomNodeIndex) return
 
-            for (i in from..to - 1) {
+            for (i in from until to) {
                 if (i >= topNodeIndex && i <= bottomNodeIndex) {
                     getContentNode(i)?.let { factory.itemChanged(i, it) }
                     gutter?.let { gutter ->
@@ -337,20 +331,21 @@ class VirtualView<P>(
         }
 
         if (rebuild) {
-            needsRebuild = true
+            clear()
             requestLayout()
 
         } else {
 
             if (adjustFrom != Int.MAX_VALUE) {
-                var offset = if (adjustFrom == 0) initialOffset else nodeBottom(contentList[adjustFrom - 1])
-                for (i in adjustFrom..contentList.size - 1) {
+                var y = if (adjustFrom == 0) initialOffset else nodeBottom(contentList[adjustFrom - 1])
+                for (i in adjustFrom until contentList.size) {
                     val node = contentList[i]
-                    node.layoutY = offset
+                    val prefHeight = node.prefHeight(-1.0)
+                    node.resizeRelocate(0.0, y, viewportWidth, prefHeight)
                     if (gutter != null) {
-                        gutterList[i].layoutY = offset
+                        gutterList[i].resizeRelocate(0.0, y, maxGutterPrefWidth, prefHeight)
                     }
-                    offset += nodeHeight(node)
+                    y += prefHeight
                 }
 
             }
@@ -527,7 +522,8 @@ class VirtualView<P>(
     }
 
     override fun layoutChildren() {
-        // println("VirtualView.layoutChildren")
+        println("VirtualView.layoutChildren")
+
         val width = width
         val height = height
 
@@ -539,39 +535,27 @@ class VirtualView<P>(
             return
         }
 
-        if (needsRebuild) {
-            clear()
-            needsRebuild = false
-        }
-        // We need to create the gutter nodes, to find the gutterWidth. Only then can we decide which scroll bars
-        // must be visible. But then we need to fill the viewport AGAIN, because we may need extra items
-        // when the hScroll is removed.
         viewportHeight = height // (Assume hScroll is NOT visible for now)
         fillViewport()
 
-        gutterWidth = if (clippedGutter.isVisible) {
-            maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
-        } else {
-            0.0
-        }
+        val leftInset = clippedContent.snappedLeftInset()
+        val topInset = clippedContent.snappedTopInset()
 
-        layoutScrollBars()
-
-        // Fill again (see comment above for why this is done twice)
-        fillViewport()
-
-        clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
-        contentRegion.resizeRelocate(0.0, 0.0, viewportWidth - gutterWidth, viewportHeight)
 
         if (clippedGutter.isVisible) {
+
+            gutterWidth = maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
             clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
-            gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
-            // Make all gutter nodes the correct width
-            for (child in gutterRegion.children) {
-                child.resize(maxGutterPrefWidth, nodeHeight(child))
-            }
+            gutterRegion.resizeRelocate(0.0, topInset, gutterWidth, viewportHeight)
+
+        } else {
+            gutterWidth = 0.0
         }
 
+        clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
+        contentRegion.resizeRelocate(leftInset, topInset, viewportWidth - gutterWidth, viewportHeight)
+
+        layoutScrollBars()
     }
 
     private fun layoutScrollBars() {
@@ -644,20 +628,17 @@ class VirtualView<P>(
      * Creates a Node.
      * It is left to the caller to update [topNodeIndex] if necessary.
      */
-    private fun createNode(index: Int, offset: Double, visibleIndex: Int?): Node {
+    private fun createNode(index: Int, visibleIndex: Int?): Node {
         val node = factory.createNode(index)
         if (visibleIndex == null) {
             contentList.add(node)
         } else {
             contentList.add(visibleIndex, node)
         }
-
+        node.applyCss()
         val prefHeight = node.prefHeight(-1.0)
-        node.resize(prefWidth, prefHeight)
-        node.layoutY = offset
-        node.layoutX = clippedContent.snappedLeftInset()
-
-        maxPrefWidth = Math.max(maxPrefWidth, node.layoutBounds.width)
+        node.resize(viewportWidth, prefHeight)
+        if (node is Parent) node.layout()
         return node
     }
 
@@ -684,15 +665,14 @@ class VirtualView<P>(
             node.applyCss()
             if (node is Parent) node.layout()
 
+            val height = nodeHeight(contentNode)
             val prefWidth = node.prefWidth(-1.0)
             if (prefWidth > maxGutterPrefWidth) {
                 maxGutterPrefWidth = prefWidth
                 requestLayout()
             }
-            node.isManaged = false
+            node.resizeRelocate(0.0, contentNode.layoutY, maxGutterPrefWidth, height)
 
-            val height = nodeHeight(contentNode)
-            positionGutterNode(node, 0.0, contentNode.layoutY, maxGutterPrefWidth, height)
             return node
         }
         throw IllegalStateException("Gutter is null")
@@ -707,9 +687,11 @@ class VirtualView<P>(
         if (topNodeIndex >= list.size) {
             topNodeIndex = 0
         }
-        val node = createNode(topNodeIndex, clippedContent.snappedTopInset(), null)
-        // Adjust by the fractional part of vScroll.value
-        node.layoutY += (vScroll.value - topNodeIndex) * nodeHeight(node)
+        val node = createNode(topNodeIndex, null)
+        val prefHeight = node.prefHeight(-1.0)
+        val y = (vScroll.value - topNodeIndex) * prefHeight
+
+        node.resizeRelocate(0.0, y - prefHeight, viewportWidth, prefHeight)
 
         if (gutter != null) {
             createGutterNode(topNodeIndex, node, null)
@@ -721,41 +703,40 @@ class VirtualView<P>(
 
         val firstVisibleNode = contentList.first()
         var index = topNodeIndex - 1
-        var offset = nodePosition(firstVisibleNode)
-        var nextPosition = offset - nodeHeight(firstVisibleNode)
+        var y = nodePosition(firstVisibleNode)
 
-        while (index >= 0 && offset > 0) {
-            val node = createNode(index, nextPosition, 0)
+        while (index >= 0 && y > 0) {
+            val node = createNode(index, 0)
+            val prefHeight = node.prefHeight(-1.0)
+            node.resizeRelocate(0.0, y - prefHeight, viewportWidth, prefHeight)
+            y -= prefHeight
             //topNodeIndex--
 
             if (gutter != null) {
                 createGutterNode(index, node, 0)
             }
-
-            val nodeHeight = nodeHeight(node)
-            offset -= nodeHeight
-            nextPosition -= nodeHeight
             index--
         }
         topNodeIndex = index + 1
-
     }
 
     private fun addTrailingNodes() {
         if (contentList.isEmpty()) return
 
         val startNode = contentList.last()
-        var offset = nodeBottom(startNode)
+        var y = nodeBottom(startNode)
         var index = topNodeIndex + contentList.size
 
-        while (index < list.size && offset < viewportHeight) {
-            val node = createNode(index, offset, null)
+        while (index < list.size && y < viewportHeight) {
+            val node = createNode(index, null)
+            val prefHeight = node.prefHeight(-1.0)
+            node.resizeRelocate(0.0, y, viewportWidth, prefHeight)
 
             if (gutter != null) {
                 createGutterNode(index, node, null)
             }
 
-            offset += nodeHeight(node)
+            y += prefHeight
             index++
         }
 
@@ -804,7 +785,7 @@ class VirtualView<P>(
         // Make it public.
         public override fun getChildren() = super.getChildren()
 
-        // Children are being manually laid out, so do nothing here.
+        // Children are being manually laid out by VirtualView iteself
         override fun layoutChildren() {
             return
         }
