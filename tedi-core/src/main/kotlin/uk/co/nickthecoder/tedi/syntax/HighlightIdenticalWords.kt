@@ -20,8 +20,15 @@ open class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
 
     var myRanges = mutableListOf<HighlightRange>()
 
-    private val listener = propertyChangeDelayedThread(tediArea.caretPositionProperty(), wait) {
-        caretMoved()
+    private val listener = propertyChangeDelayedThread(tediArea.selectionProperty(), wait) { range ->
+        if (range.length == 0) {
+            caretMoved()
+        } else {
+            // Turn off identical word highlighting when there's a selection.
+            Platform.runLater {
+                clear()
+            }
+        }
     }
 
     private val focusListener = ChangeListener<Boolean> { _, _, _ -> onFocusChanged() }
@@ -115,13 +122,15 @@ open class HighlightIdenticalWords(val tediArea: TediArea, wait: Long = 100) {
     open fun isWordCharacter(c: Char) = c.isJavaIdentifierPart()
 
     open fun clear() {
-        tediArea.highlightRanges().removeAll(myRanges)
-        myRanges.clear()
+        if (myRanges.isNotEmpty()) {
+            tediArea.highlightRanges().removeAll(myRanges)
+            myRanges.clear()
+        }
     }
 
     open fun detach() {
         clear()
-        tediArea.caretPositionProperty().removeListener(listener)
+        tediArea.selectionProperty().removeListener(listener)
         tediArea.focusedProperty().removeListener(focusListener)
     }
 

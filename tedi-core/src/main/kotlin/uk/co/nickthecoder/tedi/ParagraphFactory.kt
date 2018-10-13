@@ -99,6 +99,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                         if (highlight is FillHighlight) {
                             if (rectangle == null) {
                                 rectangle = Rectangle(5.0, 5.0)
+                                rectangle.fill = null
                                 rectangle.isSmooth = false
                                 rectangle.styleClass.add("rectangle")
                             }

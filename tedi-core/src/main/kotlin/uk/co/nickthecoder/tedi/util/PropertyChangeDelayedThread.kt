@@ -17,12 +17,12 @@ import java.util.concurrent.CountDownLatch
  *
  * @return The ChangeListener. call [property].removeListener( resultValue ) to stop listening to change events.
  */
-fun <T> propertyChangeDelayedThread(property: ObservableValue<T>, wait: Long, action: () -> Unit): ChangeListener<T> {
+fun <T> propertyChangeDelayedThread(property: ObservableValue<T>, wait: Long, action: (T) -> Unit): ChangeListener<T> {
 
     var thread: Thread? = null
     var actionLatch: CountDownLatch? = null
 
-    val listener = ChangeListener<T> { _, _, _ ->
+    val listener = ChangeListener<T> { _, _, newValue: T ->
 
         thread?.interrupt() // Interrupt the thread if there is one.
 
@@ -36,7 +36,7 @@ fun <T> propertyChangeDelayedThread(property: ObservableValue<T>, wait: Long, ac
 
                 actionLatch = CountDownLatch(1)
                 try {
-                    action()
+                    action(newValue)
                 } finally {
                     thread = null
                     actionLatch?.countDown()

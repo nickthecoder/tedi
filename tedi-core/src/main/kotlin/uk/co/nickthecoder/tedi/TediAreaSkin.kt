@@ -493,16 +493,19 @@ class TediAreaSkin(control: TediArea)
 
     /**
      * A Highlight used by [selectionHighlightRange] to highlight the selected text.
+     *
+     * Note, fill colors are BOUND, so that other highlight ranges do not affect them
+     * (changes to style and styleClass will have no effect to a bound property).
+     *
+     * This makes this Highlight more potent than regular Highlights.
      */
     private val selectionHighlight = object : FillHighlight {
         override fun style(rect: Rectangle) {
-            rect.style = null
-            rect.styleClass.clear()
-            rect.fill = highlightFill
+            rect.fillProperty().bind(highlightFillProperty)
         }
 
         override fun style(text: Text) {
-            text.fill = highlightTextFill
+            text.fillProperty().bind(highlightTextFillProperty)
         }
     }
 
