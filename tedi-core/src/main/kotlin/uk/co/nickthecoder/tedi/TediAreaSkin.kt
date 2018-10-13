@@ -52,6 +52,7 @@ import javafx.scene.shape.LineTo
 import javafx.scene.shape.MoveTo
 import javafx.scene.shape.Path
 import javafx.scene.shape.Rectangle
+import javafx.scene.text.Font
 import javafx.scene.text.Text
 import javafx.util.Duration
 import uk.co.nickthecoder.tedi.javafx.BehaviorSkinBase
@@ -156,8 +157,8 @@ class TediAreaSkin(control: TediArea)
         // caretPath
         with(caretPath) {
             isManaged = false
+            // TODO Should this be stroke?
             fillProperty().bind(textFillProperty)
-            //strokeProperty().bind(textFillProperty)
         }
 
         // tmpText
@@ -177,8 +178,8 @@ class TediAreaSkin(control: TediArea)
         virtualView.vScroll.valueProperty().addListener { _, _, _ -> repositionCaret() }
 
         // Font
-        control.fontProperty().addListener { _, _, _ -> onFontChanged() }
-        onFontChanged()
+        control.fontProperty().addListener { _, _, new -> onFontChanged(new) }
+        onFontChanged(control.font)
 
         // Gutter
         control.gutter().addListener { _, _, newValue ->
@@ -215,18 +216,29 @@ class TediAreaSkin(control: TediArea)
         if (paragraphNode == null) {
             caretPath.layoutX = -100.0 // Off screen
         } else {
-            caretPath.layoutY = paragraphNode.layoutY + paragraphNode.parent.layoutY
-            caretPath.layoutX = paragraphNode.xForColumn(column)
+            caretPath.layoutY = paragraphNode.boundsInParent.maxY
+            val (x, font) = paragraphNode.caretDetails(column)
+            if (font != null && font.size != caretFontSize) {
+                createCaretPath(font)
+            }
+            caretPath.layoutX = x
         }
     }
 
-    private fun onFontChanged() {
-        cachedLineHeight = 0.0
+    private var caretFontSize = 0.0
+
+    private fun createCaretPath(font: Font) {
+        caretFontSize = font.size
+        val height = caretFontSize * 1.3 // Font API is lacking. It doesn't give us font metrics, so lets guess a height.
         caretPath.elements.clear()
         caretPath.elements.add(MoveTo(0.0, 0.0))
-        caretPath.elements.add(LineTo(0.0, lineHeight()))
+        caretPath.elements.add(LineTo(0.0, -height))
         caretPath.fillProperty().bind(textFillProperty)
-        caretPath.strokeWidth = Math.min(1.0, lineHeight() / 15.0)
+        caretPath.strokeWidth = Math.min(1.0, caretFontSize / 15.0)
+    }
+
+    private fun onFontChanged(font: Font) {
+        createCaretPath(font)
         virtualView.reset()
         Platform.runLater { repositionCaret() }
     }
@@ -274,11 +286,7 @@ class TediAreaSkin(control: TediArea)
     private fun scrollToCaret() {
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
         virtualView.ensureItemVisible(line)
-
-        val x = virtualView.fromContentX(caretPath.layoutX)
-        if (x < 0) {
-            virtualView.hScroll.value += x
-        }
+        virtualView.ensureXVisible(caretPath.layoutX)
     }
 
     /**
@@ -326,16 +334,6 @@ class TediAreaSkin(control: TediArea)
     fun nextLine(select: Boolean) {
         changeLine(1, select)
     }
-
-    private var cachedLineHeight = 0.0
-
-    fun lineHeight(): Double {
-        if (cachedLineHeight == 0.0) {
-            cachedLineHeight = Math.ceil(tmpText.boundsInLocal.height)
-        }
-        return cachedLineHeight
-    }
-
 
     fun lineStart(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
@@ -504,8 +502,6 @@ class TediAreaSkin(control: TediArea)
         }
 
         override fun style(text: Text) {
-            text.style = null
-            text.styleClass.clear()
             text.fill = highlightTextFill
         }
     }

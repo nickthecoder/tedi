@@ -43,20 +43,20 @@ class ClippedView(node: Node) : Region() {
             field = v
             children.clear()
             children.add(v)
-            v.layoutX = snappedLeftInset() - clipX
-            v.layoutY = snappedTopInset() - clipY
+            v.layoutX = -clipX
+            v.layoutY = -clipY
         }
 
     var clipX: Double = 0.0
         set(v) {
             field = v
-            node.layoutX = snappedLeftInset() -v
+            node.layoutX = -v
         }
 
     var clipY: Double = 0.0
         set(v) {
             field = v
-            node.layoutY = snappedTopInset() -v
+            node.layoutY = -v
         }
 
     private val clipRect = Rectangle()

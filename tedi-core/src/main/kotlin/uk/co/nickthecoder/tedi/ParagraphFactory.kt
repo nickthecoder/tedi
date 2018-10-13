@@ -4,6 +4,7 @@ import javafx.geometry.VPos
 import javafx.scene.Group
 import javafx.scene.Node
 import javafx.scene.shape.Rectangle
+import javafx.scene.text.Font
 import javafx.scene.text.Text
 import uk.co.nickthecoder.tedi.util.UpdatableNode
 import uk.co.nickthecoder.tedi.util.VirtualFactory
@@ -129,7 +130,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                     previousRectangle?.let { rectangle ->
                         rectangle.width = textBounds.width
                         rectangle.height = textBounds.height
-                        rectangle.relocate(x, 0.0)
+                        rectangle.layoutX = x
                         previousRectangle = null
                     }
                     x += textBounds.width
@@ -146,7 +147,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                 if (child is Text) {
                     child.layoutY = maxHeight
                 } else if (child is Rectangle) {
-                    child.resize(child.width, maxHeight + maxDescent)
+                    child.resizeRelocate(child.layoutX, maxHeight + maxDescent - child.height, child.width, child.height)
                 }
             }
 
@@ -195,10 +196,12 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
 
         /**
          * Returns an X coordinate in pixels (relative to the TediArea), corresponding to a column.
+         * and also the Font used t that column index.
+         * This is specifically designed to help position, and size the caret within TediAreaSkin.
          */
-        fun xForColumn(column: Int): Double {
+        fun caretDetails(column: Int): Pair<Double, Font?> {
             //println("xForColumn $column")
-            if (column == 0) return tediAreaSkin.virtualView.fromContentX(0.0)
+            if (column <= 0) return Pair(tediAreaSkin.virtualView.fromContentX(0.0), children.filterIsInstance<Text>().firstOrNull()?.font)
 
             var columnsEaten = 0
             children.forEach { text ->
@@ -208,7 +211,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                     if (column == columnsEaten) {
                         // At the end of this piece of text.
                         //println("At the end of a segment ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
-                        return tediAreaSkin.virtualView.fromContentX(text.boundsInParent.maxX)
+                        return Pair(tediAreaSkin.virtualView.fromContentX(text.boundsInParent.maxX), text.font)
                     } else if (column < columnsEaten) {
                         // In the middle of the text. Let's change the text, find the new bounds, then
                         // change it back
@@ -216,7 +219,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                         try {
                             text.text = oldText.substring(0, column - columnsEaten + oldText.length)
                             //println("Middle of a segment $oldText ${text.boundsInParent.maxX} -> ${virtualView.fromContentX(text.boundsInParent.maxX)}")
-                            return tediAreaSkin.virtualView.fromContentX(text.boundsInParent.maxX)
+                            return Pair(tediAreaSkin.virtualView.fromContentX(text.boundsInParent.maxX), text.font)
                         } finally {
                             text.text = oldText
                         }
@@ -227,7 +230,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                 }
             }
             //println("At the end of loop ${boundsInLocal.maxX} -> ${virtualView.fromContentX(boundsInLocal.maxX)}")
-            return tediAreaSkin.virtualView.fromContentX(boundsInLocal.maxX)
+            return Pair(tediAreaSkin.virtualView.fromContentX(boundsInLocal.maxX), children.filterIsInstance<Text>().lastOrNull()?.font)
         }
     }
 

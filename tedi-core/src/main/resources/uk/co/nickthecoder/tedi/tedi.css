@@ -2,16 +2,13 @@
 }
 
 .tedi-area .content {
-    -fx-padding: 14 10;
-}
-
-.tedi-area .gutter-area {
-    -fx-background-color: #eeeeee;
-    -fx-border-color: #cccccc;
-    -fx-border-width: 0 1 0 0;
+    -fx-padding: 20 10;
 }
 
 .tedi-area .gutter {
+    -fx-background-color: #eeeeee;
+    -fx-border-color: #cccccc;
+    -fx-border-width: 0 1 0 0;
     -fx-font-family: 'monospace';
     -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
     -fx-text-fill: #a0a0a0; /* BUG. Sometimes not picked up (the default gray is seen) */

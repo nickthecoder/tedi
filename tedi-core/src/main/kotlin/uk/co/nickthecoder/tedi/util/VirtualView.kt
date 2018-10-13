@@ -122,11 +122,20 @@ class VirtualView<P>(
 
     private var ignoreVScrollChanges = false
 
+    //---------------------------------------------------------------------------
+    // init
+    //---------------------------------------------------------------------------
+
     init {
         styleClass.add("virtual-view")
         clippedContent.styleClass.add("content")
+        contentRegion.styleClass.add("content-region")
         corner.styleClass.setAll("corner")
-        clippedGutter.styleClass.add("gutter-area")
+
+        contentRegion.isManaged = false
+        gutterRegion.isManaged = false
+        clippedContent.isManaged = false
+        clippedGutter.isManaged = false
 
         children.addAll(vScroll, hScroll, corner, clippedGutter, clippedContent)
         clippedGutter.isVisible = gutter != null
@@ -138,6 +147,10 @@ class VirtualView<P>(
 
         clippedContent.addEventHandler(ScrollEvent.SCROLL) { event -> onScrollEvent(event) }
     }
+
+    //---------------------------------------------------------------------------
+    // methods
+    //---------------------------------------------------------------------------
 
     /**
      * The node for a given index of [list].
@@ -175,7 +188,7 @@ class VirtualView<P>(
 
     /**
      * Given an X coordinate relative to the whole view, returns the X coordinate relative to
-     * the content nodes (including the contentRegion's left inset).
+     * the content nodes.
      *
      * This is the opposite of [fromContentX].
      */
@@ -191,12 +204,50 @@ class VirtualView<P>(
     fun ensureItemVisible(index: Int) {
         if (contentList.isEmpty()) return
 
-        if (index <= topNodeIndex) {
-            scrollToItem(index)
-            // TODO Ensure it is aligned with the top
-        } else if (index >= bottomNodeIndex) {
-            // TODO Scroll so that the bottom item is index
-            // TODO Ensure it is aligned with the bottom
+        val visibleNode = getContentNode(index)
+        if (visibleNode == null) {
+            if (index < topNodeIndex) {
+                // Scroll up
+                vScroll.value = index.toDouble()
+            } else {
+                // Scroll down
+                val diff = bottomNodeIndex - index
+                vScroll.value -= diff
+            }
+        } else {
+            val y = visibleNode.layoutY
+            val top = y - clippedContent.snappedTopInset()
+            if (top < 0) {
+                // scroll down a little
+                adjustPositions(top)
+                fillViewport()
+                setVScrollPosition(index)
+            }
+            val bottom = viewportHeight - clippedContent.snappedBottomInset() - nodeBottom(visibleNode)
+            if (bottom < 0) {
+                // scroll up a little
+                adjustPositions(-bottom)
+                fillViewport()
+                // TODO Adjust the vscroll bar value???
+            }
+        }
+
+    }
+
+    private var hScrollValue: Double
+        get() = hScroll.value
+        set(v) {
+            hScroll.value = clamp(0.0, v, hScroll.max)
+        }
+
+    fun ensureXVisible(x: Double) {
+        val left = x - gutterWidth - clippedContent.snappedLeftInset()
+        if (left < 0) {
+            hScrollValue += left
+        }
+        val right = viewportWidth - x - clippedContent.snappedRightInset()
+        if (right < 0) {
+            hScrollValue -= right
         }
     }
 
@@ -341,9 +392,9 @@ class VirtualView<P>(
                 for (i in adjustFrom until contentList.size) {
                     val node = contentList[i]
                     val prefHeight = node.prefHeight(-1.0)
-                    node.resizeRelocate(0.0, y, viewportWidth, prefHeight)
+                    positionNode(node, y, prefHeight)
                     if (gutter != null) {
-                        gutterList[i].resizeRelocate(0.0, y, maxGutterPrefWidth, prefHeight)
+                        positionGutterNode(gutterList[i], node)
                     }
                     y += prefHeight
                 }
@@ -364,11 +415,18 @@ class VirtualView<P>(
         }
     }
 
+    //---------------------------------------------------------------------------
+    // Scrolling
+    //---------------------------------------------------------------------------
+
+    /**
+     * The mouse's scroll wheel has been turned (or the equivalent on a track pad).
+     */
     private fun onScrollEvent(event: ScrollEvent) {
         if (contentList.isEmpty()) return
 
         if (event.deltaY != 0.0) {
-            val fromPixels = event.deltaY / nodeHeight(contentList.first())
+            val fromPixels = event.deltaY / nodeHeight(contentList.firstOrNull())
             vScroll.setSafeValue(vScroll.value - fromPixels)
         }
         // I don't have a horizontal scroll wheel. Is this working ok?
@@ -378,34 +436,47 @@ class VirtualView<P>(
         event.consume()
     }
 
-    private fun scrollToItem(index: Int) {
-        vScroll.value = index.toDouble()
-    }
-
+    /**
+     * Sets the vScroll's value without [vScrollChanged] having to deal with the change.
+     * Used when the value should be tweaked, but I don't want to move, change or create any
+     * content nodes.
+     */
     private fun setVScrollValue(newValue: Double) {
         ignoreVScrollChanges = true
         vScroll.value = newValue
         ignoreVScrollChanges = false
     }
 
+    private fun setVScrollPosition(newValue: Int) {
+        setVScrollValue(newValue.toDouble())
+    }
+
+    /**
+     * From a listener of vScroll.valueProperty.
+     */
     private fun vScrollChanged(oldValue: Double, newValue: Double) {
+
         if (ignoreVScrollChanges || !vScroll.isVisible) return
+        if (contentList.isEmpty()) return
 
         val diff = newValue - oldValue
         if (Math.abs(diff) > contentList.size - 1) {
-            // Clear and start from scratch
-            clear()
-            fillViewport()
+            // A large jump. Clear all nodes and start from scratch
+            reset()
+
         } else {
-            adjustScroll(diff)
+            // A small jump
+            val pixels = diff * if (diff < 0) nodeHeight(contentList.first()) else nodeHeight(contentList.last())
+            adjustPositions(pixels)
+            fillViewport()
         }
     }
 
-    private fun adjustScroll(delta: Double) {
-        if (contentList.isEmpty()) return
-
-        val pixels = delta * if (delta < 0) nodeHeight(contentList.first()) else nodeHeight(contentList.last())
-
+    /**
+     * Move all nodes up/down by the given number of pixels.
+     * (Affects all content nodes and gutter nodes, if gutter != null).
+     */
+    private fun adjustPositions(pixels: Double) {
         for (node in contentList) {
             node.layoutY -= pixels
         }
@@ -414,18 +485,24 @@ class VirtualView<P>(
                 node.layoutY -= pixels
             }
         }
-
-        fillViewport()
     }
 
+    /**
+     * Called when [standardScrolling] == true, and the user has clicked above the vScroll's thumb.
+     */
     internal fun pageUp() {
-        if (contentList.isEmpty()) return
+        if (contentList.size < 2) return
 
-        // TODO This could be better, because it assumes that the PREVIOUS page is the
-        // same height as the CURRENT page.
-        vScroll.setSafeValue(vScroll.value - contentList.size)
+        val lastFullyVisible = contentList[contentList.size - 2]
+        val y = nodePosition(lastFullyVisible)
+        adjustPositions(-y)
+        fillViewport()
+        setVScrollPosition(topNodeIndex)
     }
 
+    /**
+     * Called when [standardScrolling] == true, and the user has clicked below the vScroll's thumb.
+     */
     internal fun pageDown() {
         if (contentList.isEmpty()) return
 
@@ -482,44 +559,9 @@ class VirtualView<P>(
         }
     }
 
-    private fun fillViewport() {
-        if (contentList.isEmpty()) {
-            addFirstNode()
-        }
-        addLeadingNodes()
-        addTrailingNodes()
-        cull()
-
-        // Is the first node visible, and LOWER than it should be?
-        val firstNode = contentList.first()
-        val topDiff = nodePosition(firstNode) - clippedContent.snappedTopInset()
-        if (topNodeIndex == 0 && topDiff > 0) {
-            for (node in contentList) {
-                node.layoutY -= topDiff
-            }
-            for (node in gutterList) {
-                node.layoutY -= topDiff
-            }
-            setVScrollValue(0.0)
-        }
-
-        // Is the last node visible, and too high up? But don't do this when we are at the top of the list
-        val lastNode = contentList.last()
-        val bottomDiff = viewportHeight - clippedContent.snappedBottomInset() - nodeBottom(lastNode)
-        if (bottomNodeIndex == list.size - 1 && bottomDiff > 0 && vScroll.value != 0.0) {
-            for (node in contentList) {
-                node.layoutY += bottomDiff
-            }
-            for (node in gutterList) {
-                node.layoutY += bottomDiff
-            }
-            setVScrollValue(vScroll.max)
-        }
-
-        updateScrollMaxAndVisible()
-        // TODO For debugging. This shouldn't happen any more!
-        if (vScroll.value < 0 || vScroll.value > vScroll.max) Thread.dumpStack()
-    }
+    //---------------------------------------------------------------------------
+    // Layout related methods
+    //---------------------------------------------------------------------------
 
     override fun layoutChildren() {
         println("VirtualView.layoutChildren")
@@ -538,24 +580,21 @@ class VirtualView<P>(
         viewportHeight = height // (Assume hScroll is NOT visible for now)
         fillViewport()
 
-        val leftInset = clippedContent.snappedLeftInset()
-        val topInset = clippedContent.snappedTopInset()
-
-
         if (clippedGutter.isVisible) {
-
             gutterWidth = maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
-            clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
-            gutterRegion.resizeRelocate(0.0, topInset, gutterWidth, viewportHeight)
-
         } else {
             gutterWidth = 0.0
         }
 
-        clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
-        contentRegion.resizeRelocate(leftInset, topInset, viewportWidth - gutterWidth, viewportHeight)
-
         layoutScrollBars()
+
+        if (clippedGutter.isVisible) {
+            clippedGutter.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
+            gutterRegion.resizeRelocate(0.0, 0.0, gutterWidth, viewportHeight)
+        }
+
+        clippedContent.resizeRelocate(gutterWidth, 0.0, viewportWidth - gutterWidth, viewportHeight)
+        contentRegion.resizeRelocate(-hScroll.value, 0.0, viewportWidth - gutterWidth, viewportHeight)
     }
 
     private fun layoutScrollBars() {
@@ -611,7 +650,7 @@ class VirtualView<P>(
             hScroll.visibleAmount = (available / maxPrefWidth) * hScroll.max
 
         } else {
-            clippedContent.clipX = 0.0
+            hScroll.value = 0.0
         }
         if (needVBar) {
             vScroll.resizeRelocate(width - vBarWidth, 0.0, vBarWidth, viewportHeight)
@@ -637,14 +676,17 @@ class VirtualView<P>(
         }
         node.applyCss()
         val prefHeight = node.prefHeight(-1.0)
-        node.resize(viewportWidth, prefHeight)
-        if (node is Parent) node.layout()
+        val prefWidth = node.prefWidth(-1.0)
+        if (maxPrefWidth < prefWidth) {
+            maxPrefWidth = prefWidth
+        }
+        positionNode(node, 0.0, prefHeight)
         return node
     }
 
-
-    private fun positionGutterNode(node: Node, x: Double, y: Double, width: Double, height: Double) {
-        node.resizeRelocate(x + gutterRegion.snappedLeftInset(), y, width, height)
+    private fun positionNode(node: Node, y: Double, prefHeight: Double) {
+        node.resizeRelocate(clippedContent.snappedLeftInset(), y, viewportWidth, prefHeight)
+        if (node is Parent) node.layout()
     }
 
     /**
@@ -665,17 +707,59 @@ class VirtualView<P>(
             node.applyCss()
             if (node is Parent) node.layout()
 
-            val height = nodeHeight(contentNode)
             val prefWidth = node.prefWidth(-1.0)
             if (prefWidth > maxGutterPrefWidth) {
                 maxGutterPrefWidth = prefWidth
                 requestLayout()
             }
-            node.resizeRelocate(0.0, contentNode.layoutY, maxGutterPrefWidth, height)
-
+            positionGutterNode(node, contentNode)
             return node
         }
         throw IllegalStateException("Gutter is null")
+    }
+
+    private fun positionGutterNode(gutterNode: Node, contentNode: Node) {
+        gutterNode.resizeRelocate(gutterRegion.snappedLeftInset(), contentNode.layoutY, maxGutterPrefWidth, nodeHeight(contentNode))
+
+    }
+
+    private fun fillViewport() {
+        if (contentList.isEmpty()) {
+            addFirstNode()
+        }
+        addLeadingNodes()
+        addTrailingNodes()
+        cull()
+
+        // Is the first node visible, and LOWER than it should be?
+        val firstNode = contentList.first()
+        val topDiff = nodePosition(firstNode) - clippedContent.snappedTopInset()
+        if (topNodeIndex == 0 && topDiff > 0) {
+            for (node in contentList) {
+                node.layoutY -= topDiff
+            }
+            for (node in gutterList) {
+                node.layoutY -= topDiff
+            }
+            setVScrollValue(0.0)
+        }
+
+        // Is the last node visible, and too high up? But don't do this when we are at the top of the list
+        val lastNode = contentList.last()
+        val bottomDiff = viewportHeight - clippedContent.snappedBottomInset() - nodeBottom(lastNode)
+        if (bottomNodeIndex == list.size - 1 && bottomDiff > 0 && vScroll.value != 0.0) {
+            for (node in contentList) {
+                node.layoutY += bottomDiff
+            }
+            for (node in gutterList) {
+                node.layoutY += bottomDiff
+            }
+            setVScrollValue(vScroll.max)
+        }
+
+        updateScrollMaxAndVisible()
+        // TODO For debugging. This shouldn't happen any more!
+        if (vScroll.value < 0 || vScroll.value > vScroll.max) Thread.dumpStack()
     }
 
     private fun addFirstNode() {
@@ -689,9 +773,9 @@ class VirtualView<P>(
         }
         val node = createNode(topNodeIndex, null)
         val prefHeight = node.prefHeight(-1.0)
-        val y = (vScroll.value - topNodeIndex) * prefHeight
+        val y = (vScroll.value - topNodeIndex) * prefHeight + clippedContent.snappedTopInset()
 
-        node.resizeRelocate(0.0, y - prefHeight, viewportWidth, prefHeight)
+        positionNode(node, y, prefHeight)
 
         if (gutter != null) {
             createGutterNode(topNodeIndex, node, null)
@@ -708,9 +792,8 @@ class VirtualView<P>(
         while (index >= 0 && y > 0) {
             val node = createNode(index, 0)
             val prefHeight = node.prefHeight(-1.0)
-            node.resizeRelocate(0.0, y - prefHeight, viewportWidth, prefHeight)
+            positionNode(node, y - prefHeight, prefHeight)
             y -= prefHeight
-            //topNodeIndex--
 
             if (gutter != null) {
                 createGutterNode(index, node, 0)
@@ -730,7 +813,7 @@ class VirtualView<P>(
         while (index < list.size && y < viewportHeight) {
             val node = createNode(index, null)
             val prefHeight = node.prefHeight(-1.0)
-            node.resizeRelocate(0.0, y, viewportWidth, prefHeight)
+            positionNode(node, y, prefHeight)
 
             if (gutter != null) {
                 createGutterNode(index, node, null)
