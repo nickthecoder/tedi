@@ -170,11 +170,11 @@ class TediAreaSkin(control: TediArea)
 
         // Caret position
         control.caretPositionProperty().addListener { _, _, _ ->
-            repositionCaret()
+            repositionCaretPath()
             scrollToCaret()
         }
-        virtualView.hScroll.valueProperty().addListener { _, _, _ -> repositionCaret() }
-        virtualView.vScroll.valueProperty().addListener { _, _, _ -> repositionCaret() }
+        virtualView.hScroll.valueProperty().addListener { _, _, _ -> repositionCaretPath() }
+        virtualView.vScroll.valueProperty().addListener { _, _, _ -> repositionCaretPath() }
 
         // Font
         control.fontProperty().addListener { _, _, new -> onFontChanged(new) }
@@ -207,7 +207,7 @@ class TediAreaSkin(control: TediArea)
 
     }
 
-    private fun repositionCaret() {
+    private fun repositionCaretPath() {
         targetCaretX = -1.0
 
         val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
@@ -239,13 +239,13 @@ class TediAreaSkin(control: TediArea)
     private fun onFontChanged(font: Font) {
         createCaretPath(font)
         virtualView.reset()
-        Platform.runLater { repositionCaret() }
+        Platform.runLater { repositionCaretPath() }
     }
 
     override fun layoutChildren(contentX: Double, contentY: Double, contentWidth: Double, contentHeight: Double) {
         virtualView.resizeRelocate(contentX, contentY, contentWidth, contentHeight)
         // Position the caret.
-        repositionCaret()
+        repositionCaretPath()
     }
 
     /**
@@ -260,14 +260,12 @@ class TediAreaSkin(control: TediArea)
             return skinnable.length
         }
         val paragraphNode = getParagraphNode(line)
-        paragraphNode ?: throw IllegalStateException("Couldn't find paragraph node")
-
-        val column = paragraphNode.getColumn(x)
+        val column = paragraphNode?.getColumn(x) ?: 0
         return skinnable.positionOfLine(line, column)
 
     }
 
-    fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean) {
+    fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean = false) {
         if (select) {
             if (extendSelection) {
                 skinnable.extendSelection(pos)
@@ -308,14 +306,10 @@ class TediAreaSkin(control: TediArea)
 
         val newPosition = skinnable.positionOfLine(requiredLine, column)
 
-        changeCaretPosition(newPosition, select)
+        positionCaret(newPosition, select)
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
-    }
-
-    fun changeCaretPosition(caretPosition: Int, select: Boolean) {
-        skinnable.selectRange(if (select) skinnable.anchor else caretPosition, caretPosition)
     }
 
     fun previousPage(select: Boolean) {
@@ -325,7 +319,7 @@ class TediAreaSkin(control: TediArea)
 
         // Have we reached the top ( pageUp did nothing )
         if (oldFirst == newFirst) {
-            changeCaretPosition(0, select)
+            positionCaret(0, select)
         } else {
             changeLine(virtualView.getListIndexAtY(0.0) - oldFirst, select)
         }
@@ -337,7 +331,7 @@ class TediAreaSkin(control: TediArea)
         val newFirst = virtualView.getListIndexAtY(0.0)
         // Have we reached the bottom ( pageDown did nothing )
         if (oldFirst == newFirst) {
-            changeCaretPosition(skinnable.length, select)
+            positionCaret(skinnable.length, select)
         } else {
             changeLine(newFirst - oldFirst, select)
         }
@@ -354,13 +348,13 @@ class TediAreaSkin(control: TediArea)
     fun lineStart(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
         val newPosition = skinnable.positionOfLine(lineColumn.first, 0)
-        changeCaretPosition(newPosition, select)
+        positionCaret(newPosition, select)
     }
 
     fun lineEnd(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
         val newPosition = skinnable.positionOfLine(lineColumn.first, Int.MAX_VALUE)
-        changeCaretPosition(newPosition, select)
+        positionCaret(newPosition, select)
     }
 
     fun deleteChar(previous: Boolean) {
@@ -450,7 +444,7 @@ class TediAreaSkin(control: TediArea)
      *
      * This makes this Highlight more potent than regular Highlights.
      */
-    private val selectionHighlight = object : FillHighlight {
+    internal val selectionHighlight = object : FillHighlight {
         override fun style(rect: Rectangle) {
             rect.fillProperty().bind(highlightFillProperty)
         }

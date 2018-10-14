@@ -103,6 +103,9 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                                 rectangle.isSmooth = false
                                 rectangle.styleClass.add("rectangle")
                             }
+                            if (phr.cause.end > paragraph.cachedPosition + paragraph.length && highlight === tediAreaSkin.selectionHighlight) {
+                                rectangle.width = FULL_WIDTH
+                            }
                             highlight.style(rectangle)
                         }
                     }
@@ -129,7 +132,9 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
 
                     child.layoutX = x
                     previousRectangle?.let { rectangle ->
-                        rectangle.width = textBounds.width
+                        if (rectangle.width != FULL_WIDTH) {
+                            rectangle.width = textBounds.width
+                        }
                         rectangle.height = textBounds.height
                         rectangle.layoutX = x
                         previousRectangle = null
@@ -235,4 +240,7 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
         }
     }
 
+    companion object {
+        private val FULL_WIDTH = 5000.0
+    }
 }
