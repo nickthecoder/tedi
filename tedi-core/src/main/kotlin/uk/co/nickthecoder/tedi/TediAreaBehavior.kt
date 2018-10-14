@@ -165,10 +165,6 @@ class TediAreaBehavior(val control: TediArea)
                 "NextLine" -> skin.nextLine(false)
                 "SelectPreviousLine" -> skin.previousLine(true)
                 "SelectNextLine" -> skin.nextLine(true)
-                "ParagraphStart" -> skin.paragraphStart(true, false)
-                "ParagraphEnd" -> skin.paragraphEnd(true, isWindows, false)
-                "SelectParagraphStart" -> skin.paragraphStart(true, true)
-                "SelectParagraphEnd" -> skin.paragraphEnd(true, isWindows, true)
                 "PreviousPage" -> skin.previousPage(false)
                 "NextPage" -> skin.nextPage(false)
                 "SelectPreviousPage" -> skin.previousPage(true)
@@ -288,8 +284,8 @@ class TediAreaBehavior(val control: TediArea)
 
     private fun mouseTripleClick() {
         // select the line
-        skin.paragraphStart(false, false)
-        skin.paragraphEnd(false, isWindows, true)
+        skin.lineStart(false)
+        skin.lineEnd(true)
     }
 
 

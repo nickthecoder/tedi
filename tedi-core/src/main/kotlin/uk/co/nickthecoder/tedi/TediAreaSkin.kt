@@ -157,8 +157,7 @@ class TediAreaSkin(control: TediArea)
         // caretPath
         with(caretPath) {
             isManaged = false
-            // TODO Should this be stroke?
-            fillProperty().bind(textFillProperty)
+            strokeProperty().bind(textFillProperty)
         }
 
         // tmpText
@@ -284,7 +283,7 @@ class TediAreaSkin(control: TediArea)
      * Ensures that the caret is visible, by altering the horizontal and vertical scroll bars
      */
     private fun scrollToCaret() {
-        val (line, column) = skinnable.lineColumnForPosition(skinnable.caretPosition)
+        val line = skinnable.lineForPosition(skinnable.caretPosition)
         virtualView.ensureItemVisible(line)
         virtualView.ensureXVisible(caretPath.layoutX)
     }
@@ -309,22 +308,39 @@ class TediAreaSkin(control: TediArea)
 
         val newPosition = skinnable.positionOfLine(requiredLine, column)
 
-        if (select) {
-            skinnable.selectRange(skinnable.anchor, newPosition)
-        } else {
-            skinnable.selectRange(newPosition, newPosition)
-        }
+        changeCaretPosition(newPosition, select)
 
         // targetCaretX will have been reset when the selection changed, therefore we need to set it again.
         targetCaretX = requiredX
     }
 
+    fun changeCaretPosition(caretPosition: Int, select: Boolean) {
+        skinnable.selectRange(if (select) skinnable.anchor else caretPosition, caretPosition)
+    }
+
     fun previousPage(select: Boolean) {
-        // TODO
+        val oldFirst = virtualView.getListIndexAtY(0.0)
+        virtualView.pageUp()
+        val newFirst = virtualView.getListIndexAtY(0.0)
+
+        // Have we reached the top ( pageUp did nothing )
+        if (oldFirst == newFirst) {
+            changeCaretPosition(0, select)
+        } else {
+            changeLine(virtualView.getListIndexAtY(0.0) - oldFirst, select)
+        }
     }
 
     fun nextPage(select: Boolean) {
-        // TODO
+        val oldFirst = virtualView.getListIndexAtY(0.0)
+        virtualView.pageDown()
+        val newFirst = virtualView.getListIndexAtY(0.0)
+        // Have we reached the bottom ( pageDown did nothing )
+        if (oldFirst == newFirst) {
+            changeCaretPosition(skinnable.length, select)
+        } else {
+            changeLine(newFirst - oldFirst, select)
+        }
     }
 
     fun previousLine(select: Boolean) {
@@ -338,78 +354,13 @@ class TediAreaSkin(control: TediArea)
     fun lineStart(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
         val newPosition = skinnable.positionOfLine(lineColumn.first, 0)
-        if (select) {
-            skinnable.selectRange(skinnable.anchor, newPosition)
-        } else {
-            skinnable.selectRange(newPosition, newPosition)
-        }
+        changeCaretPosition(newPosition, select)
     }
 
     fun lineEnd(select: Boolean) {
         val lineColumn = skinnable.lineColumnForPosition(skinnable.caretPosition)
         val newPosition = skinnable.positionOfLine(lineColumn.first, Int.MAX_VALUE)
-        if (select) {
-            skinnable.selectRange(skinnable.anchor, newPosition)
-        } else {
-            skinnable.selectRange(newPosition, newPosition)
-        }
-    }
-
-
-    fun paragraphStart(previousIfAtStart: Boolean, select: Boolean) {
-        val textArea = skinnable
-        val text = textArea.textProperty().valueSafe
-        var pos = textArea.caretPosition
-
-        if (pos > 0) {
-            if (previousIfAtStart && text.codePointAt(pos - 1) == 0x0a) {
-                // We are at the beginning of a paragraph.
-                // Back up to the previous paragraph.
-                pos--
-            }
-            // Back up to the beginning of this paragraph
-            while (pos > 0 && text.codePointAt(pos - 1) != 0x0a) {
-                pos--
-            }
-            if (select) {
-                textArea.selectPositionCaret(pos)
-            } else {
-                textArea.positionCaret(pos)
-            }
-        }
-    }
-
-    fun paragraphEnd(goPastInitialNewline: Boolean, goPastTrailingNewline: Boolean, select: Boolean) {
-        val textArea = skinnable
-        val text = textArea.textProperty().valueSafe
-        var pos = textArea.caretPosition
-        val len = text.length
-        var wentPastInitialNewline = false
-
-        if (pos < len) {
-            if (goPastInitialNewline && text.codePointAt(pos) == 0x0a) {
-                // We are at the end of a paragraph, start by moving to the
-                // next paragraph.
-                pos++
-                wentPastInitialNewline = true
-            }
-            if (!(goPastTrailingNewline && wentPastInitialNewline)) {
-                // Go to the end of this paragraph
-                while (pos < len && text.codePointAt(pos) != 0x0a) {
-                    pos++
-                }
-                if (goPastTrailingNewline && pos < len) {
-                    // We are at the end of a paragraph, finish by moving to
-                    // the beginning of the next paragraph (Windows behavior).
-                    pos++
-                }
-            }
-            if (select) {
-                textArea.selectPositionCaret(pos)
-            } else {
-                textArea.positionCaret(pos)
-            }
-        }
+        changeCaretPosition(newPosition, select)
     }
 
     fun deleteChar(previous: Boolean) {
