@@ -596,7 +596,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
     companion object {
 
-        private val DISPLAY_LINE_NUMBERS = createBooleanCssMetaData<TediArea>("-fx-display-line-numbers") { it.displayLineNumbers() }
+        val DISPLAY_LINE_NUMBERS = createBooleanCssMetaData<TediArea>("-fx-display-line-numbers") { it.displayLineNumbers() }
 
         private val STYLEABLES: List<CssMetaData<out Styleable, *>> = extendList(TextInputControl.getClassCssMetaData(),
                 DISPLAY_LINE_NUMBERS)

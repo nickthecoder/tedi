@@ -5,7 +5,8 @@ import javafx.css.Styleable
 import javafx.scene.layout.Region
 
 
-class GutterRegion(val gutter: VirtualGutter?) : Region() {
+open class GutterRegion(val gutter: VirtualGutter?) : Region() {
+
 
     // Make it public.
     public override fun getChildren() = super.getChildren()

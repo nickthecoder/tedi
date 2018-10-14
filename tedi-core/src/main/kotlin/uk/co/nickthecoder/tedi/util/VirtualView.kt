@@ -76,10 +76,18 @@ class VirtualView<P>(
             // The existing gutter must have "free" called for existing gutterNodes.
             clear()
             field = v
-            gutterRegion = GutterRegion(v)
-            gutterList = gutterRegion.children
-
+            // This line is WEIRD! I want it to read simply : gutterRegion = GutterRegion(v)
+            // However, when I do that, the extra css styles defined by VirtualGutter v aren't processed correctly.
+            // Only the "regular" styles (defined by Region) are processed.
+            // This bodge works, because an anonymous class is created, and therefore the instance's
+            // class name is unique for each instance, and therefore JavaFX cannot use cached css meta data.
+            // Note. Another solution is to call : gutterRegion.impl_reapplyCSS()
+            // but I don't want to use deprecated API calls.
+            // FYI, gutterRegion.applyCSS() does NOT work.
+            gutterRegion = object : GutterRegion(v) {}
             clippedGutter.node = gutterRegion
+
+            gutterList = gutterRegion.children
             clippedGutter.isVisible = v != null
             reset()
         }
@@ -122,6 +130,8 @@ class VirtualView<P>(
 
     private var ignoreVScrollChanges = false
 
+    private var repositionGutterNodes = false
+
     //---------------------------------------------------------------------------
     // init
     //---------------------------------------------------------------------------
@@ -130,6 +140,7 @@ class VirtualView<P>(
         styleClass.add("virtual-view")
         clippedContent.styleClass.add("content")
         contentRegion.styleClass.add("content-region")
+        clippedGutter.styleClass.add("clipped-gutter")
         corner.styleClass.setAll("corner")
 
         contentRegion.isManaged = false
@@ -178,12 +189,12 @@ class VirtualView<P>(
     fun getListIndexAtY(y: Double): Int {
         if (contentList.isEmpty()) return -1
         if (y < nodePosition(contentList.first())) {
-            return -1
+            return topNodeIndex - 1
         }
         contentList.forEachIndexed { index, node ->
             if (y < nodeBottom(node)) return index + topNodeIndex
         }
-        return contentList.size
+        return bottomNodeIndex + 1
     }
 
     /**
@@ -221,14 +232,14 @@ class VirtualView<P>(
                 // scroll down a little
                 adjustPositions(top)
                 fillViewport()
-                setVScrollPosition(index)
+                setVScrollPosition()
             }
             val bottom = viewportHeight - clippedContent.snappedBottomInset() - nodeBottom(visibleNode)
             if (bottom < 0) {
                 // scroll up a little
                 adjustPositions(-bottom)
                 fillViewport()
-                // TODO Adjust the vscroll bar value???
+                setVScrollPosition()
             }
         }
 
@@ -361,7 +372,10 @@ class VirtualView<P>(
                 if (i >= topNodeIndex && i <= bottomNodeIndex) {
                     getContentNode(i)?.let { factory.itemChanged(i, it) }
                     gutter?.let { gutter ->
-                        getGutterNode(i)?.let { gutter.itemChanged(i, it) }
+                        getGutterNode(i)?.let { gutterNode ->
+                            gutter.itemChanged(i, gutterNode)
+                            checkGutterNodeWidth(gutterNode)
+                        }
                     }
                     // Note, this may have changed its height, but we'll deal with that later
                 }
@@ -409,6 +423,7 @@ class VirtualView<P>(
                     gutterList.forEachIndexed { i, gutterNode ->
                         val index = topNodeIndex + i
                         gutter.documentChanged(index, gutterNode)
+                        checkGutterNodeWidth(gutterNode)
                     }
                 }
             }
@@ -443,12 +458,18 @@ class VirtualView<P>(
      */
     private fun setVScrollValue(newValue: Double) {
         ignoreVScrollChanges = true
-        vScroll.value = newValue
+        vScroll.value = clamp(0.0, newValue, vScroll.max)
         ignoreVScrollChanges = false
     }
 
     private fun setVScrollPosition(newValue: Int) {
         setVScrollValue(newValue.toDouble())
+    }
+
+    private fun setVScrollPosition() {
+        val first = contentList.firstOrNull()
+        val fraction = if (first == null) 0.0 else (nodePosition(first) - clippedContent.snappedTopInset()) / nodeHeight(first)
+        setVScrollValue(topNodeIndex - fraction)
     }
 
     /**
@@ -497,7 +518,7 @@ class VirtualView<P>(
         val y = nodePosition(lastFullyVisible)
         adjustPositions(-y)
         fillViewport()
-        setVScrollPosition(topNodeIndex)
+        setVScrollPosition()
     }
 
     /**
@@ -582,6 +603,16 @@ class VirtualView<P>(
 
         if (clippedGutter.isVisible) {
             gutterWidth = maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
+            // If maxGutterPrefWidth increased when creating a gutter node, then all gutter nodes need to be
+            // repositioned. This happens when the line numbers jump from 9 to 10 and 99 to 100 etc.
+            // As maxGtterPrefWidth is not reset, this happens very infrequently.
+            if (repositionGutterNodes) {
+                repositionGutterNodes = false
+                contentList.forEachIndexed { index, node ->
+                    val gutterNode = gutterList[index]
+                    positionGutterNode(gutterNode, node)
+                }
+            }
         } else {
             gutterWidth = 0.0
         }
@@ -706,16 +737,27 @@ class VirtualView<P>(
             }
             node.applyCss()
             if (node is Parent) node.layout()
+            checkGutterNodeWidth(node)
 
-            val prefWidth = node.prefWidth(-1.0)
-            if (prefWidth > maxGutterPrefWidth) {
-                maxGutterPrefWidth = prefWidth
-                requestLayout()
-            }
             positionGutterNode(node, contentNode)
             return node
         }
         throw IllegalStateException("Gutter is null")
+    }
+
+    /**
+     * Called whenever a gutter node is created or updated.
+     * If [gutterNode]'s prefWidth > maxGutterPrefWidth, then [gutterRegion] needs to be made bigger,
+     * and all gutter nodes repositioned. This is done by setting [maxGutterPrefWidth], and [requestLayout] ().
+     */
+    private fun checkGutterNodeWidth(gutterNode: Node) {
+        val prefWidth = gutterNode.prefWidth(-1.0)
+        if (prefWidth > maxGutterPrefWidth) {
+            maxGutterPrefWidth = prefWidth
+            // All gutter nodes must be repositioned
+            repositionGutterNodes = true
+            requestLayout()
+        }
     }
 
     private fun positionGutterNode(gutterNode: Node, contentNode: Node) {

@@ -70,6 +70,9 @@ class ClippedView(node: Node) : Region() {
 
         widthProperty().addListener { _ -> clipRect.width = width }
         heightProperty().addListener { _ -> clipRect.height = height }
+    }
 
+    override fun layoutChildren() {
+        return
     }
 }

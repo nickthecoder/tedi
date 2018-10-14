@@ -103,9 +103,19 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                                 rectangle.isSmooth = false
                                 rectangle.styleClass.add("rectangle")
                             }
+                            // Special case for the selection.
+                            // If it the selection extends beyond this paragraph, then make the highlight rectangle the
+                            // full width of the viewport
                             if (phr.cause.end > paragraph.cachedPosition + paragraph.length && highlight === tediAreaSkin.selectionHighlight) {
                                 rectangle.width = FULL_WIDTH
                             }
+                            // For selections, the rectangle's height is the full line height. i.e. if there are
+                            // different size fonts, then the selection's highlight rectangle will be the same.
+                            // even the small font's rectangle will be the full line height.
+                            if (highlight === tediAreaSkin.selectionHighlight) {
+                                rectangle.height = FULL_HEIGHT
+                            }
+
                             highlight.style(rectangle)
                         }
                     }
@@ -120,8 +130,8 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
             maxDescent = 0.0
             computedWidth = 0.0
 
+            // Stage 1. Move all Text objects to the correct x value. Find out the maxHeight
             var x = 0.0
-            var previousRectangle: Rectangle? = null
             children.forEach { child ->
                 if (child is Text) {
                     child.applyCss() // TODO Is this needed?
@@ -131,29 +141,33 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                     computedWidth += textBounds.width
 
                     child.layoutX = x
-                    previousRectangle?.let { rectangle ->
-                        if (rectangle.width != FULL_WIDTH) {
-                            rectangle.width = textBounds.width
-                        }
-                        rectangle.height = textBounds.height
-                        rectangle.layoutX = x
-                        previousRectangle = null
-                    }
                     x += textBounds.width
-                } else if (child is Rectangle) {
-                    previousRectangle = child
                 }
-
             }
 
+            // Round up to integer values.
             maxHeight = Math.ceil(maxHeight)
             maxDescent = Math.ceil(maxDescent)
 
+            // Stage 2. Move all Text to the correct y value, and place rectangles in the correct places.
+            var previousRectangle: Rectangle? = null
             for (child in children) {
                 if (child is Text) {
                     child.layoutY = maxHeight
+                    val textBounds = child.boundsInLocal
+
+                    previousRectangle?.let { rectangle ->
+                        // Special processing for selection highlights. See comments in update()
+                        if (rectangle.width != FULL_WIDTH) {
+                            rectangle.width = textBounds.width
+                        }
+                        rectangle.height = if (rectangle.height == FULL_HEIGHT) maxHeight + maxDescent else textBounds.height
+                        rectangle.resizeRelocate(child.layoutX, maxHeight + maxDescent - rectangle.height, rectangle.width, rectangle.height)
+                        previousRectangle = null
+                    }
+
                 } else if (child is Rectangle) {
-                    child.resizeRelocate(child.layoutX, maxHeight + maxDescent - child.height, child.width, child.height)
+                    previousRectangle = child
                 }
             }
 
@@ -175,7 +189,9 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
         }
 
         override fun layoutChildren() {
-            calculate()
+            if (!calculated) {
+                calculate()
+            }
         }
 
         /**
@@ -242,5 +258,6 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
 
     companion object {
         private val FULL_WIDTH = 5000.0
+        private val FULL_HEIGHT = -1.0
     }
 }

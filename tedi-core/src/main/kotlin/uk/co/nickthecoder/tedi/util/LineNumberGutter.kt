@@ -53,25 +53,21 @@ open class LineNumberGutter() : VirtualGutter {
 
     open inner class LineNumberNode(var index: Int) : HBox(), UpdatableNode {
 
-        val lineNumber = Text((index + 1).toString()).apply {
+        private val lineNumber = Text((index + 1).toString()).apply {
             textOrigin = VPos.TOP
         }
 
         init {
-            style()
+            lineNumber.fontProperty().bind(fontProperty)
+            lineNumber.fillProperty().bind(textFillProperty)
             val padding = Region()
             HBox.setHgrow(padding, Priority.ALWAYS)
             children.addAll(padding, lineNumber)
             alignment = Pos.CENTER
         }
 
-        fun style() {
-            lineNumber.font = font
-            lineNumber.fill = textFill
-        }
 
         override fun update(newIndex: Int) {
-            style()
             if (newIndex != index) {
                 index = newIndex
                 lineNumber.text = (index + 1).toString()

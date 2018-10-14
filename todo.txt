@@ -8,10 +8,6 @@ Demo is sluggish moving the caret position. Is this because of the column/line n
 Current Work
 ------------
 
-pageUp/down
-
-Sort out vScroll value with large padding
-
 Display Line numbers isn't being picked up from tedi.css (is for "code" tabs, but not others)
 
 Next
