@@ -8,7 +8,12 @@ Demo is sluggish moving the caret position. Is this because of the column/line n
 Current Work
 ------------
 
-Display Line numbers isn't being picked up from tedi.css (is for "code" tabs, but not others)
+Current-line highlighting.
+    Extra code in the factory :
+        If index == current line, then add the rectangle
+        Fire 2 paragraph changes whenever the current line changes
+
+Current line highlighting in the gutter
 
 Next
 ----
@@ -18,23 +23,9 @@ Have two modes for the horizontal scroll :
     When wrapping is enabled. The node's heights are calculated using the viewport width
         In which case, never show the scrollbar???
 
-Get rid of skin.tmpText
-
-selection is using tempText, rather than the real Text objects.
-
-Current-line highlighting.
-    Extra code in the factory :
-        If index == current line, then add the rectangle
-        Fire 2 paragraph changes whenever the current line changes
-
-Current line highlighting in the gutter
 
 Later
 -----
-
-Only place those paragraphNodes which are VISIBLE into the scene graph to improve performance.
-    Virtual Flow (see below)
-Move the gutter OUTSIDE of the scrollbar, so that it isn't scrolled away horizontally.
 
 Consider allowing ranges to be PART of the document, such that undo/redo affects them.
     Either through new UndoAbleRange interface, a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
@@ -50,38 +41,18 @@ Add an "Overview" gutter on the right, which show certain HighlightRanges.
 
     Can we make this pluggable. i.e. do NOT include it in TediArea, just allow additional gutters to be added to TediArea.
 
-Make the left gutter pluggable in the same way.
-    e.g. to add "breakpoints", "super" and "sub-class" buttons against functions/fields.
-
 Folding
     Anywhere that there's paired highlights which are on different lines add folding buttons V and ^
     For python lovers, and for indented plain text, use indentation to determine where folds can appear.
-    NOTE. This would have an effect on how the API for a pluggable left gutter.
 
 Check when layoutChildren is being called, and try to minimise this.
-
-Get BOLD etc working with non-monospaced fonts.
 
 Consider adding back line-wrapping
     I'd have to use a TextFlow instead of Group for styled paragraphs. (Check "is Group")
 
 
-VirtualFlow
------------
-
-Options.
-Roll my own from scratch
-Copy/Paste JavaFX VirtualFlow
-Use Flowless
-
-Correct layout for TediArea (Note there's no ScrollPane!)
-    Scroll bar (right)
-    "inner" section (left) containing :
-        Gutter (left) (with line numbers)
-        Content (center)
-        Scroll bar (bottom)
-    Overview floating section left of the scroll bar
-Content will be a virtual flow, and Gutter is also a virtual flow.
+Folding
+-------
 
 If I'm going to have folding, then my data structure will be tree-like :
     Root UnFold (0..lineCount-1)

@@ -1,8 +1,12 @@
 package uk.co.nickthecoder.tedi
 
+import javafx.geometry.Insets
 import javafx.geometry.VPos
-import javafx.scene.Group
 import javafx.scene.Node
+import javafx.scene.layout.Background
+import javafx.scene.layout.BackgroundFill
+import javafx.scene.layout.CornerRadii
+import javafx.scene.layout.Region
 import javafx.scene.shape.Rectangle
 import javafx.scene.text.Font
 import javafx.scene.text.Text
@@ -29,16 +33,15 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
     // ParagraphNode
     //--------------------------------------------------------------------------
 
-    inner class ParagraphNode(index: Int) : Group(), UpdatableNode {
+    inner class ParagraphNode(index: Int) : Region(), UpdatableNode {
 
-        private var maxHeight = 0.0
-        private var maxDescent = 0.0
+        private var maxTextHeight = 0.0
+        private var maxTextDescent = 0.0
         private var computedWidth = 0.0
         private var calculated = false
 
         init {
             update(index)
-            isAutoSizeChildren = false
         }
 
         private fun createText(str: String): Text {
@@ -55,6 +58,10 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
             val paragraph = tediAreaSkin.skinnable.paragraphs[newIndex]
 
             // println("Factory [$newIndex] -> ${paragraph.text}")
+
+            if (tediAreaSkin.skinnable.caretLine == newIndex) {
+                background = Background(BackgroundFill(tediAreaSkin.currentLineFill, CornerRadii.EMPTY, Insets.EMPTY))
+            }
 
             calculated = false
 
@@ -126,18 +133,18 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
         }
 
         private fun calculate() {
-            maxHeight = 0.0
-            maxDescent = 0.0
+            maxTextHeight = 0.0
+            maxTextDescent = 0.0
             computedWidth = 0.0
 
-            // Stage 1. Move all Text objects to the correct x value. Find out the maxHeight
+            // Stage 1. Move all Text objects to the correct x value. Find out the maxTextHeight
             var x = 0.0
             children.forEach { child ->
                 if (child is Text) {
                     child.applyCss() // TODO Is this needed?
                     val textBounds = child.boundsInLocal
-                    maxHeight = Math.max(maxHeight, -textBounds.minY)
-                    maxDescent = Math.max(maxDescent, textBounds.maxY)
+                    maxTextHeight = Math.max(maxTextHeight, -textBounds.minY)
+                    maxTextDescent = Math.max(maxTextDescent, textBounds.maxY)
                     computedWidth += textBounds.width
 
                     child.layoutX = x
@@ -146,14 +153,14 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
             }
 
             // Round up to integer values.
-            maxHeight = Math.ceil(maxHeight)
-            maxDescent = Math.ceil(maxDescent)
+            maxTextHeight = Math.ceil(maxTextHeight)
+            maxTextDescent = Math.ceil(maxTextDescent)
 
             // Stage 2. Move all Text to the correct y value, and place rectangles in the correct places.
             var previousRectangle: Rectangle? = null
             for (child in children) {
                 if (child is Text) {
-                    child.layoutY = maxHeight
+                    child.layoutY = maxTextHeight
                     val textBounds = child.boundsInLocal
 
                     previousRectangle?.let { rectangle ->
@@ -161,8 +168,8 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                         if (rectangle.width != FULL_WIDTH) {
                             rectangle.width = textBounds.width
                         }
-                        rectangle.height = if (rectangle.height == FULL_HEIGHT) maxHeight + maxDescent else textBounds.height
-                        rectangle.resizeRelocate(child.layoutX, maxHeight + maxDescent - rectangle.height, rectangle.width, rectangle.height)
+                        rectangle.height = if (rectangle.height == FULL_HEIGHT) maxTextHeight + maxTextDescent else textBounds.height
+                        rectangle.resizeRelocate(child.layoutX, maxTextHeight + maxTextDescent - rectangle.height, rectangle.width, rectangle.height)
                         previousRectangle = null
                     }
 
@@ -174,14 +181,14 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
             calculated = true
         }
 
-        override fun prefHeight(width: Double): Double {
+        override fun computePrefHeight(width: Double): Double {
             if (!calculated) {
                 calculate()
             }
-            return maxHeight + maxDescent
+            return maxTextHeight + maxTextDescent
         }
 
-        override fun prefWidth(height: Double): Double {
+        override fun computePrefWidth(height: Double): Double {
             if (!calculated) {
                 calculate()
             }

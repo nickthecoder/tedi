@@ -248,8 +248,8 @@ private fun isInvalidCharacter(c: Char, newlineIllegal: Boolean, tabIllegal: Boo
 inline fun <reified N : Styleable> createPaintCssMetaData(
         property: String,
         defaultValue: Paint = Color.WHITE,
-        crossinline getter: (N) -> StyleableObjectProperty<Paint>) =
-        createCssMetaData<N, Paint>(property, StyleConverter.getPaintConverter(), defaultValue, getter)
+        crossinline getter: (N) -> StyleableObjectProperty<Paint?>) =
+        createCssMetaData<N, Paint?>(property, StyleConverter.getPaintConverter(), defaultValue, getter)
 
 inline fun <reified N : Styleable> createBooleanCssMetaData(
         property: String,

@@ -140,6 +140,7 @@ public class Example extends Application {
             // prevents the highlighting being performed for EVERY keystroke, and instead only does it
             // after an idle period.
             JavaSyntax.getInstance().attach(tediArea, 500);
+            tediArea.setDisplayLineNumbers(true);
 
             // Add some example text.
             tediArea.setText("public class Example {\n\n" +

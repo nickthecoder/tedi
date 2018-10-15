@@ -44,8 +44,13 @@ import javafx.css.StyleableBooleanProperty
 import javafx.css.StyleableObjectProperty
 import javafx.event.ActionEvent
 import javafx.event.EventHandler
+import javafx.geometry.Insets
 import javafx.scene.Node
 import javafx.scene.control.IndexRange
+import javafx.scene.layout.Background
+import javafx.scene.layout.BackgroundFill
+import javafx.scene.layout.CornerRadii
+import javafx.scene.layout.Region
 import javafx.scene.paint.Color
 import javafx.scene.paint.Paint
 import javafx.scene.shape.LineTo
@@ -75,8 +80,6 @@ class TediAreaSkin(control: TediArea)
      */
     private var targetCaretX = -1.0
 
-    private val tmpText = Text()
-
     //---------------------------------------------------------------------------
     // Properties
     //---------------------------------------------------------------------------
@@ -84,7 +87,7 @@ class TediAreaSkin(control: TediArea)
     /**
      * The fill to use for the text under normal conditions
      */
-    private val textFillProperty: StyleableObjectProperty<Paint> = createStyleable("textFill", Color.BLACK, TEXT_FILL)
+    private val textFillProperty: StyleableObjectProperty<Paint?> = createStyleable("textFill", Color.BLACK, TEXT_FILL)
     var textFill: Paint?
         get() = textFillProperty.get()
         set(v) = textFillProperty.set(v)
@@ -92,7 +95,7 @@ class TediAreaSkin(control: TediArea)
     /**
      * The background behind the selected text
      */
-    private val highlightFillProperty: StyleableObjectProperty<Paint> = createStyleable("highlightFill", Color.DODGERBLUE, HIGHLIGHT_FILL)
+    private val highlightFillProperty: StyleableObjectProperty<Paint?> = createStyleable("highlightFill", Color.DODGERBLUE, HIGHLIGHT_FILL)
     var highlightFill: Paint?
         get() = highlightFillProperty.get()
         set(v) = highlightFillProperty.set(v)
@@ -100,7 +103,7 @@ class TediAreaSkin(control: TediArea)
     /**
      * The selected text's color
      */
-    private val highlightTextFillProperty: StyleableObjectProperty<Paint> = createStyleable("highlightTextFill", Color.WHITE, HIGHLIGHT_TEXT_FILL)
+    private val highlightTextFillProperty: StyleableObjectProperty<Paint?> = createStyleable("highlightTextFill", Color.WHITE, HIGHLIGHT_TEXT_FILL)
     var highlightTextFill: Paint?
         get() = highlightTextFillProperty.get()
         set(v) = highlightTextFillProperty.set(v)
@@ -108,7 +111,7 @@ class TediAreaSkin(control: TediArea)
     /**
      * The current line's background color
      */
-    private val currentLineFillProperty: StyleableObjectProperty<Paint> = createStyleable("currentLineFill", Color.WHITE, CURRENT_LINE_FILL)
+    private val currentLineFillProperty: StyleableObjectProperty<Paint?> = createStyleable("currentLineFill", Color.WHITE, CURRENT_LINE_FILL)
     var currentLineFill: Paint?
         get() = currentLineFillProperty.get()
         set(v) = currentLineFillProperty.set(v)
@@ -160,10 +163,7 @@ class TediAreaSkin(control: TediArea)
             strokeProperty().bind(textFillProperty)
         }
 
-        // tmpText
-        tmpText.fontProperty().bind(control.fontProperty())
-
-
+        // Selection
         control.selectionProperty().addListener { _, oldValue, newValue ->
             onSelectionChanged(oldValue, newValue)
         }
@@ -173,6 +173,10 @@ class TediAreaSkin(control: TediArea)
             repositionCaretPath()
             scrollToCaret()
         }
+        control.caretLineProperty().addListener { _, old, new ->
+            highlightCurrentLine(old.toInt(), new.toInt())
+        }
+
         virtualView.hScroll.valueProperty().addListener { _, _, _ -> repositionCaretPath() }
         virtualView.vScroll.valueProperty().addListener { _, _, _ -> repositionCaretPath() }
 
@@ -207,6 +211,30 @@ class TediAreaSkin(control: TediArea)
 
     }
 
+    private fun highlightCurrentLine(oldValue: Int, newValue: Int) {
+        virtualView.getContentNode(oldValue.toInt())?.let {
+            if (it is Region) {
+                it.background = null
+            }
+        }
+        virtualView.getContentNode(newValue.toInt())?.let {
+            if (it is Region) {
+                it.background = Background(BackgroundFill(currentLineFill, CornerRadii.EMPTY, Insets.EMPTY))
+            }
+        }
+
+        virtualView.getGutterNode(oldValue.toInt())?.let {
+            if (it is Region) {
+                it.background = null
+            }
+        }
+        virtualView.getGutterNode(newValue.toInt())?.let {
+            if (it is Region) {
+                it.background = Background(BackgroundFill(currentLineFill, CornerRadii.EMPTY, Insets.EMPTY))
+            }
+        }
+    }
+
     private fun repositionCaretPath() {
         targetCaretX = -1.0
 
@@ -228,7 +256,7 @@ class TediAreaSkin(control: TediArea)
 
     private fun createCaretPath(font: Font) {
         caretFontSize = font.size
-        val height = caretFontSize * 1.3 // Font API is lacking. It doesn't give us font metrics, so lets guess a height.
+        val height = caretFontSize * 1.2 // Font API is lacking. It doesn't give us font metrics, so lets guess a height.
         caretPath.elements.clear()
         caretPath.elements.add(MoveTo(0.0, 0.0))
         caretPath.elements.add(LineTo(0.0, -height))

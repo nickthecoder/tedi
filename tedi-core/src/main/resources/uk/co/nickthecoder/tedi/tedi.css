@@ -1,5 +1,9 @@
+.tedi-area {
+    -fx-current-line-fill: #fffae3;
+}
+
 .tedi-area .content {
-    -fx-padding: 20 10;
+    -fx-padding: 6 10;
 }
 .tedi-area .gutter {
     -fx-background-color: #eeeeee;
@@ -7,23 +11,24 @@
     -fx-border-width: 0 1 0 0;
     -fx-font-family: 'monospace';
     -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
-    -fx-text-fill: blue; /*#a0a0a0; */ /* BUG. Sometimes not picked up (the default gray is seen) */
+    -fx-text-fill: #a0a0a0;
 }
 
 .tedi-area.code {
     -fx-font-family: 'monospace';
-    -fx-display-line-numbers: true;
 }
 
 .virtual-view .corner {
     -fx-background-color: derive(-fx-base,-1%);
 }
 
-/***** A default colour scene for syntax highlighting *****/
+/***** A default colour scheme for syntax highlighting *****/
 
+/* Larger fonts only here for testing */
 .tedi-area .content .syntax-keyword { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
 .tedi-area .content .syntax-softKeyword { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
 .tedi-area .content .syntax-modifier { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
+
 .tedi-area .content .syntax-string { -fx-fill: #008000; -fx-font-weight: bold; }
 .tedi-area .content .syntax-comment { -fx-fill: #808080; -fx-font-style: italic; }
 .tedi-area .content .syntax-annotation { -fx-fill: #808000; }

@@ -269,7 +269,6 @@ class VirtualView<P>(
         maxPrefWidth = 0.0
         maxGutterPrefWidth = 0.0
         clear()
-        fillViewport()
         requestLayout()
     }
 
@@ -599,13 +598,14 @@ class VirtualView<P>(
         }
 
         viewportHeight = height // (Assume hScroll is NOT visible for now)
+        viewportWidth = width
         fillViewport()
 
         if (clippedGutter.isVisible) {
             gutterWidth = maxGutterPrefWidth + gutterRegion.snappedLeftInset() + gutterRegion.snappedRightInset()
             // If maxGutterPrefWidth increased when creating a gutter node, then all gutter nodes need to be
             // repositioned. This happens when the line numbers jump from 9 to 10 and 99 to 100 etc.
-            // As maxGtterPrefWidth is not reset, this happens very infrequently.
+            // As maxGutterPrefWidth is not reset, this happens very infrequently.
             if (repositionGutterNodes) {
                 repositionGutterNodes = false
                 contentList.forEachIndexed { index, node ->
@@ -762,7 +762,6 @@ class VirtualView<P>(
 
     private fun positionGutterNode(gutterNode: Node, contentNode: Node) {
         gutterNode.resizeRelocate(gutterRegion.snappedLeftInset(), contentNode.layoutY, maxGutterPrefWidth, nodeHeight(contentNode))
-
     }
 
     private fun fillViewport() {

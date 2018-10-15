@@ -40,10 +40,10 @@ open class LineNumberGutter() : VirtualGutter {
         set(v) = fontProperty.set(v)
 
     // Text Fill
-    private val textFillProperty: StyleableObjectProperty<Paint> = createStyleable("textFill", Color.GRAY, TEXT_FILL)
+    private val textFillProperty: StyleableObjectProperty<Paint?> = createStyleable("textFill", Color.GRAY, TEXT_FILL)
 
-    fun textFill(): StyleableObjectProperty<Paint> = textFillProperty
-    var textFill: Paint
+    fun textFill(): StyleableObjectProperty<Paint?> = textFillProperty
+    var textFill: Paint?
         get() = textFillProperty.get()
         set(v) = textFillProperty.set(v)
 
