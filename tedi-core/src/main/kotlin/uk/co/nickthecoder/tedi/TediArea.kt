@@ -33,6 +33,7 @@ package uk.co.nickthecoder.tedi
 import javafx.beans.InvalidationListener
 import javafx.beans.binding.Bindings
 import javafx.beans.binding.IntegerBinding
+import javafx.beans.binding.StringBinding
 import javafx.beans.property.*
 import javafx.beans.value.ChangeListener
 import javafx.beans.value.ObservableIntegerValue
@@ -282,6 +283,43 @@ open class TediArea private constructor(internal val content: TediAreaContent)
             override fun computeValue() = lineColumnForPosition(caretPosition).second
         })
 
+        patchTextInputControl()
+    }
+
+    protected open fun warning(str: String) {
+        System.err.println("WARNING $str")
+    }
+
+    private fun patchTextInputControl() {
+        try {
+            (getPrivateField("length") as ReadOnlyIntegerWrapper).bind(object : IntegerBinding() {
+                init {
+                    bind(textProperty())
+                }
+
+                override fun computeValue(): Int {
+                    return content.length()
+                }
+            })
+        } catch (e: Exception) {
+            warning("Failed to patch TextInputControl.length property. As a result, editing long documents may be slow.")
+        }
+
+        try {
+            (getPrivateField("selectedText") as ReadOnlyStringWrapper).bind(object : StringBinding() {
+                init {
+                    bind(selectionProperty(), textProperty())
+                }
+
+                override fun computeValue(): String {
+                    val sel = selection
+                    return content.get(sel.start, sel.end)
+                }
+            });
+        } catch (e: Exception) {
+            warning("Failed to patch TextInputControl.selectedText property. As a result, editing long documents may be slow.")
+        }
+
     }
 
     /***************************************************************************
@@ -400,11 +438,125 @@ open class TediArea private constructor(internal val content: TediAreaContent)
         undoRedo.postChange()
     }
 
-    /***************************************************************************
-     *                                                                         *
-     * Word Selection.                                                         *
-     *                                                                         *
-     **************************************************************************/
+    //--------------------------------------------------------------------------
+    // The following methods are duplicates of those in TextInputControl,
+    // but without using getText() which is horribly inefficient.
+    //--------------------------------------------------------------------------
+
+    private var charIterator: BreakIterator = BreakIterator.getCharacterInstance()
+
+    override fun deletePreviousChar(): Boolean {
+        var failed = true
+        if (isEditable && !isDisabled) {
+            val dot = caretPosition
+            val mark = anchor
+            if (dot != mark) {
+                // there is a selection of text to remove
+                replaceSelection("")
+                failed = false
+            } else if (dot > 0) {
+                // The caret is not at the beginning, so remove some characters.
+                // Typically you'd only be removing a single character, but
+                // in some cases you must remove two depending on the unicode
+                // characters
+                val from = Math.max(0, dot - 10)
+                val subtext = content.get(from, dot)
+                val p = Character.offsetByCodePoints(subtext, dot - from, -1)
+                deleteText(from + p, dot)
+                failed = false
+            }
+        }
+        return !failed
+    }
+
+    override fun deleteNextChar(): Boolean {
+        var failed = true
+        if (isEditable && !isDisabled) {
+            val textLength = content.length()
+            val dot = caretPosition
+            val mark = anchor
+            if (dot != mark) {
+                // there is a selection of text to remove
+                replaceSelection("")
+                failed = false
+            } else if (textLength > 0 && dot < textLength) {
+                // The caret is not at the end, so remove some characters.
+                // Typically you'd only be removing a single character, but
+                // in some cases you must remove two depending on the unicode
+                // characters
+
+                val to = Math.min(dot + 10, textLength)
+                val subtext = getText(dot, to)
+                charIterator.setText(subtext)
+                val p = dot + charIterator.following(0)
+                deleteText(dot, p)
+                failed = false
+            }
+        }
+        return !failed
+    }
+
+    override fun forward() {
+        // user has moved caret to the right
+        val textLength = content.length()
+        val dot = caretPosition
+        val mark = anchor
+        if (dot != mark) {
+            val pos = Math.max(dot, mark)
+            selectRange(pos, pos)
+        } else if (dot < textLength && textLength > 0) {
+            val to = Math.min(dot + 10, textLength)
+            val subtext = getText(dot, to)
+            charIterator.setText(subtext)
+            val pos = dot + charIterator.following(0)
+            selectRange(pos, pos)
+        }
+        deselect()
+    }
+
+    override fun backward() {
+        // user has moved caret to the left
+        val textLength = content.length()
+        val dot = caretPosition
+        val mark = anchor
+        if (dot != mark) {
+            val pos = Math.min(dot, mark)
+            selectRange(pos, pos)
+        } else if (dot > 0 && textLength > 0) {
+            val caret = caretPosition
+            val from = Math.max(0, caret - 10)
+            val subtext = getText(from, caret)
+            charIterator.setText(subtext)
+            val pos = from + charIterator.preceding(caret - from)
+            selectRange(pos, pos)
+        }
+        deselect()
+    }
+
+    override fun selectBackward() {
+        if (caretPosition > 0 && content.length() > 0) {
+            // because the anchor stays put, by moving the caret to the left
+            // we ensure that a selection is registered and that it is correct
+
+            val caret = caretPosition
+            val from = Math.max(0, caret - 10)
+            val subtext = getText(from, caret)
+            charIterator.setText(subtext)
+            selectRange(anchor, from + charIterator.preceding(caret - from))
+        }
+    }
+
+    override fun selectForward() {
+        val textLength = content.length()
+        val caret = caretPosition
+        if (textLength > 0 && caret < textLength) {
+
+            val to = Math.min(caret + 10, textLength)
+            val subtext = getText(caret, to)
+            charIterator.setText(subtext)
+            selectRange(anchor, caret + charIterator.following(0))
+        }
+    }
 
     /**
      * Avoid using Character.isSpaceChar() and Character.isWhitespace(),
@@ -457,6 +609,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
         // large documents. Let's do better, by using a string starting at the caret position.
         // I'll assume a word isn't more than 100 characters, but I suppose a "better" solution could
         // look for the end of the next non-blank line.
+        val length = content.length()
         val start = caretPosition
         val end = Math.min(start + 100, length)
 

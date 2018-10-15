@@ -148,6 +148,7 @@ class DemoWindow(stage: Stage = Stage()) {
                 load(DemoWindow::class.java, "Welcome", false)
                 welcomeHighlights()
             })
+
             tabs.add(EditorTab().apply { load(DemoWindow::class.java, "LICENSE", false) })
 
             tabs.add(EditorTab().apply {
@@ -177,6 +178,29 @@ class DemoWindow(stage: Stage = Stage()) {
             })
 
             tabs.add(EditorTab().apply { load(TediArea::class.java, "tedi.css", true) })
+
+            // Creates a long document by duplicating the GPL License text multiple times.
+            tabs.add(EditorTab().apply {
+                tediArea.text = """A long document for ad-hoc performance testing.
+
+If you want to test even longer documents, search for this text in Demo.kt
+and change repeat(50) to something larger.
+Or you could select all, copy and paste a few times! (ctrl+A, ctrl+C, ctrl+V, ctrl+V ...)
+
+The rest of this document is the License text repeated many times.
+
+""" + (tabs[1] as EditorTab).tediArea.text.repeat(50)
+                text = "${tediArea.lineCount} lines"
+            })
+
+            tabs.add(EditorTab().apply {
+                text = "4 Byte Chars"
+                tediArea.text = """The following character are Mathematical Alphanumeric Symbols.
+They require 4 bytes to encode each of them, not the more usual two bytes.
+𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙
+TediArea still has some bugs, where it doesn't handle these 4 byte characters correctly.
+"""
+            })
         }
 
         with(undo) {

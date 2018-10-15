@@ -103,6 +103,11 @@ class ParagraphList
 
     fun get(start: Int, end: Int): String {
 
+        if (end - start > 10000) { // TODO Remove once I'm confident I've removed all unwanted uses of getText()
+            println("QUESTION. Is there still code that needlessly uses getText() ?")
+            Thread.dumpStack()
+        }
+
         val length = end - start
         val textBuilder = StringBuilder(length)
 
@@ -367,12 +372,13 @@ class ParagraphList
 
             var total = paragraphs[validCacheIndex].cachedPosition + paragraphs[validCacheIndex].length + 1
             val requiredValidIndex = Math.min(line, paragraphs.size - 1)
+
             for (i in validCacheIndex + 1..requiredValidIndex) {
                 val p = paragraphs[i]
                 p.cachedPosition = total
                 total += p.length + 1
             }
-            //println("Valided to ${validCacheIndex}")
+            //println("Validated to ${validCacheIndex}")
             validCacheIndex = requiredValidIndex
         }
 
@@ -394,7 +400,7 @@ class ParagraphList
      *
      * The must never be <= 0
      */
-    private var guessCharsPerLine = 40
+    private var guessCharsPerLine = 40.0
 
 
     /**
@@ -406,36 +412,38 @@ class ParagraphList
      */
     fun lineForPosition(position: Int): Int {
 
-        val guessedLine = clamp(0, position / guessCharsPerLine, paragraphs.size - 1)
+        val guessedLine = clamp(0, (position / guessCharsPerLine).toInt(), paragraphs.size - 1)
         var count = positionOfLine(guessedLine)
         if (count == position) return guessedLine
 
-        if (count < position) {
-            // Our guess was too low (and therefore guessCharsPerLine is too high)
-            if (guessCharsPerLine > 1) {
-                guessCharsPerLine--
+        fun updateGuess(pos: Int, line: Int) {
+            if (line > 20) {
+                guessCharsPerLine = pos.toDouble() / line
             }
+        }
+
+        if (count < position) {
+
             // Move forwards
-            for (i in guessedLine..paragraphs.size - 1) {
+            for (i in guessedLine until paragraphs.size) {
                 val p = paragraphs[i]
                 if (count + p.length >= position) {
+                    updateGuess(position, i)
                     return i
                 }
                 count += p.length + 1 // 1 for the new line character
             }
+            updateGuess(position, paragraphs.size - 1)
             return paragraphs.size - 1
-        } else {
 
-            // Our guess was too high (and therefore guessCharsPerLine is too low)
-            if (position > 0) {
-                guessCharsPerLine++
-            }
+        } else {
 
             // Move backwards
             for (i in guessedLine - 1 downTo 0) {
                 val p = paragraphs[i]
                 count -= p.length + 1
                 if (position >= count) {
+                    updateGuess(position, i)
                     return i
                 }
             }

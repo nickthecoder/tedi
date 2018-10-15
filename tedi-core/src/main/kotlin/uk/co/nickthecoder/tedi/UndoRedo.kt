@@ -221,7 +221,7 @@ class BetterUndoRedo(val tediArea: TediArea) : UndoRedo() {
                 undoWarningIssued = true
                 println("WARNING : Failed to destroy the existing undo/redo feature of TextInputControl")
                 println("          Calls to TextInputControl.undo() and redo() and the properties undoable and redoable")
-                println("          may cause weird behaviour. (You shouldn't be using these anyway!)")
+                println("          may cause weird behaviour.")
             }
         }
     }

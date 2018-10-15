@@ -8,27 +8,16 @@ Demo is sluggish moving the caret position. Is this because of the column/line n
 Current Work
 ------------
 
-Current-line highlighting.
-    Extra code in the factory :
-        If index == current line, then add the rectangle
-        Fire 2 paragraph changes whenever the current line changes
-
-Current line highlighting in the gutter
-
 Next
 ----
 
-Have two modes for the horizontal scroll :
-    When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
-    When wrapping is enabled. The node's heights are calculated using the viewport width
-        In which case, never show the scrollbar???
-
+Remove bidi stuff
 
 Later
 -----
 
 Consider allowing ranges to be PART of the document, such that undo/redo affects them.
-    Either through new UndoAbleRange interface, a new boolean on HighlightRange, or via "range.owner = tediArea.content"???
+    Through a new UndoableRange interface
 
 Add an "Overview" gutter on the right, which show certain HighlightRanges.
     e.g. matches in Find & Replace
@@ -48,25 +37,14 @@ Folding
 Check when layoutChildren is being called, and try to minimise this.
 
 Consider adding back line-wrapping
-    I'd have to use a TextFlow instead of Group for styled paragraphs. (Check "is Group")
+    Moving up/down a line will need extra work.
+    Fill styles that span multiple lines will be tricky.
+    In layout, if content's width changes, then re-lay out all existing nodes, and fillViewport() (as there may be space for more)
+    Have two modes for the horizontal scroll :
+        When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
+        When wrapping is enabled. The node's heights are calculated using the viewport width
+            In which case, never show the scrollbar???
 
-
-Folding
--------
-
-If I'm going to have folding, then my data structure will be tree-like :
-    Root UnFold (0..lineCount-1)
-        Folded (0..10)
-        UnFold (11.20)
-        Folded (21,100)
-            Fold(21, 40)
-            UnFolded(41,60)
-            Fold(60,100)
-        etc.
-And my Root will be in charge of converting visible indices (for the virtual flow) into paragraph indices
-Note. When I implement line-wrapping, then a single Paragraph COULD be folded (so that it only ever takes up one line)
-
-NOTE. This should be EXTERNAL to TediArea.
-Have an interface Folding and the default value is an instance of class NoFolding
-Then I implement TreeFolding.
+Create a Rich Text Demo, where styles are part of the document (undoable)
+    Only makes sense if wrapping is implemented.
 

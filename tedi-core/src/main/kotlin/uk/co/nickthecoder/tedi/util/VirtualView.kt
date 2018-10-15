@@ -414,9 +414,6 @@ class VirtualView<P>(
 
             }
 
-            addTrailingNodes()
-            updateScrollMaxAndVisible()
-
             if (documentChanged) {
                 gutter?.let { gutter ->
                     gutterList.forEachIndexed { i, gutterNode ->
@@ -426,6 +423,8 @@ class VirtualView<P>(
                     }
                 }
             }
+
+            fillViewport()
         }
     }
 

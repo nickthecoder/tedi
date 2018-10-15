@@ -76,7 +76,7 @@ allowing your application to chose which helper classes to use.
 
 In summary, TediArea is a simple JavaFX control. The Tedi project
 includes TediArea as well as additional classes that you may find
-useful to use in conjuection with TediArea.
+useful to use in conjunction with TediArea.
 
 ## Syntax Highlighting
 
@@ -90,16 +90,29 @@ and therefore do not understand the grammar of the languages.
 
 ## Known Bugs/Issues
 
-- Applying highlights, which change the font weight or style, only work
-  correctly with mono-spaced fonts.
-- Highlights won't work correctly if they change the font size or font family
+- Line wrapping not supported. My use case doesn't require line wrapping,
+  but I may it later if persuaded ;-)
+- Does not handle **very** long lines efficiently.
+  A huge document without line breaks will be very laggy.
+  I don't plan on fixing this, so if this is an issue, I suggest you
+  check while loading, and then prompt the user to either :
+  1. abort
+  2. continue (and expect a bad experience)
+  3. add additional line breaks.
+- Still buggy in parts when encountering 4 Byte characters, such as
+  "𝐀" U+1D400 Mathematical Bold Capital A
 - HighlightRanges are not included in the undo/redo list.
   This is deliberate, because highlighting is merely cosmetic,
   not an integral part of the document.
-- There is a "flash", when text turns from normal to highlighted.
-  The highlighted text moves by less than a pixel (I think),
-  which can be distracting.
-  This is especially noticeble when using HighlightIdenticalWords.
+  Note, it is possible for you to add this behaviour on top of TediArea.
+  Listen for changes to the highlight ranges. Filter those highlights that
+  you care about (e.g. isinstanceof an UndoableHighlightRange interface).
+  Create your own UndoRedo.Change objects, and pass them to BetterUndoRedo.add().
+- There is a minor "flash", when text turns from normal to highlighted.
+  The highlighted text sometimes moves left/right by a pixel,
+  which can be distracting. This is due to "Kerning", and the lack thereof
+  between portions of text with different highlights.
+  This will be more pronounced with large, fancy fonts (especially heavily slanted fonts).
 
 ### Undo/Redo is weird.
 
@@ -135,17 +148,23 @@ versions of JavaFX. So just DON'T mix and match!
 I am aware that this breaks one of my goals (being a consistent sub-class
 of TextInputControl), but it's the best that I can do.
 
-## Planned additional features
-
-- Optimise for large documents. TextArea (on which this is based),
-  is not efficient at all. See below.
-
 ## Performance
 
-Don't use Tedi for large documents until I finish optimising it.
-A 10,000 line document is sluggish, but bearable.
-RichTextFX (see below) is noticeably quicker than TediArea for large documents.
+TediArea has now been optimised for large documents.
+Alas there was a price to pay.
+TediArea extends TextInputControl, and that class is ridiculously
+inefficient. It converts the whole document to a String for the simplest
+of operations (such as moving the caret forwards/backwards, deleting a
+character etc).
 
+I've replaced all of these with efficient versions, however, I had to
+access private field using reflection to fix the following :
+
+- The "length" property
+- The "selection" property
+
+I really like the idea of extending TextInputControl, but maybe the
+advantages aren't enough to outweigh the disadvantages. Hmm.
 
 ## Styling TediArea
 
@@ -252,8 +271,8 @@ If you want a rich text editor
 (as opposed to a plain text editor with highlights),
 then RichTextFX may be a better choice than Tedi.
 
-At present (Sept 2018), RichTextFX is significantly faster than Tedi;
-RichTextFX handles 10,000+ line documents with ease.
+Also, if you need line wrapping, TediArea doesn't currently support that,
+so RichTextFX may be a better fit.
 
 ## License
 
