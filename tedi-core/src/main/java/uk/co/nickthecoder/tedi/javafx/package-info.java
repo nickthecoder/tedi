@@ -1,4 +1,6 @@
 /**
+ * This is free software.
+ * 
  * Copied some utility classes directly from the JavaFX code base.
  * Only the package name has been changed.
  * <p>
