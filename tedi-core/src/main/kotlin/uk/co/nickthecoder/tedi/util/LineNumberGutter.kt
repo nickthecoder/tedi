@@ -17,12 +17,12 @@ import javafx.scene.text.Text
 
 open class LineNumberGutter() : VirtualGutter {
 
-    override fun createNode(index: Int): LineNumberNode {
-        return LineNumberNode(index)
+    override fun createNode(index: Int): LineNumber {
+        return LineNumber(index)
     }
 
     override fun documentChanged(index: Int, node: Node) {
-        if (node is LineNumberNode) {
+        if (node is LineNumber) {
             node.update(index)
         }
     }
@@ -48,16 +48,17 @@ open class LineNumberGutter() : VirtualGutter {
         set(v) = textFillProperty.set(v)
 
     //---------------------------------------------------------------------------
-    // Line Number Node
+    // Line Number
     //---------------------------------------------------------------------------
 
-    open inner class LineNumberNode(var index: Int) : HBox(), UpdatableNode {
+    open inner class LineNumber(var index: Int) : HBox(), UpdatableNode {
 
         private val lineNumber = Text((index + 1).toString()).apply {
             textOrigin = VPos.TOP
         }
 
         init {
+            styleClass.add("line-number")
             lineNumber.fontProperty().bind(fontProperty)
             lineNumber.fillProperty().bind(textFillProperty)
             val padding = Region()

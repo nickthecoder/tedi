@@ -10,8 +10,11 @@
     -fx-border-color: #cccccc;
     -fx-border-width: 0 1 0 0;
     -fx-font-family: 'monospace';
-    -fx-padding: 0 8 0 4; /* Note top and bottom are ignored */
     -fx-text-fill: #a0a0a0;
+}
+
+.tedi-area .gutter .line-number {
+    -fx-padding: 0 8 0 4;
 }
 
 .tedi-area.code {
