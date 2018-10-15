@@ -119,10 +119,13 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
     : TextInputControl(content) {
 
-    constructor() : this(TediAreaContent())
+    constructor() : this(TediAreaContent()) {
+        content.undoRedo = StandardUndoRedo(this)
+    }
 
 
     constructor(text: String) : this(TediAreaContent()) {
+        content.undoRedo = StandardUndoRedo(this)
         this.text = text
     }
 
@@ -380,7 +383,11 @@ open class TediArea private constructor(internal val content: TediAreaContent)
      * TediArea isn't able to use improve Undo/Redo in a more seamless fashion.
      * Sorry.
      */
-    var undoRedo: UndoRedo = StandardUndoRedo(this)
+    var undoRedo: UndoRedo
+        get() = content.undoRedo
+        set(v) {
+            content.undoRedo = v
+        }
 
     override fun selectRange(anchor: Int, caretPosition: Int) {
         super.selectRange(anchor, caretPosition)
@@ -512,7 +519,10 @@ open class TediArea private constructor(internal val content: TediAreaContent)
      *
      * This is a thin wrapper around [ParagraphList], which does most of the hard work.
      */
-    internal class TediAreaContent : TextInputControl.Content {
+    internal class TediAreaContent()
+        : TextInputControl.Content {
+
+        lateinit var undoRedo: UndoRedo
 
         internal val paragraphList = ParagraphList()
 
