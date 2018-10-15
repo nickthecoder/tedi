@@ -443,57 +443,62 @@ open class TediArea private constructor(internal val content: TediAreaContent)
     // but without using getText() which is horribly inefficient.
     //--------------------------------------------------------------------------
 
-    private var charIterator: BreakIterator = BreakIterator.getCharacterInstance()
+    /**
+     * Given a [position], returns a position which is clamped between 0 and length, and
+     * also ensures that it is not between a surrogate pair.
+     * If [position] is between a surrogate pair, then [forwards] determines if the
+     * result is position + 1 (true), or position - 1 (false).
+     *
+     * See [Character.isLowSurrogate]
+     */
+    fun safePosition(position: Int, forwards: Boolean): Int {
+        if (position <= 0) return 0
+        if (position >= content.length()) return content.length()
+
+        val str = getText(position, position + 1)
+        return if (str.get(0).isLowSurrogate()) {
+            if (forwards) {
+                position + 1
+            } else {
+                position - 1
+            }
+        } else {
+            position
+        }
+    }
 
     override fun deletePreviousChar(): Boolean {
-        var failed = true
         if (isEditable && !isDisabled) {
             val dot = caretPosition
-            val mark = anchor
-            if (dot != mark) {
+            if (dot != anchor) {
                 // there is a selection of text to remove
                 replaceSelection("")
-                failed = false
-            } else if (dot > 0) {
-                // The caret is not at the beginning, so remove some characters.
-                // Typically you'd only be removing a single character, but
-                // in some cases you must remove two depending on the unicode
-                // characters
-                val from = Math.max(0, dot - 10)
-                val subtext = content.get(from, dot)
-                val p = Character.offsetByCodePoints(subtext, dot - from, -1)
-                deleteText(from + p, dot)
-                failed = false
+                return true
+            }
+            val start = safePosition(dot - 1, false)
+            if (start != dot) {
+                deleteText(start, dot)
+                return true
             }
         }
-        return !failed
+        return false
     }
 
     override fun deleteNextChar(): Boolean {
-        var failed = true
         if (isEditable && !isDisabled) {
-            val textLength = content.length()
             val dot = caretPosition
-            val mark = anchor
-            if (dot != mark) {
+            if (dot != anchor) {
                 // there is a selection of text to remove
                 replaceSelection("")
-                failed = false
-            } else if (textLength > 0 && dot < textLength) {
-                // The caret is not at the end, so remove some characters.
-                // Typically you'd only be removing a single character, but
-                // in some cases you must remove two depending on the unicode
-                // characters
-
-                val to = Math.min(dot + 10, textLength)
-                val subtext = getText(dot, to)
-                charIterator.setText(subtext)
-                val p = dot + charIterator.following(0)
-                deleteText(dot, p)
-                failed = false
+                return true
+            }
+            val end = safePosition(dot + 1, true)
+            if (dot != end) {
+                deleteText(dot, end)
+                return true
             }
         }
-        return !failed
+        return false
     }
 
     override fun forward() {
@@ -501,14 +506,12 @@ open class TediArea private constructor(internal val content: TediAreaContent)
         val textLength = content.length()
         val dot = caretPosition
         val mark = anchor
-        if (dot != mark) {
+        if (dot != anchor) {
             val pos = Math.max(dot, mark)
             selectRange(pos, pos)
+
         } else if (dot < textLength && textLength > 0) {
-            val to = Math.min(dot + 10, textLength)
-            val subtext = getText(dot, to)
-            charIterator.setText(subtext)
-            val pos = dot + charIterator.following(0)
+            val pos = safePosition(dot + 1, true)
             selectRange(pos, pos)
         }
         deselect()
@@ -522,40 +525,22 @@ open class TediArea private constructor(internal val content: TediAreaContent)
         if (dot != mark) {
             val pos = Math.min(dot, mark)
             selectRange(pos, pos)
+
         } else if (dot > 0 && textLength > 0) {
-            val caret = caretPosition
-            val from = Math.max(0, caret - 10)
-            val subtext = getText(from, caret)
-            charIterator.setText(subtext)
-            val pos = from + charIterator.preceding(caret - from)
+            val pos = safePosition(dot - 1, false)
             selectRange(pos, pos)
         }
         deselect()
     }
 
     override fun selectBackward() {
-        if (caretPosition > 0 && content.length() > 0) {
-            // because the anchor stays put, by moving the caret to the left
-            // we ensure that a selection is registered and that it is correct
-
-            val caret = caretPosition
-            val from = Math.max(0, caret - 10)
-            val subtext = getText(from, caret)
-            charIterator.setText(subtext)
-            selectRange(anchor, from + charIterator.preceding(caret - from))
-        }
+        val pos = safePosition(caretPosition - 1, false)
+        selectRange(anchor, pos)
     }
 
     override fun selectForward() {
-        val textLength = content.length()
-        val caret = caretPosition
-        if (textLength > 0 && caret < textLength) {
-
-            val to = Math.min(caret + 10, textLength)
-            val subtext = getText(caret, to)
-            charIterator.setText(subtext)
-            selectRange(anchor, caret + charIterator.following(0))
-        }
+        val pos = safePosition(caretPosition + 1, true)
+        selectRange(anchor, pos)
     }
 
     /**

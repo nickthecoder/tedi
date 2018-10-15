@@ -1,9 +1,7 @@
 Bugs
 ----
 
-Demo is sluggish moving the caret position. Is this because of the column/line number at the top?
-    I don't remember it being sluggish before.
-    Maybe because its creating threads for the various extensions. Reuse existing threads?
+4 byte characters not supported by changeLines, and also mouse selection.
 
 Current Work
 ------------
@@ -11,13 +9,8 @@ Current Work
 Next
 ----
 
-Remove bidi stuff
-
 Later
 -----
-
-Consider allowing ranges to be PART of the document, such that undo/redo affects them.
-    Through a new UndoableRange interface
 
 Add an "Overview" gutter on the right, which show certain HighlightRanges.
     e.g. matches in Find & Replace
@@ -31,10 +24,9 @@ Add an "Overview" gutter on the right, which show certain HighlightRanges.
     Can we make this pluggable. i.e. do NOT include it in TediArea, just allow additional gutters to be added to TediArea.
 
 Folding
+    Switch to a different VirtualView, which takes a list of Folds, rather than Paragraphs
     Anywhere that there's paired highlights which are on different lines add folding buttons V and ^
     For python lovers, and for indented plain text, use indentation to determine where folds can appear.
-
-Check when layoutChildren is being called, and try to minimise this.
 
 Consider adding back line-wrapping
     Moving up/down a line will need extra work.
@@ -47,4 +39,5 @@ Consider adding back line-wrapping
 
 Create a Rich Text Demo, where styles are part of the document (undoable)
     Only makes sense if wrapping is implemented.
+
 

@@ -8,18 +8,11 @@ import javafx.scene.text.Text
  * [charIndex] is the zero based index into the [Text's] text
  * [isLeading] true iff the point was to the left of the hit character's mid point.
  */
-class HitInformation(var charIndex: Int, var isLeading: Boolean) {
-
-    //init {
-    //    println("Hit Information : $this")
-    //}
+data class HitInformation(val charIndex: Int, val isLeading: Boolean, val surrogatePair: Boolean = false) {
 
     fun getInsertionIndex(): Int {
-        return if (isLeading) charIndex else charIndex + 1
+        return if (isLeading) charIndex else charIndex + if (surrogatePair) 2 else 1
     }
-
-    override fun toString() = "charIndex: $charIndex, isLeading: $isLeading"
-
 }
 
 private val tempText = Text()
@@ -37,6 +30,11 @@ private val tempText = Text()
  * Whichever of these two guesses has the smallest diff is the winner.
  */
 fun Text.hitTestChar(x: Double, y: Double): HitInformation {
+
+    fun isSurrogatePair(text: String, pos: Int): Boolean {
+        if (pos > text.length - 2) return false
+        return text[pos].isHighSurrogate()// && text[pos + 1].isLowSurrogate()
+    }
 
     val normX = x - layoutX
     val normY = y - layoutY
@@ -65,6 +63,16 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
         return HitInformation(lineStartPosition + lineText.length, true)
     } else {
         var guess = (normX / tempText.boundsInLocal.width * lineText.length).toInt()
+
+        // Skips by dir (which is either 1 or -1), when in the middle of a surrogate pair.
+        fun adjustGuess(dir: Int = -1) {
+            if (guess < lineText.length && lineText[guess].isLowSurrogate()) {
+                guess = clamp(0, guess + dir, lineText.length)
+            }
+        }
+
+        adjustGuess()
+
         tempText.text = lineText.substring(0, guess)
         var diff = normX - tempText.boundsInLocal.width
         var previousDiff = diff
@@ -72,23 +80,27 @@ fun Text.hitTestChar(x: Double, y: Double): HitInformation {
         if (diff < 0) {
             while (diff < 0 && guess > 0) {
                 guess--
+                adjustGuess()
                 tempText.text = lineText.substring(0, guess)
                 previousDiff = diff
                 diff = normX - tempText.boundsInLocal.width
             }
             if (guess < 0) {
-                return HitInformation(lineStartPosition, true)
+                return HitInformation(lineStartPosition, true, isSurrogatePair(lineText, 0))
             } else {
-                return HitInformation(lineStartPosition + guess, diff < -previousDiff)
+                return HitInformation(lineStartPosition + guess, diff < -previousDiff, isSurrogatePair(lineText, guess))
             }
         } else {
             while (diff > 0 && guess < lineText.length) {
                 guess++
+                adjustGuess(1)
                 tempText.text = lineText.substring(0, guess)
                 previousDiff = diff
                 diff = normX - tempText.boundsInLocal.width
             }
-            return HitInformation(lineStartPosition + guess - 1, diff < -previousDiff)
+            guess--
+            adjustGuess(-1)
+            return HitInformation(lineStartPosition + guess, diff < -previousDiff, isSurrogatePair(lineText, guess))
         }
     }
 }

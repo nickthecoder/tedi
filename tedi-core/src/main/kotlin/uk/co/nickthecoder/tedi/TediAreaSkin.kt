@@ -290,7 +290,6 @@ class TediAreaSkin(control: TediArea)
         val paragraphNode = getParagraphNode(line)
         val column = paragraphNode?.getColumn(x) ?: 0
         return skinnable.positionOfLine(line, column)
-
     }
 
     fun positionCaret(pos: Int, select: Boolean, extendSelection: Boolean = false) {
@@ -332,7 +331,7 @@ class TediAreaSkin(control: TediArea)
             paragraphNode.getColumn(requiredX)
         }
 
-        val newPosition = skinnable.positionOfLine(requiredLine, column)
+        val newPosition = skinnable.safePosition(skinnable.positionOfLine(requiredLine, column), false)
 
         positionCaret(newPosition, select)
 
