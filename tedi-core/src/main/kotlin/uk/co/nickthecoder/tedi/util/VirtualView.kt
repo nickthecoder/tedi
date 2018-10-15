@@ -583,7 +583,7 @@ class VirtualView<P>(
     //---------------------------------------------------------------------------
 
     override fun layoutChildren() {
-        println("VirtualView.layoutChildren")
+        //println("VirtualView.layoutChildren")
 
         val width = width
         val height = height

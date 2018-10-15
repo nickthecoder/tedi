@@ -30,8 +30,6 @@
 
 package uk.co.nickthecoder.tedi
 
-import javafx.beans.InvalidationListener
-import javafx.geometry.NodeOrientation
 import javafx.scene.input.KeyCode.*
 import javafx.scene.input.KeyEvent
 import javafx.scene.input.KeyEvent.KEY_PRESSED
@@ -43,7 +41,6 @@ import uk.co.nickthecoder.tedi.javafx.OptionalBoolean
 import uk.co.nickthecoder.tedi.util.isLinux
 import uk.co.nickthecoder.tedi.util.isMac
 import uk.co.nickthecoder.tedi.util.isWindows
-import java.text.Bidi
 import java.util.*
 
 class TediAreaBehavior(val control: TediArea)
@@ -59,24 +56,10 @@ class TediAreaBehavior(val control: TediArea)
      */
     private var lastEvent: KeyEvent? = null
 
-    private val textListener = InvalidationListener { _ -> invalidateBidi() }
-
-    private var bidi: Bidi? = null
-    private var rtlText: Boolean? = null
-
     private var shiftDown = false
     private var deferClick = false
 
     private var editing = false
-
-    init {
-        control.textProperty().addListener(textListener)
-    }
-
-    override fun dispose() {
-        control.textProperty().removeListener(textListener)
-        super.dispose()
-    }
 
     //-------------------------------------------------------------------------
     // Key Events
@@ -325,30 +308,11 @@ class TediAreaBehavior(val control: TediArea)
         }
     }
 
-
-    private fun invalidateBidi() {
-        bidi = null
-        rtlText = null
-    }
-
-    private fun getBidi(): Bidi {
-        if (bidi == null) {
-            bidi = Bidi(control.textProperty().valueSafe,
-                    if (control.effectiveNodeOrientation == NodeOrientation.RIGHT_TO_LEFT)
-                        Bidi.DIRECTION_RIGHT_TO_LEFT
-                    else
-                        Bidi.DIRECTION_LEFT_TO_RIGHT)
-        }
-        return bidi!!
-    }
-
-    private fun isRTLText(): Boolean {
-        if (rtlText == null) {
-            val bidi = getBidi()
-            rtlText = bidi.isRightToLeft
-        }
-        return rtlText!!
-    }
+    /**
+     * I've removed bi-directional support, but left this stub here
+     * so that if I re-implement it, existing code won't need to be changed.
+     */
+    private fun isRTLText() = false
 
     private fun nextCharacterVisually(moveRight: Boolean) {
         if (moveRight != isRTLText()) {

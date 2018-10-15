@@ -195,7 +195,7 @@ The rest of this document is the License text repeated many times.
 
             tabs.add(EditorTab().apply {
                 text = "4 Byte Chars"
-                tediArea.text = """The following character are Mathematical Alphanumeric Symbols.
+                tediArea.text = """The following characters are Mathematical Alphanumeric Symbols.
 They require 4 bytes to encode each of them, not the more usual two bytes.
 𝐀𝐁𝐂𝐃𝐄𝐅𝐆𝐇𝐈𝐉𝐊𝐋𝐌𝐍𝐎𝐏𝐐𝐑𝐒𝐓𝐔𝐕𝐖𝐗𝐘𝐙
 TediArea still has some bugs, where it doesn't handle these 4 byte characters correctly.

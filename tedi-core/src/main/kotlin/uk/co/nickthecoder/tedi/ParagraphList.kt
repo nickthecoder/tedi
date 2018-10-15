@@ -103,10 +103,10 @@ class ParagraphList
 
     fun get(start: Int, end: Int): String {
 
-        if (end - start > 10000) { // TODO Remove once I'm confident I've removed all unwanted uses of getText()
-            println("QUESTION. Is there still code that needlessly uses getText() ?")
-            Thread.dumpStack()
-        }
+        //if (end - start > 10000) { // TODO Remove once I'm confident I've removed all unwanted uses of getText()
+        //    println("QUESTION. Is there still code that needlessly uses getText() ?")
+        //    Thread.dumpStack()
+        //}
 
         val length = end - start
         val textBuilder = StringBuilder(length)
