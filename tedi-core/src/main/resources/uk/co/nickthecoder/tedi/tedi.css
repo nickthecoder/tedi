@@ -27,10 +27,9 @@
 
 /***** A default colour scheme for syntax highlighting *****/
 
-/* Larger fonts only here for testing */
-.tedi-area .content .syntax-keyword { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
-.tedi-area .content .syntax-softKeyword { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
-.tedi-area .content .syntax-modifier { -fx-fill: #000088; -fx-font-weight: bold; -fx-font-size: 120%; }
+.tedi-area .content .syntax-keyword { -fx-fill: #000088; -fx-font-weight: bold;}
+.tedi-area .content .syntax-softKeyword { -fx-fill: #000088; -fx-font-weight: bold;}
+.tedi-area .content .syntax-modifier { -fx-fill: #000088; -fx-font-weight: bold;}
 
 .tedi-area .content .syntax-string { -fx-fill: #008000; -fx-font-weight: bold; }
 .tedi-area .content .syntax-comment { -fx-fill: #808080; -fx-font-style: italic; }

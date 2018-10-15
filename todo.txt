@@ -1,13 +1,20 @@
 Bugs
 ----
 
-4 byte characters not supported by changeLines, and also mouse selection.
-
 Current Work
 ------------
 
 Next
 ----
+
+Consider adding back line-wrapping
+    Moving up/down a line will need extra work.
+    Fill styles that span multiple lines will be tricky.
+    In layout, if content's width changes, then re-lay out all existing nodes, and fillViewport() (as there may be space for more)
+    Have two modes for the horizontal scroll :
+        When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
+        When wrapping is enabled. The node's heights are calculated using the viewport width
+            In which case, never show the scrollbar???
 
 Later
 -----
@@ -27,15 +34,6 @@ Folding
     Switch to a different VirtualView, which takes a list of Folds, rather than Paragraphs
     Anywhere that there's paired highlights which are on different lines add folding buttons V and ^
     For python lovers, and for indented plain text, use indentation to determine where folds can appear.
-
-Consider adding back line-wrapping
-    Moving up/down a line will need extra work.
-    Fill styles that span multiple lines will be tricky.
-    In layout, if content's width changes, then re-lay out all existing nodes, and fillViewport() (as there may be space for more)
-    Have two modes for the horizontal scroll :
-        When wrapping is disabled. The node's heights are calculated using -1.0 (i.e. limitless)
-        When wrapping is enabled. The node's heights are calculated using the viewport width
-            In which case, never show the scrollbar???
 
 Create a Rich Text Demo, where styles are part of the document (undoable)
     Only makes sense if wrapping is implemented.
