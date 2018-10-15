@@ -472,7 +472,9 @@ class TediAreaSkin(control: TediArea)
      *
      * This makes this Highlight more potent than regular Highlights.
      */
-    internal val selectionHighlight = object : FillHighlight {
+    internal val selectionHighlight = SelectionHighlight()
+
+    inner class SelectionHighlight : FillHighlight {
         override fun style(rect: Rectangle) {
             rect.fillProperty().bind(highlightFillProperty)
         }

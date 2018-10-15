@@ -100,6 +100,11 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                 // styled in more than one way.
                 for (phr in paragraph.highlights) {
                     val highlight = phr.cause.highlight
+
+                    // The SelectionHighlight is special. If there are two or more TediAreas sharing the same content,
+                    // then only apply this highlight to the TediArea that created it.
+                    if (highlight is TediAreaSkin.SelectionHighlight && highlight !== tediAreaSkin.selectionHighlight) continue
+
                     if (phr.intersects(from, to)) {
                         highlight.style(text)
 
@@ -113,13 +118,13 @@ class ParagraphFactory(val tediAreaSkin: TediAreaSkin) : VirtualFactory {
                             // Special case for the selection.
                             // If it the selection extends beyond this paragraph, then make the highlight rectangle the
                             // full width of the viewport
-                            if (phr.cause.end > paragraph.cachedPosition + paragraph.length && highlight === tediAreaSkin.selectionHighlight) {
+                            if (phr.cause.end > paragraph.cachedPosition + paragraph.length && highlight is TediAreaSkin.SelectionHighlight) {
                                 rectangle.width = FULL_WIDTH
                             }
                             // For selections, the rectangle's height is the full line height. i.e. if there are
                             // different size fonts, then the selection's highlight rectangle will be the same.
                             // even the small font's rectangle will be the full line height.
-                            if (highlight === tediAreaSkin.selectionHighlight) {
+                            if (highlight is TediAreaSkin.SelectionHighlight) {
                                 rectangle.height = FULL_HEIGHT
                             }
 
