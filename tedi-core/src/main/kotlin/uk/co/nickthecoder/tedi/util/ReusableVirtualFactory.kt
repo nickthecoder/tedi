@@ -16,10 +16,10 @@ interface UpdatableNode {
  * basis (evey time the viewport is paged up or down).
  *
  */
-abstract class ReusableVirtualFactory(private val wrapped: VirtualFactory, val maxSize: Int = 100)
+open class ReusableVirtualFactory(protected val wrapped: VirtualFactory, val maxSize: Int = 100)
     : VirtualFactory {
 
-    private val reusableList = mutableListOf<Node>()
+    protected val reusableList = mutableListOf<Node>()
 
     override fun createNode(index: Int): Node = if (reusableList.isEmpty()) {
         wrapped.createNode(index)
@@ -35,5 +35,13 @@ abstract class ReusableVirtualFactory(private val wrapped: VirtualFactory, val m
         if (reusableList.size < maxSize) {
             reusableList.add(node)
         }
+    }
+}
+
+open class ReusableVirtualGutter(protected val wrappedGutter: VirtualGutter, maxSize: Int = 100)
+    : ReusableVirtualFactory(wrappedGutter, maxSize), VirtualGutter {
+
+    override fun documentChanged(index: Int, node: Node) {
+        wrappedGutter.documentChanged(index, node)
     }
 }

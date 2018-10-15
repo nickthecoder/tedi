@@ -14,8 +14,7 @@ import javafx.scene.paint.Paint
 import javafx.scene.text.Font
 import javafx.scene.text.Text
 
-
-open class LineNumberGutter() : VirtualGutter {
+open class LineNumberGutter : VirtualGutter {
 
     override fun createNode(index: Int): LineNumber {
         return LineNumber(index)
@@ -69,6 +68,7 @@ open class LineNumberGutter() : VirtualGutter {
 
 
         override fun update(newIndex: Int) {
+            background = null
             if (newIndex != index) {
                 index = newIndex
                 lineNumber.text = (index + 1).toString()

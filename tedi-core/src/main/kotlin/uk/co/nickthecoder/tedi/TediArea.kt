@@ -204,7 +204,7 @@ open class TediArea private constructor(internal val content: TediAreaContent)
 
 
     // Gutter
-    private val gutterProperty = SimpleObjectProperty<VirtualGutter>(this, "gutter", LineNumberGutter())
+    private val gutterProperty = SimpleObjectProperty<VirtualGutter>(this, "gutter", ReusableVirtualGutter(LineNumberGutter()))
 
     fun gutter(): ObjectProperty<VirtualGutter> = gutterProperty
     var gutter: VirtualGutter
