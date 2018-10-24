@@ -353,7 +353,7 @@ class VirtualView<P>(
                 rebuild = true
             } else {
                 documentChanged = true
-                if (from >= topNodeIndex && to < bottomNodeIndex) {
+                if (from >= topNodeIndex && to - 1 < bottomNodeIndex) {
                     val index = from - topNodeIndex
                     // We don't care about the offset at this stage, it will be corrected later.
                     val node = createNode(from, index)
@@ -368,11 +368,10 @@ class VirtualView<P>(
         fun removedItems(from: Int, amount: Int) {
 
             documentChanged = true
-
             if (from < topNodeIndex || from > bottomNodeIndex) return
 
             val visibleFrom = Math.max(0, from - topNodeIndex)
-            val visibleTo = Math.min(contentList.size - 1, from - topNodeIndex + amount)
+            val visibleTo = Math.min(contentList.size, from - topNodeIndex + amount)
 
             adjustFrom = Math.min(adjustFrom, visibleFrom)
             contentList.subList(visibleFrom, visibleTo).clear()
@@ -382,7 +381,7 @@ class VirtualView<P>(
         }
 
         fun updatedItems(from: Int, to: Int) {
-            if (from < topNodeIndex || to > bottomNodeIndex) return
+            if (to < topNodeIndex || from > bottomNodeIndex) return
 
             for (i in from until to) {
                 if (i >= topNodeIndex && i <= bottomNodeIndex) {
@@ -417,8 +416,10 @@ class VirtualView<P>(
 
         } else {
 
+            adjustFrom = Math.max(0, adjustFrom)
+
             if (adjustFrom != Int.MAX_VALUE) {
-                var y = if (adjustFrom == 0) initialOffset else nodeBottom(contentList[adjustFrom - 1])
+                var y = if (adjustFrom < 1) initialOffset else nodeBottom(contentList[adjustFrom - 1])
                 for (i in adjustFrom until contentList.size) {
                     val node = contentList[i]
                     val prefHeight = node.prefHeight(-1.0)

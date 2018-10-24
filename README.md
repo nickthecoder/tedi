@@ -2,9 +2,7 @@
 
 A simple text editor control suitable for embedding inside a JavaFX application.
 
-Pronounced Tedi (and is short for **T**ext **edi**tor)
-
-The main usage is for composing plain text files, especially source code.
+Pronounced Teddy (and is short for **T**ext **edi**tor)
 
 TediArea is a JavaFX Control, very similar to a TextArea,
 (but with extra features),
@@ -34,17 +32,17 @@ and the odd **new** keywords as appropriate ;-)
 
 There are more [screenshots](screenshots/screenshots.md) to have a look at.
 
+Take a look at [Example.java](example/src/main/java/uk/co/nickthecoder/tedi/example/Example.java)
+or the much more complicated [Demo.kt](demo/src/main/kotlin/uk/co/nickthecoder/tedi/demo/Demo.kt).
+application (written in Kotlin).
+
 ## Status
 
 TediArea does everything I want it to, and more!
 
-I'm currently optimising things, and I may well introduce new bugs!
-Check the **todo.txt** file for details!
-It's currently only as fast as TextArea, which means that 5000+ line documents
-are laggy!
-Run the demo, and copy/paste the License file a few times.
+I've just finished optimising TediArea for very large documents.
 
-I've already embedded Tedi within a couple of my other projects.
+I've already embedded TediArea within a couple of my other projects.
 
 - As a script editor in my
   [Tickle Game Engine](https://github.com/nickthecoder/tickle).
@@ -88,26 +86,29 @@ to add support for other languages.
 These syntax highlighters are based on regular expressions,
 and therefore do not understand the grammar of the languages.
 
+If you are serious about syntax highlighting, don't use regexs, use
+[ANTLR](http://www.antlr.org/).
+But that is beyond the scope of this project for now.
+
 ## Known Bugs/Issues
 
-- Line wrapping not supported. My use case doesn't require line wrapping,
+- Line wrapping is not supported. My use case doesn't require line wrapping,
   but I may it later if persuaded ;-)
 - Does not handle **very** long lines efficiently.
   A huge document without line breaks will be very laggy.
   I don't plan on fixing this, so if this is an issue, I suggest you
-  check while loading, and then prompt the user to either :
+  check for very long lines while loading, and then prompt the user to either :
   1. abort
   2. continue (and expect a bad experience)
   3. add additional line breaks.
-- Still buggy in parts when encountering 4 Byte characters, such as
-  "𝐀" U+1D400 Mathematical Bold Capital A
 - HighlightRanges are not included in the undo/redo list.
   This is deliberate, because highlighting is merely cosmetic,
   not an integral part of the document.
   Note, it is possible for you to add this behaviour on top of TediArea.
-  Listen for changes to the highlight ranges. Filter those highlights that
-  you care about (e.g. isinstanceof an UndoableHighlightRange interface).
-  Create your own UndoRedo.Change objects, and pass them to BetterUndoRedo.add().
+  - Listen for changes to the highlight ranges.
+  - Filter those highlights that you care about (e.g. isinstanceof an UndoableHighlightRange interface).
+  - Create your own UndoRedo.Change objects
+  - Pass them to BetterUndoRedo.add().
 - There is a minor "flash", when text turns from normal to highlighted.
   The highlighted text sometimes moves left/right by a pixel,
   which can be distracting. This is due to "Kerning", and the lack thereof
@@ -274,8 +275,42 @@ then RichTextFX may be a better choice than Tedi.
 Also, if you need line wrapping, TediArea doesn't currently support that,
 so RichTextFX may be a better fit.
 
+### Efxclipse/SmartCode
+
+This is the source code editor used by the Eclipse IDE.
+
+https://wiki.eclipse.org/Efxclipse/SmartCode#Sample
+
+I'm sure it's really good, but I haven't tried it.
+The instructions linked above make no sense to me, and the demo application
+doesn't help either :
+
+https://github.com/BestSolution-at/dartedit
+
+The demo application contains over **500 files**.
+I don't think I've ever seen bloat that bad before.
+OMG, this is supposed to be a **demo** application.
+
+    git clone https://github.com/BestSolution-at/dartedit.git
+    cd dartedit
+    find . | grep -v .git | wc
+
+    565     570   51804
+
+If that weren't bad enough, there isn't even any instructions on how to
+compile or run the demo. There is no README, nothing but directories
+till you dig at least 2 levels deep into the hierarchy.
+
+I have a hard and fast rule : If I can't compile an application at the
+command line, I don't want it. I have a hunch that it would takes days
+trying to build the demo application without using the Eclipse IDE.
+No, just **NO**. Don't force a particular IDE onto developers.
+
+It's a shame, because if you could strip away all the OSGi bloat,
+I'm sure it would be a perfect solution.
+
 ## License
 
-TediArea is a fork of JavaFX's TextArea,
+TediArea started out as a fork of JavaFX's TextArea,
 and therefore the license is the same :
 GPL version 2 (with no option to move to a later version).

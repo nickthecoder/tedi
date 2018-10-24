@@ -1,6 +1,10 @@
 Bugs
 ----
 
+Edit the last line is weird
+
+Select all, cut threw???
+
 Current Work
 ------------
 
