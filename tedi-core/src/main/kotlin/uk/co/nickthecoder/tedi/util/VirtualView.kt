@@ -821,7 +821,6 @@ class VirtualView<P>(
     }
 
     private fun addFirstNode() {
-        if (list.isEmpty()) return
         if (contentList.isNotEmpty()) throw IllegalStateException("Content List is not empty")
         if (gutterList.isNotEmpty()) throw IllegalStateException("Gutter List is not empty")
 
@@ -829,6 +828,9 @@ class VirtualView<P>(
         if (topNodeIndex >= list.size) {
             topNodeIndex = 0
         }
+
+        if (list.isEmpty()) return
+
         val node = createNode(topNodeIndex, null)
         val prefHeight = node.prefHeight(-1.0)
         val y = (vScroll.value - topNodeIndex) * prefHeight + clippedContent.snappedTopInset()

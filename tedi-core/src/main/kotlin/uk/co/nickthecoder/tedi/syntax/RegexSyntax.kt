@@ -146,7 +146,7 @@ open class RegexSyntax(val list: List<RegexHighlight>)
 
     companion object {
 
-        val NUMBER_PATTERN = "\\b[0-9](\\.[0-9]+)?\\b"
+        val NUMBER_PATTERN = "\\b[0-9]+(\\.[0-9]+)?\\b"
         val ANNOTATION_PATTERN = "\\@\\b\\w+\\b" // e.g. @Deprecated
         val SEMICOLON_PATTERN = "\\;"
         val SEMICOLON_EOL_PATTERN = "\\;\\s*$"
