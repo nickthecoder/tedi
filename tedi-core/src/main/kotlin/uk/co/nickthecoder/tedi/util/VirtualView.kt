@@ -368,7 +368,7 @@ class VirtualView<P>(
         fun removedItems(from: Int, amount: Int) {
 
             documentChanged = true
-            if (from < topNodeIndex || from > bottomNodeIndex) return
+            if (from + amount < topNodeIndex || from > bottomNodeIndex) return
 
             val visibleFrom = Math.max(0, from - topNodeIndex)
             val visibleTo = Math.min(contentList.size, from - topNodeIndex + amount)
@@ -829,7 +829,10 @@ class VirtualView<P>(
             topNodeIndex = 0
         }
 
-        if (list.isEmpty()) return
+        if (list.isEmpty()) {
+            topNodeIndex = -1
+            return
+        }
 
         val node = createNode(topNodeIndex, null)
         val prefHeight = node.prefHeight(-1.0)
@@ -849,7 +852,7 @@ class VirtualView<P>(
         var index = topNodeIndex - 1
         var y = nodePosition(firstVisibleNode)
 
-        while (index >= 0 && y > 0) {
+        while (index >= 0 && index < list.size && y > 0) {
             val node = createNode(index, 0)
             val prefHeight = node.prefHeight(-1.0)
             positionNode(node, y - prefHeight, prefHeight)
@@ -870,7 +873,7 @@ class VirtualView<P>(
         var y = nodeBottom(startNode)
         var index = topNodeIndex + contentList.size
 
-        while (index < list.size && y < viewportHeight) {
+        while (index >= 0 && index < list.size && y < viewportHeight) {
             val node = createNode(index, null)
             val prefHeight = node.prefHeight(-1.0)
             positionNode(node, y, prefHeight)
